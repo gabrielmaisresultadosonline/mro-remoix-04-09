@@ -333,47 +333,6 @@ Deno.serve(async (req) => {
       return json({ success: true });
     }
 
-    // ---------------- REDEFINIR SENHA DE CADASTRO (SOMENTE AUTH, NÃO TOCA EM OUTROS DADOS) ----------------
-    if (action === "reset-user-password") {
-      const userId = String(body.user_id ?? "").trim();
-      if (!userId) return fail("Usuário não informado.", 400);
-
-      // Confirma que o usuário existe antes de gerar/gravar qualquer senha.
-      const { data: targetAuthUser, error: targetLookupError } = await db.auth.admin.getUserById(userId);
-      if (targetLookupError || !targetAuthUser?.user) {
-        trace("reset_password.rejected", { reason: "user_not_found" });
-        return fail("Usuário não encontrado.", 404);
-      }
-
-      const temporaryPassword = generateTemporaryPassword();
-
-      // Atualiza somente a credencial de autenticação (auth.users) via service role.
-      // Nenhuma outra coluna/tabela do usuário é alterada por esta ação.
-      const { error: updateError } = await db.auth.admin.updateUserById(userId, {
-        password: temporaryPassword,
-      });
-
-      if (updateError) {
-        console.error("[ig-admin] reset-user-password failed:", updateError.message);
-        return fail("Não foi possível redefinir a senha. Tente novamente.", 500);
-      }
-
-      // Auditoria sem o segredo: apenas o fato de que houve redefinição, por quem e quando.
-      await audit(db, {
-        actor_type: "super_admin",
-        action: "admin.user_password_reset",
-        target: userId,
-        ip,
-        metadata: { admin: adminEmail },
-      });
-
-      trace("reset_password.success", { admin: adminEmail });
-
-      // A senha temporária é devolvida uma única vez, apenas nesta resposta,
-      // para o admin repassar ao usuário com segurança (nunca fica em log/banco).
-      return json({ success: true, temporary_password: temporaryPassword });
-    }
-
     if (action === "reset-user-password") {
       const userId = String(body.user_id ?? "").trim();
       const newPassword = String(body.new_password ?? "");
