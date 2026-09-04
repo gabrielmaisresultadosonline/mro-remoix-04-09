@@ -10,6 +10,7 @@
 
 import { Router } from "express";
 import crypto from "node:crypto";
+import nodemailer from "nodemailer";
 import { adminQuery } from "../db.js";
 import { env } from "../env.js";
 import { resolveAuth, signToken } from "../auth-context.js";
@@ -24,6 +25,7 @@ interface AuthUserRow {
   email_confirmed_at: string | null;
   user_metadata: Record<string, unknown> | null;
   banned_until: string | null;
+  updated_at?: string | null;
 }
 
 /**
@@ -32,6 +34,7 @@ interface AuthUserRow {
  * mas com derivação de chave adequada — SHA-256 simples é fraco para senha.
  */
 const PBKDF2_ITERATIONS = 120_000;
+const RECOVERY_TTL_SECONDS = 30 * 60;
 
 function hashPassword(password: string, salt?: string): string {
   const usedSalt = salt ?? crypto.randomBytes(16).toString("hex");
