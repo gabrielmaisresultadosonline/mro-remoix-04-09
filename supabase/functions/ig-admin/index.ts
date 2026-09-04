@@ -6,7 +6,7 @@
  * no primeiro acesso. Nenhuma senha, hash ou token aparece em log ou resposta.
  *
  * Ações: login | change-password | dashboard | users | user-detail
- *        | set-user-blocked | instagram | logs
+ *        | set-user-blocked | reset-user-password | instagram | logs
  */
 import {
   audit,
@@ -320,6 +320,44 @@ Deno.serve(async (req) => {
         metadata: { admin: adminEmail },
       });
 
+      return json({ success: true });
+    }
+
+    if (action === "reset-user-password") {
+      const userId = String(body.user_id ?? "").trim();
+      const newPassword = String(body.new_password ?? "");
+      if (!/^[0-9a-f-]{36}$/i.test(userId)) return fail("Usuário inválido.", 400);
+      if (newPassword.length < 8 || newPassword.length > 200) {
+        return fail("A nova senha deve ter entre 8 e 200 caracteres.", 400);
+      }
+
+      const { data: profile } = await db
+        .from("ig_profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!profile) return fail("Cadastro não encontrado.", 404);
+
+      const passwordData = await hashPassword(newPassword);
+      const passwordHash = `pbkdf2$210000$${passwordData.salt}$${passwordData.hash}`;
+      const { error: updateError } = await db
+        .from("auth_users")
+        .update({ password_hash: passwordHash, updated_at: new Date().toISOString() })
+        .eq("id", userId);
+
+      if (updateError) {
+        trace("user.password_reset_failed", { user_id: userId, reason: updateError.message.slice(0, 120) });
+        return fail("Não foi possível redefinir a senha.", 500);
+      }
+
+      trace("user.password_reset", { user_id: userId });
+      await audit(db, {
+        actor_type: "super_admin",
+        action: "admin.user_password_reset",
+        target: userId,
+        ip,
+        metadata: { admin: adminEmail },
+      });
       return json({ success: true });
     }
 

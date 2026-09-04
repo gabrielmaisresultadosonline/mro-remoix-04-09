@@ -44,14 +44,34 @@ function hashPassword(password: string, salt?: string): string {
 function verifyPassword(password: string, stored: string): boolean {
   if (stored.startsWith("pbkdf2$")) {
     const [, iterations, salt, expected] = stored.split("$");
+    const iterationCount = Number(iterations);
+    if (!salt || !expected || !Number.isInteger(iterationCount) || iterationCount <= 0) return false;
     const derived = crypto
-      .pbkdf2Sync(password, salt, Number(iterations), 64, "sha512")
+      .pbkdf2Sync(password, salt, iterationCount, 64, "sha512")
       .toString("hex");
     return timingSafeEqualHex(derived, expected);
   }
   // Compatibilidade com hashes SHA-256 legados já existentes no projeto.
   const legacy = crypto.createHash("sha256").update(password).digest("hex");
   return timingSafeEqualHex(legacy, stored);
+}
+
+/**
+ * Os usuários importados do provedor anterior chegam como `bcrypt:$2...`.
+ * O PostgreSQL já possui pgcrypto; validamos o hash dentro do banco e, após
+ * sucesso, o substituímos por PBKDF2 para não manter bcrypt no runtime Node.
+ */
+async function verifyStoredPassword(password: string, stored: string): Promise<boolean> {
+  if (!stored.startsWith("bcrypt:")) return verifyPassword(password, stored);
+
+  const bcryptHash = stored.slice("bcrypt:".length);
+  if (!/^\$2[aby]\$\d{2}\$/.test(bcryptHash)) return false;
+
+  const rows = await adminQuery<{ valid: boolean }>(
+    "SELECT crypt($1, $2) = $2 AS valid",
+    [password, bcryptHash],
+  );
+  return rows[0]?.valid === true;
 }
 
 function timingSafeEqualHex(a: string, b: string): boolean {
@@ -126,8 +146,10 @@ authRouter.post("/token", async (req, res) => {
   }
 
   const user = await findUserByEmail(email);
-  if (!user || !verifyPassword(password, user.password_hash)) {
+  const passwordValid = user ? await verifyStoredPassword(password, user.password_hash) : false;
+  if (!user || !passwordValid) {
     // Mensagem genérica: não revelamos se o e-mail existe.
+    console.warn(`[auth] login rejeitado email=${maskEmail(email)} motivo=credenciais_invalidas`);
     res.status(400).json({ error: "invalid_grant", error_description: "Invalid login credentials" });
     return;
   }
@@ -136,6 +158,17 @@ authRouter.post("/token", async (req, res) => {
     throw new RestError(403, "Usuário bloqueado.");
   }
 
+  if (user.password_hash.startsWith("bcrypt:")) {
+    await adminQuery(
+      "UPDATE auth_users SET password_hash = $2, last_sign_in_at = now(), updated_at = now() WHERE id = $1",
+      [user.id, hashPassword(password)],
+    );
+    console.info(`[auth] hash legado atualizado user=${user.id}`);
+  } else {
+    await adminQuery("UPDATE auth_users SET last_sign_in_at = now() WHERE id = $1", [user.id]);
+  }
+
+  console.info(`[auth] login concluído user=${user.id}`);
   res.json(buildSession(user));
 });
 
@@ -229,6 +262,11 @@ async function findUserById(id: string): Promise<AuthUserRow | null> {
     [id],
   );
   return rows[0] ?? null;
+}
+
+function maskEmail(email: string): string {
+  const [local = "", domain = ""] = email.split("@");
+  return `${local.slice(0, 2)}***@${domain}`;
 }
 
 export { hashPassword, verifyPassword };
