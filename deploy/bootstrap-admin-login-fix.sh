@@ -4,7 +4,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/ia-mro}"
-REPO_URL="https://github.com/gabrielmaisresultadosonline/mro-projeto-17-35-02-09.git"
+REPO_URL="https://github.com/gabrielmaisresultadosonline/mro-remoix-04-09.git"
 
 fail() {
   echo "ERRO: $1" >&2

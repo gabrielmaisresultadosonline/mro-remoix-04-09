@@ -18,7 +18,7 @@ cd "$(dirname "$0")"
 # Este é o único repositório autorizado para atualizar a VPS. Não aceite um
 # REPO_URL herdado do shell/PM2: foi exatamente isso que permitiu um deploy
 # aparentemente bem-sucedido continuar publicando mro-projeto-02.
-CANONICAL_REPO_URL="https://github.com/gabrielmaisresultadosonline/mro-projeto-17-35-02-09.git"
+CANONICAL_REPO_URL="https://github.com/gabrielmaisresultadosonline/mro-remoix-04-09.git"
 if [ -n "${REPO_URL:-}" ] && [ "${REPO_URL%/}" != "${CANONICAL_REPO_URL%/}" ]; then
   echo "ERRO: REPO_URL aponta para um repositório não autorizado: $REPO_URL" >&2
   echo "Esperado: $CANONICAL_REPO_URL" >&2
