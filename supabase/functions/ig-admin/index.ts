@@ -36,16 +36,6 @@ function trace(step: string, detail: Record<string, unknown> = {}): void {
   console.log(`[ig-admin] ${step} ${JSON.stringify(detail)}`);
 }
 
-
-/** Gera senha temporária aleatória e forte, nunca previsível, para redefinição segura. */
-function generateTemporaryPassword(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
-  const bytes = crypto.getRandomValues(new Uint8Array(20));
-  let out = "";
-  for (const b of bytes) out += alphabet[b % alphabet.length];
-  return out;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 

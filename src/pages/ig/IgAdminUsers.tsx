@@ -29,9 +29,6 @@ const IgAdminUsers = () => {
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [resetTarget, setResetTarget] = useState<{ userId: string; label: string } | null>(null);
-  const [resetPassword, setResetPassword] = useState<string | null>(null);
-  const [resetBusy, setResetBusy] = useState(false);
   const [passwordUser, setPasswordUser] = useState<{ id: string; email: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -67,39 +64,6 @@ const IgAdminUsers = () => {
     const membership = data?.memberships.find((m) => m.user_id === userId);
     if (!membership) return null;
     return data?.tenants.find((t) => t.id === membership.tenant_id) ?? null;
-  };
-
-  const confirmResetPassword = async () => {
-    if (!resetTarget) return;
-    setResetBusy(true);
-    try {
-      const result = await igAdminApi.resetUserPassword(resetTarget.userId);
-      setResetPassword(result.temporary_password);
-    } catch (err) {
-      toast({
-        title: "Ação não concluída",
-        description: err instanceof Error ? err.message : "Tente novamente.",
-        variant: "destructive",
-      });
-      setResetTarget(null);
-    } finally {
-      setResetBusy(false);
-    }
-  };
-
-  const closeResetDialog = () => {
-    setResetTarget(null);
-    setResetPassword(null);
-  };
-
-  const copyPassword = async () => {
-    if (!resetPassword) return;
-    try {
-      await navigator.clipboard.writeText(resetPassword);
-      toast({ title: "Senha copiada" });
-    } catch {
-      toast({ title: "Não foi possível copiar", variant: "destructive" });
-    }
   };
 
   const toggleBlock = async (userId: string, blocked: boolean) => {
@@ -285,47 +249,6 @@ const IgAdminUsers = () => {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={Boolean(resetTarget)} onOpenChange={(open) => !open && closeResetDialog()}>
-        <AlertDialogContent>
-          {!resetPassword ? (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Redefinir senha de cadastro</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Uma nova senha temporária será gerada para <strong>{resetTarget?.label}</strong>. A senha atual não
-                  é exibida em nenhum momento e nenhum outro dado do usuário é alterado. Repasse a nova senha ao
-                  usuário por um canal seguro e oriente a troca no primeiro acesso.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={resetBusy}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction disabled={resetBusy} onClick={(e) => { e.preventDefault(); void confirmResetPassword(); }}>
-                  {resetBusy ? "Gerando..." : "Gerar nova senha"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          ) : (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Senha redefinida</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta senha é exibida uma única vez e não fica salva em nenhum log. Copie e repasse ao usuário por um
-                  canal seguro agora.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
-                <code className="flex-1 select-all break-all text-sm font-medium">{resetPassword}</code>
-                <Button type="button" size="icon" variant="ghost" onClick={() => void copyPassword()} aria-label="Copiar senha">
-                  <Copy className="h-4 w-4" aria-hidden />
-                </Button>
-              </div>
-              <AlertDialogFooter>
-                <AlertDialogAction onClick={closeResetDialog}>Concluído</AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
     </IgAdminShell>
   );
 };
