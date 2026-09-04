@@ -348,7 +348,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (updateError || !updatedUser) {
-        trace("user.password_reset_failed", { user_id: userId, reason: updateError.message.slice(0, 120) });
+        trace("user.password_reset_failed", {
+          user_id: userId,
+          reason: updateError?.message.slice(0, 120) ?? "auth_user_not_found",
+        });
         return fail("Não foi possível redefinir a senha.", 500);
       }
 
