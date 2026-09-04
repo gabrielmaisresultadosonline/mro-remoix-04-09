@@ -340,12 +340,14 @@ Deno.serve(async (req) => {
 
       const passwordData = await hashPassword(newPassword);
       const passwordHash = `pbkdf2$210000$${passwordData.salt}$${passwordData.hash}`;
-      const { error: updateError } = await db
+      const { data: updatedUser, error: updateError } = await db
         .from("auth_users")
         .update({ password_hash: passwordHash, updated_at: new Date().toISOString() })
-        .eq("id", userId);
+        .eq("id", userId)
+        .select("id")
+        .maybeSingle();
 
-      if (updateError) {
+      if (updateError || !updatedUser) {
         trace("user.password_reset_failed", { user_id: userId, reason: updateError.message.slice(0, 120) });
         return fail("Não foi possível redefinir a senha.", 500);
       }

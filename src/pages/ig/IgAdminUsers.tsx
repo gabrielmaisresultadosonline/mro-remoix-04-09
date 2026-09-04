@@ -33,6 +33,12 @@ const IgAdminUsers = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const closePasswordDialog = () => {
+    setPasswordUser(null);
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -98,9 +104,7 @@ const IgAdminUsers = () => {
     try {
       await igAdminApi.resetUserPassword(passwordUser.id, newPassword);
       toast({ title: "Senha redefinida", description: `A nova senha de ${passwordUser.email} já está ativa.` });
-      setPasswordUser(null);
-      setNewPassword("");
-      setConfirmPassword("");
+      closePasswordDialog();
     } catch (err) {
       toast({
         title: "Não foi possível redefinir a senha",
@@ -206,7 +210,7 @@ const IgAdminUsers = () => {
         </div>
       )}
 
-      <Dialog open={Boolean(passwordUser)} onOpenChange={(open) => !open && setPasswordUser(null)}>
+      <Dialog open={Boolean(passwordUser)} onOpenChange={(open) => !open && closePasswordDialog()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Redefinir senha</DialogTitle>
@@ -239,7 +243,7 @@ const IgAdminUsers = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPasswordUser(null)} disabled={Boolean(busy)}>
+            <Button variant="outline" onClick={closePasswordDialog} disabled={Boolean(busy)}>
               Cancelar
             </Button>
             <Button onClick={() => void resetPassword()} disabled={Boolean(busy)}>
