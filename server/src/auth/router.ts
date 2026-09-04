@@ -273,10 +273,10 @@ authRouter.put("/user", async (req, res) => {
   const auth = resolveAuth(req);
   if (!auth.userId) throw new RestError(401, "Sessão inválida.");
 
-  if (typeof req.body?.password === "string" && auth.claims.typ === "recovery") {
+  if (typeof req.body?.password === "string" && auth.claims?.typ === "recovery") {
     const currentUser = await findUserById(auth.userId);
     if (!currentUser) throw new RestError(401, "Link de recuperação inválido.");
-    const issuedAt = Number(auth.claims.iat ?? 0);
+    const issuedAt = Number(auth.claims?.iat ?? 0);
     if (currentUser.updated_at && issuedAt * 1000 <= new Date(currentUser.updated_at).getTime()) {
       throw new RestError(401, "Este link de recuperação já foi utilizado.");
     }
