@@ -12,7 +12,7 @@ API_DOMAIN="${API_DOMAIN:-api.maisresultadosonline.com.br}"
 BACKEND_PORT="${BACKEND_PORT:-8787}"
 SITE_ORIGIN="${SITE_ORIGIN:-https://maisresultadosonline.com.br}"
 FUNCTION_PATH="/functions/v1/mro-tool-api"
-CANONICAL_REPO_URL="https://github.com/gabrielmaisresultadosonline/mro-projeto-17-35-02-09.git"
+CANONICAL_REPO_URL="https://github.com/gabrielmaisresultadosonline/mro-remoix-04-09.git"
 LOG_FILE="${LOG_FILE:-/var/log/mro/mro-tool-cors-check.log}"
 
 log()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
