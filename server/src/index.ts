@@ -110,30 +110,51 @@ app.use((req, res, next) => {
 
 // CORS padrão (com credenciais) para o restante da API. Não roda nas leituras
 // públicas acima, senão sobrescreveria o `*` pela origem refletida.
-const credentialedCors = cors({
-  origin: env.corsOrigins.includes("*") ? true : env.corsOrigins,
-  credentials: true,
-  exposedHeaders: ["Content-Range", "X-Total-Count"],
-  allowedHeaders: [
-    "authorization",
-    "apikey",
-    "content-type",
-    "prefer",
-    "range",
-    "x-client-info",
-    "x-upsert",
-    "x-internal-call",
-    "x-admin-token",
-    "x-requested-with",
-    "accept",
-    "accept-profile",
-    "content-profile",
-    "x-supabase-client-platform",
-    "x-supabase-client-platform-version",
-    "x-supabase-client-runtime",
-    "x-supabase-client-runtime-version",
-  ],
+//
+// Os cabeçalhos permitidos são refletidos a partir do preflight
+// (`Access-Control-Request-Headers`) somados a uma base fixa. Sem isso, cada
+// função nova com header próprio (ex.: `x-ig-admin-token` no /IG/admin) era
+// bloqueada no preflight mesmo com a função respondendo corretamente.
+const BASE_ALLOWED_HEADERS = [
+  "authorization",
+  "apikey",
+  "content-type",
+  "prefer",
+  "range",
+  "x-client-info",
+  "x-upsert",
+  "x-internal-call",
+  "x-admin-token",
+  "x-ig-admin-token",
+  "x-bot-token",
+  "x-requested-with",
+  "accept",
+  "accept-profile",
+  "content-profile",
+  "x-supabase-client-platform",
+  "x-supabase-client-platform-version",
+  "x-supabase-client-runtime",
+  "x-supabase-client-runtime-version",
+];
+
+function allowedHeadersFor(req: Request): string[] {
+  const requested = (req.header("access-control-request-headers") ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  return Array.from(new Set([...BASE_ALLOWED_HEADERS, ...requested]));
+}
+
+const credentialedCors = cors((req, callback) => {
+  callback(null, {
+    origin: env.corsOrigins.includes("*") ? true : env.corsOrigins,
+    credentials: true,
+    exposedHeaders: ["Content-Range", "X-Total-Count"],
+    allowedHeaders: allowedHeadersFor(req as Request),
+    maxAge: 86400,
+  });
 });
+
 
 app.use((req, res, next) => {
   if (isPublicStorageRead(req) || isMroToolApiRequest(req)) return next();
