@@ -273,6 +273,15 @@ authRouter.put("/user", async (req, res) => {
   const auth = resolveAuth(req);
   if (!auth.userId) throw new RestError(401, "Sessão inválida.");
 
+  if (typeof req.body?.password === "string" && auth.claims.typ === "recovery") {
+    const currentUser = await findUserById(auth.userId);
+    if (!currentUser) throw new RestError(401, "Link de recuperação inválido.");
+    const issuedAt = Number(auth.claims.iat ?? 0);
+    if (currentUser.updated_at && issuedAt * 1000 <= new Date(currentUser.updated_at).getTime()) {
+      throw new RestError(401, "Este link de recuperação já foi utilizado.");
+    }
+  }
+
   const updates: string[] = [];
   const params: unknown[] = [auth.userId];
 
@@ -307,7 +316,7 @@ authRouter.post("/logout", (_req, res) => {
 
 async function findUserByEmail(email: string): Promise<AuthUserRow | null> {
   const rows = await adminQuery<AuthUserRow>(
-    `SELECT id, email, password_hash, email_confirmed_at, user_metadata, banned_until
+    `SELECT id, email, password_hash, email_confirmed_at, user_metadata, banned_until, updated_at
        FROM auth_users WHERE lower(email) = $1 LIMIT 1`,
     [email],
   );
@@ -316,7 +325,7 @@ async function findUserByEmail(email: string): Promise<AuthUserRow | null> {
 
 async function findUserById(id: string): Promise<AuthUserRow | null> {
   const rows = await adminQuery<AuthUserRow>(
-    `SELECT id, email, password_hash, email_confirmed_at, user_metadata, banned_until
+    `SELECT id, email, password_hash, email_confirmed_at, user_metadata, banned_until, updated_at
        FROM auth_users WHERE id = $1 LIMIT 1`,
     [id],
   );
@@ -326,6 +335,28 @@ async function findUserById(id: string): Promise<AuthUserRow | null> {
 function maskEmail(email: string): string {
   const [local = "", domain = ""] = email.split("@");
   return `${local.slice(0, 2)}***@${domain}`;
+}
+
+function safeRecoveryRedirect(value: string): string {
+  try {
+    const url = new URL(value || "https://maisresultadosonline.com.br/IG/reset-password");
+    if (url.protocol !== "https:" || url.hostname !== "maisresultadosonline.com.br") throw new Error();
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return "https://maisresultadosonline.com.br/IG/reset-password";
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character] ?? character);
 }
 
 export { hashPassword, verifyPassword };
