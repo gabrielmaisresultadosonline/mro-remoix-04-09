@@ -204,6 +204,60 @@ authRouter.post("/signup", async (req, res) => {
   res.json(buildSession(rows[0]));
 });
 
+/** POST /auth/v1/recover — envia um link de recuperação válido por 30 minutos. */
+authRouter.post("/recover", async (req, res) => {
+  const email = String(req.body?.email ?? "").toLowerCase().trim();
+  const rawRedirect = String(req.query.redirect_to ?? req.body?.redirect_to ?? "");
+  const redirectTo = safeRecoveryRedirect(rawRedirect);
+  const user = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? await findUserByEmail(email) : null;
+
+  // Resposta uniforme para não revelar quais e-mails estão cadastrados.
+  if (!user) {
+    console.info(`[auth] recuperação solicitada email=${maskEmail(email)} conta=nao_localizada`);
+    res.json({});
+    return;
+  }
+
+  const smtpPassword = process.env.SMTP_PASSWORD?.trim();
+  if (!smtpPassword) {
+    console.error("[auth] recuperação indisponível motivo=smtp_nao_configurado");
+    throw new RestError(503, "Serviço de recuperação temporariamente indisponível.");
+  }
+
+  const { token } = signToken({
+    sub: user.id,
+    email: user.email,
+    role: "authenticated",
+    ttlSeconds: RECOVERY_TTL_SECONDS,
+    extra: { typ: "recovery", user_metadata: user.user_metadata ?? {} },
+  });
+  const link = `${redirectTo}#access_token=${encodeURIComponent(token)}&token_type=bearer&type=recovery&expires_in=${RECOVERY_TTL_SECONDS}`;
+  const smtpUser = process.env.SMTP_USER?.trim() || "suporte@maisresultadosonline.com.br";
+  const smtpPort = Number(process.env.SMTP_PORT || 465);
+  const transport = nodemailer.createTransport({
+    host: process.env.SMTP_HOST?.trim() || "smtp.hostinger.com",
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: { user: smtpUser, pass: smtpPassword },
+  });
+
+  try {
+    await transport.sendMail({
+      from: `MRO - Mais Resultados Online <${smtpUser}>`,
+      to: user.email,
+      subject: "Redefinição de senha do Instagram MRO",
+      text: `Use este link para redefinir sua senha. Ele expira em 30 minutos: ${link}`,
+      html: `<p>Recebemos uma solicitação para redefinir sua senha.</p><p><a href="${escapeHtml(link)}">Definir nova senha</a></p><p>O link expira em 30 minutos. Se você não fez esta solicitação, ignore este e-mail.</p>`,
+    });
+    console.info(`[auth] recuperação enviada user=${user.id}`);
+  } catch (error) {
+    console.error(`[auth] recuperação falhou user=${user.id} motivo=${error instanceof Error ? error.message : "erro_desconhecido"}`);
+    throw new RestError(503, "Não foi possível enviar o e-mail de recuperação.");
+  }
+
+  res.json({});
+});
+
 /** GET /auth/v1/user */
 authRouter.get("/user", async (req, res) => {
   const auth = resolveAuth(req);
