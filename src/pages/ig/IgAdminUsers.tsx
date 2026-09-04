@@ -1,11 +1,20 @@
 /** /IG/admin/users — listagem, busca e bloqueio de clientes (auditado). */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { KeyRound, Search } from "lucide-react";
 import IgAdminShell from "@/components/ig/IgAdminShell";
 import { IgEmpty, IgError, IgLoading } from "@/components/ig/IgStates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { igAdminApi } from "@/lib/ig/adminApi";
 
@@ -20,6 +29,15 @@ const IgAdminUsers = () => {
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [passwordUser, setPasswordUser] = useState<{ id: string; email: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const closePasswordDialog = () => {
+    setPasswordUser(null);
+    setNewPassword("");
+    setConfirmPassword("");
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,6 +81,33 @@ const IgAdminUsers = () => {
     } catch (err) {
       toast({
         title: "Ação não concluída",
+        description: err instanceof Error ? err.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!passwordUser) return;
+    if (newPassword.length < 8) {
+      toast({ title: "Senha muito curta", description: "Use no mínimo 8 caracteres.", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "As senhas não coincidem", variant: "destructive" });
+      return;
+    }
+
+    setBusy(passwordUser.id);
+    try {
+      await igAdminApi.resetUserPassword(passwordUser.id, newPassword);
+      toast({ title: "Senha redefinida", description: `A nova senha de ${passwordUser.email} já está ativa.` });
+      closePasswordDialog();
+    } catch (err) {
+      toast({
+        title: "Não foi possível redefinir a senha",
         description: err instanceof Error ? err.message : "Tente novamente.",
         variant: "destructive",
       });
@@ -136,14 +181,26 @@ const IgAdminUsers = () => {
                       {user.last_login_at ? new Date(user.last_login_at).toLocaleString("pt-BR") : "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant={user.is_blocked ? "secondary" : "outline"}
-                        disabled={busy === user.user_id}
-                        onClick={() => void toggleBlock(user.user_id, !user.is_blocked)}
-                      >
-                        {user.is_blocked ? "Desbloquear" : "Bloquear"}
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          disabled={busy === user.user_id || !user.email}
+                          onClick={() => setPasswordUser({ id: user.user_id, email: user.email ?? "usuário" })}
+                          aria-label={`Redefinir senha de ${user.email ?? "usuário"}`}
+                          title="Redefinir senha"
+                        >
+                          <KeyRound className="h-4 w-4" aria-hidden />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={user.is_blocked ? "secondary" : "outline"}
+                          disabled={busy === user.user_id}
+                          onClick={() => void toggleBlock(user.user_id, !user.is_blocked)}
+                        >
+                          {user.is_blocked ? "Desbloquear" : "Bloquear"}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -152,6 +209,50 @@ const IgAdminUsers = () => {
           </table>
         </div>
       )}
+
+      <Dialog open={Boolean(passwordUser)} onOpenChange={(open) => !open && closePasswordDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Redefinir senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para {passwordUser?.email}. A senha atual não será exibida.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="ig-user-new-password">Nova senha</Label>
+              <Input
+                id="ig-user-new-password"
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ig-user-confirm-password">Confirmar nova senha</Label>
+              <Input
+                id="ig-user-confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closePasswordDialog} disabled={Boolean(busy)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => void resetPassword()} disabled={Boolean(busy)}>
+              {busy ? "Salvando..." : "Redefinir senha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </IgAdminShell>
   );
 };

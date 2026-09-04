@@ -9,6 +9,12 @@
 ## Pendente
 - [ ] Remover senha administrativa hardcoded dos painéis secundários (IAVendeMais, Empresas, ZapMRO Vendas, Instagram Nova Email/Euro, TokensPanel, EstruturaTutoriais, UserHeader, DescontoAlunos, documentação Ads News)
 
+## Login de clientes /IG
+- [x] Aceitar hashes bcrypt importados e convertê-los para PBKDF2 no primeiro login válido
+- [x] Registrar diagnósticos de login sem expor e-mail completo ou senha
+- [x] Permitir redefinição auditada da senha de clientes pelo `/IG/admin`
+- [x] Implementar `/auth/v1/recover` com e-mail SMTP e link restrito de recuperação
+
 ## Login CORS incident
 - [x] Corrigir falha de typecheck que impedia `lovablack-api` de iniciar no Deno
 - [x] Validar no deploy que o POST do login retorna 401 e CORS pela URL pública

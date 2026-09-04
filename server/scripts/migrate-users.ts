@@ -92,7 +92,9 @@ export async function migrateUsers(): Promise<void> {
        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)
        ON CONFLICT (id) DO UPDATE
          SET email = EXCLUDED.email,
-             password_hash = EXCLUDED.password_hash,
+             -- A VPS passa a ser a origem da senha após a primeira migração.
+             -- Não restaure o hash antigo em cada deploy/cutover, pois isso
+             -- desfaria redefinições feitas pelo administrador no /IG/admin.
              user_metadata = EXCLUDED.user_metadata,
              updated_at = now()`,
       [
