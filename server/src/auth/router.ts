@@ -62,9 +62,11 @@ function verifyPassword(password: string, stored: string): boolean {
  * sucesso, o substituímos por PBKDF2 para não manter bcrypt no runtime Node.
  */
 async function verifyStoredPassword(password: string, stored: string): Promise<boolean> {
-  if (!stored.startsWith("bcrypt:")) return verifyPassword(password, stored);
+  const isPrefixedBcrypt = stored.startsWith("bcrypt:");
+  const isRawBcrypt = /^\$2[aby]\$\d{2}\$/.test(stored);
+  if (!isPrefixedBcrypt && !isRawBcrypt) return verifyPassword(password, stored);
 
-  const bcryptHash = stored.slice("bcrypt:".length);
+  const bcryptHash = isPrefixedBcrypt ? stored.slice("bcrypt:".length) : stored;
   if (!/^\$2[aby]\$\d{2}\$/.test(bcryptHash)) return false;
 
   const rows = await adminQuery<{ valid: boolean }>(
@@ -158,7 +160,7 @@ authRouter.post("/token", async (req, res) => {
     throw new RestError(403, "Usuário bloqueado.");
   }
 
-  if (user.password_hash.startsWith("bcrypt:")) {
+  if (user.password_hash.startsWith("bcrypt:") || /^\$2[aby]\$\d{2}\$/.test(user.password_hash)) {
     await adminQuery(
       "UPDATE auth_users SET password_hash = $2, last_sign_in_at = now(), updated_at = now() WHERE id = $1",
       [user.id, hashPassword(password)],

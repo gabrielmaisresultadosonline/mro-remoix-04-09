@@ -103,6 +103,9 @@ export const igAdminApi = {
   setUserBlocked: (userId: string, blocked: boolean) =>
     invoke<{ success: true }>({ action: "set-user-blocked", user_id: userId, blocked }),
 
+  resetUserPassword: (userId: string) =>
+    invoke<{ success: true; temporary_password: string }>({ action: "reset-user-password", user_id: userId }),
+
   resetUserPassword: (userId: string, newPassword: string) =>
     invoke<{ success: true }>({ action: "reset-user-password", user_id: userId, new_password: newPassword }),
 

@@ -242,6 +242,18 @@ set -a; . ./server/.env; set +a
 psql -v ON_ERROR_STOP=1 -d "$DATABASE_URL" -f server/migrations/000_bootstrap.sql >/dev/null
 ok "Extensões, roles, storage, auth e realtime aplicados."
 
+# Diagnóstico seguro do login: mostra apenas quantidades por formato de hash,
+# nunca e-mails, hashes completos ou senhas. Facilita identificar migrações
+# incompletas diretamente no terminal da VPS.
+AUTH_HASH_STATUS="$(psql -t -A -d "$DATABASE_URL" -c "
+  SELECT 'total=' || count(*) ||
+         ' pbkdf2=' || count(*) FILTER (WHERE password_hash LIKE 'pbkdf2$%') ||
+         ' bcrypt=' || count(*) FILTER (WHERE password_hash LIKE 'bcrypt:$2%' OR password_hash LIKE '$2%') ||
+         ' disabled=' || count(*) FILTER (WHERE password_hash LIKE 'disabled:%')
+    FROM public.auth_users;
+" 2>/dev/null || true)"
+[ -n "$AUTH_HASH_STATUS" ] && ok "Diagnóstico das contas: $AUTH_HASH_STATUS"
+
 if [ -f server/migrations/001_schema_legacy.sql ]; then
   psql -v ON_ERROR_STOP=0 -d "$DATABASE_URL" -f server/migrations/001_schema_legacy.sql >/dev/null 2>&1 || true
   ok "Schema das tabelas do projeto aplicado."
