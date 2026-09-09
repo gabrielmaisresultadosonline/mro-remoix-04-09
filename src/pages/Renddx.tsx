@@ -63,10 +63,10 @@ const Renddx = () => {
 
   const planConfig = {
     label: 'MRO para Empresas',
-    amount: 67,
-    planType: 'monthly',
-    priceDisplay: 'R$67',
-    durationDisplay: '30 dias de acesso',
+    amount: 300,
+    planType: 'annual',
+    priceDisplay: 'R$300',
+    durationDisplay: '12 meses de acesso',
   };
 
   useEffect(() => {
@@ -132,16 +132,8 @@ const Renddx = () => {
         
         const hubProducts = data || [];
         
-        // Mapear produtos do HUB e adicionar o bump de Suporte
+        // Produtos do HUB (sem bump de Suporte WhatsApp)
         const allProducts = [
-          {
-            id: "suporte-wa",
-            slug: "suporte-whatsapp",
-            title: "Suporte exclusivo Whatsapp",
-            description: "Acesso direto ao time de especialistas",
-            price: 19,
-            plan_type: "mensal"
-          },
           ...hubProducts
             .filter(p => p.slug === 'segredo-vender-mais' || p.slug === 'postscomia')
             .map(p => ({
@@ -200,7 +192,7 @@ const Renddx = () => {
       if (checkError) { toast.error("Erro ao criar link de pagamento. Tente novamente."); return; }
       if (checkData.userExists) { toast.error("Este nome de usuário já está em uso. Escolha outro."); setUsernameError("Usuário já existe, escolha outro"); return; }
       if (!checkData.success) { toast.error(checkData.error || "Erro ao criar pagamento"); return; }
-      trackInitiateCheckout(`MRO para Empresas - 30 dias - R$67`, totalAmount);
+      trackInitiateCheckout(`MRO para Empresas - Anual - R$300`, totalAmount);
       window.location.href = checkData.payment_link;
     } catch (error) { toast.error("Erro ao processar. Tente novamente."); } finally { setLoading(false); }
   };
@@ -377,7 +369,7 @@ const Renddx = () => {
             <p className="relative mt-4 text-sm sm:text-base md:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">Software profissional de gestão e automação de marketing para <span className="text-green-300 font-semibold">empresas, agências e prestadores de serviço</span>. Organize processos, ganhe produtividade e atenda mais clientes.</p>
           </div>
 
-          {/* Vídeo Principal e CTA R$97 / 30 dias */}
+          {/* Vídeo Principal e CTA R$300 / Anual */}
           <div className="max-w-4xl mx-auto mb-10 sm:mb-16 space-y-8">
             <div className="bg-zinc-900/40 border border-green-500/20 rounded-3xl p-4 sm:p-6 backdrop-blur-sm">
               <Suspense fallback={<div className="aspect-video w-full bg-zinc-900 animate-pulse rounded-xl" />}>
@@ -386,12 +378,12 @@ const Renddx = () => {
               
               <div className="mt-8 flex flex-col items-center gap-4">
                 <div className="flex flex-col items-center">
-                  <span className="text-zinc-400 text-sm uppercase font-bold tracking-widest">30 DIAS DE ACESSO COM SUPORTE INCLUSO</span>
-                  <span className="text-zinc-500 text-base font-bold line-through">De R$147</span>
+                  <span className="text-zinc-400 text-sm uppercase font-bold tracking-widest">ACESSO ANUAL COM SUPORTE INCLUSO</span>
+                  <span className="text-zinc-500 text-base font-bold line-through">De R$804</span>
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold text-green-500">R$</span>
-                    <span className="text-6xl font-black text-green-500">67</span>
-                    <span className="text-zinc-400 text-sm font-bold">/30 dias</span>
+                    <span className="text-6xl font-black text-green-500">300</span>
+                    <span className="text-zinc-400 text-sm font-bold">/ano</span>
                   </div>
                 </div>
                 
@@ -430,7 +422,7 @@ const Renddx = () => {
         <div className="max-w-5xl mx-auto text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-full px-4 py-2 mb-4">
             <Rocket className="w-4 h-4 text-green-400" />
-            <span className="text-green-400 font-bold text-xs uppercase">Teste por 30 dias</span>
+            <span className="text-green-400 font-bold text-xs uppercase">Acesso anual</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-black mb-4 uppercase">COMO FUNCIONA O <span className="text-green-400">MODELO DE SERVIÇO</span></h2>
           <p className="text-gray-300 text-sm sm:text-lg max-w-3xl mx-auto">Utilize a MRO para empresas: organize atendimentos, automatize tarefas e profissionalize sua operação.</p>
@@ -467,17 +459,17 @@ const Renddx = () => {
         <div className="max-w-md mx-auto bg-zinc-900 border-2 border-green-500 rounded-3xl p-8 text-center relative shadow-[0_0_40px_rgba(34,197,94,0.2)]">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-black font-black px-6 py-1 rounded-full text-xs">OFERTA EXCLUSIVA</div>
           <h3 className="text-2xl font-bold mb-4">ACESSO COMPLETO AO MRO</h3>
-          <div className="text-zinc-400 text-sm font-bold mb-2 uppercase tracking-widest">Plano 30 Dias</div>
+          <div className="text-zinc-400 text-sm font-bold mb-2 uppercase tracking-widest">Plano Anual</div>
           <div className="flex flex-col items-center mb-2">
-            <span className="text-zinc-500 text-sm line-through">De R$147</span>
-            <div className="text-5xl font-black text-green-400">R$67</div>
+            <span className="text-zinc-500 text-sm line-through">De R$804</span>
+            <div className="text-5xl font-black text-green-400">R$300</div>
           </div>
-          <p className="text-zinc-400 mb-6">30 dias de acesso • suporte já incluso</p>
+          <p className="text-zinc-400 mb-6">12 meses de acesso • suporte já incluso</p>
           <ul className="text-left space-y-3 mb-8 text-zinc-300 text-sm">
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 4 contas fixas + 5 testes (Total 9)</li>
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Passo a passo completo de uso</li>
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Treinamento de gestão para empresas</li>
-            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Acesso imediato (30 dias)</li>
+            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Acesso imediato (12 meses)</li>
           </ul>
           <Button onClick={() => setShowCheckoutModal(true)} className="w-full bg-green-500 hover:bg-green-600 text-black font-black py-6 rounded-xl text-lg btn-pulse-green shadow-[0_0_20px_rgba(34,197,94,0.2)]">QUERO ACESSAR O MRO</Button>
         </div>
