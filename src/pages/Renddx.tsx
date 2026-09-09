@@ -63,10 +63,10 @@ const Renddx = () => {
 
   const planConfig = {
     label: 'MRO para Empresas',
-    amount: 67,
-    planType: 'monthly',
-    priceDisplay: 'R$67',
-    durationDisplay: '30 dias de acesso',
+    amount: 300,
+    planType: 'annual',
+    priceDisplay: 'R$300',
+    durationDisplay: '12 meses de acesso',
   };
 
   useEffect(() => {
@@ -132,16 +132,8 @@ const Renddx = () => {
         
         const hubProducts = data || [];
         
-        // Mapear produtos do HUB e adicionar o bump de Suporte
+        // Produtos do HUB (sem bump de Suporte WhatsApp)
         const allProducts = [
-          {
-            id: "suporte-wa",
-            slug: "suporte-whatsapp",
-            title: "Suporte exclusivo Whatsapp",
-            description: "Acesso direto ao time de especialistas",
-            price: 19,
-            plan_type: "mensal"
-          },
           ...hubProducts
             .filter(p => p.slug === 'segredo-vender-mais' || p.slug === 'postscomia')
             .map(p => ({
