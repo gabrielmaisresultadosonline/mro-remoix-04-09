@@ -369,7 +369,7 @@ const Renddx = () => {
             <p className="relative mt-4 text-sm sm:text-base md:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">Software profissional de gestão e automação de marketing para <span className="text-green-300 font-semibold">empresas, agências e prestadores de serviço</span>. Organize processos, ganhe produtividade e atenda mais clientes.</p>
           </div>
 
-          {/* Vídeo Principal e CTA R$97 / 30 dias */}
+          {/* Vídeo Principal e CTA R$300 / Anual */}
           <div className="max-w-4xl mx-auto mb-10 sm:mb-16 space-y-8">
             <div className="bg-zinc-900/40 border border-green-500/20 rounded-3xl p-4 sm:p-6 backdrop-blur-sm">
               <Suspense fallback={<div className="aspect-video w-full bg-zinc-900 animate-pulse rounded-xl" />}>
