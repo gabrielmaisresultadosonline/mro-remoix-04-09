@@ -76,6 +76,10 @@ function monthStart(): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
 }
 
+function identifierFingerprint(identifier: string): string {
+  return crypto.createHash("sha256").update(identifier).digest("hex").slice(0, 12);
+}
+
 function totalSlots(user: MroUserRow): number {
   return Math.max(0, Number(user.plan_accounts) || 0) + Math.max(0, Number(user.extra_accounts) || 0);
 }
@@ -156,12 +160,35 @@ async function resolveInstagram(user: MroUserRow, instagram: string) {
 export async function handleNativeMroToolLogin(req: Request, res: Response): Promise<boolean> {
   if (req.method !== "POST") return false;
   const body = parseBody(req.body);
-  if (body?.action !== "login") return false;
-
   const requestId = String(res.getHeader("X-MRO-Request-Id") ?? crypto.randomUUID());
+  const bodyBytes = Buffer.isBuffer(req.body)
+    ? req.body.byteLength
+    : Buffer.byteLength(typeof req.body === "string" ? req.body : JSON.stringify(req.body ?? {}));
+
+  if (!body) {
+    console.warn(
+      `[mro-login:${requestId}] etapa=parse_body resultado=invalido bytes=${bodyBytes} ` +
+        `content_type=${JSON.stringify(req.header("content-type") ?? "ausente")}`,
+    );
+    return false;
+  }
+  if (body.action !== "login") {
+    console.info(
+      `[mro-login:${requestId}] etapa=roteamento resultado=encaminhado action=${JSON.stringify(String(body.action ?? "ausente").slice(0, 80))}`,
+    );
+    return false;
+  }
+
   const identifier = String(body.username ?? body.email ?? body.identifier ?? "").trim().toLowerCase();
   const password = String(body.password ?? "");
+  const fingerprint = identifier ? identifierFingerprint(identifier) : "ausente";
+  res.setHeader("X-MRO-Handler", "native-postgresql-login");
+  console.info(
+    `[mro-login:${requestId}] etapa=recebido handler=native-postgresql-login ` +
+      `identifier_fp=${fingerprint} instagram_enviado=${Boolean(body.instagram ?? body.instagram_username)} bytes=${bodyBytes}`,
+  );
   if (!identifier || !password || identifier.length > 255 || password.length > 255) {
+    console.warn(`[mro-login:${requestId}] etapa=validacao resultado=entrada_invalida identifier_fp=${fingerprint}`);
     res.status(400).json({ success: false, error: "Usuário/email e senha são obrigatórios", request_id: requestId });
     return true;
   }
@@ -177,12 +204,19 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
       [identifier],
     );
     let user = users[0];
+    console.info(
+      `[mro-login:${requestId}] etapa=consulta_usuario resultado=${user ? "encontrado" : "nao_encontrado"} identifier_fp=${fingerprint}`,
+    );
     const expectedHash = sha256(password);
     const hashMatches = Boolean(user?.password_hash && safeEqual(expectedHash, user.password_hash));
     const plainMatches = Boolean(user?.password_plain && safeEqual(password, user.password_plain));
 
     if (!user || (!hashMatches && !plainMatches)) {
-      console.warn(`[mro-login:${requestId}] recusado motivo=credenciais_invalidas`);
+      console.warn(
+        `[mro-login:${requestId}] etapa=senha resultado=recusado motivo=credenciais_invalidas ` +
+          `identifier_fp=${fingerprint} usuario_encontrado=${Boolean(user)} hash_presente=${Boolean(user?.password_hash)} ` +
+          `legado_presente=${Boolean(user?.password_plain)}`,
+      );
       res.status(200).json({ success: false, error: "Usuário ou senha incorretos", request_id: requestId });
       return true;
     }
@@ -192,9 +226,14 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
         user.id,
         expectedHash,
       ]);
+      console.info(`[mro-login:${requestId}] etapa=senha resultado=migrado_para_sha256 user_id=${user.id}`);
     }
 
     const info = planInfo(user);
+    console.info(
+      `[mro-login:${requestId}] etapa=plano ativo=${user.is_active} expirado=${info.expired} ` +
+        `acesso=${info.access_allowed} user_id=${user.id}`,
+    );
     if (!info.access_allowed) {
       res.status(200).json({
         success: false,
@@ -221,6 +260,10 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
 
     const instagram = normalizeInstagram(body.instagram ?? body.instagram_username);
     const instagramCheck = instagram ? await resolveInstagram(user, instagram) : null;
+    console.info(
+      `[mro-login:${requestId}] etapa=instagram enviado=${Boolean(instagram)} ` +
+        `registrado=${instagramCheck?.registered ?? "nao_verificado"} fonte=${instagramCheck?.source ?? "nenhuma"} user_id=${user.id}`,
+    );
     if (instagramCheck && !instagramCheck.registered) {
       res.status(200).json({
         success: false,
@@ -277,12 +320,16 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
       request_id: requestId,
     };
 
-    console.info(`[mro-login:${requestId}] concluído user=${user.id} instagram=${instagram ? "verificado" : "não_enviado"}`);
+    console.info(
+      `[mro-login:${requestId}] etapa=resposta resultado=sucesso user_id=${user.id} ` +
+        `instagram=${instagram ? "verificado" : "nao_enviado"} contas=${fixedAccounts.length} testes=${trialAccounts.length}`,
+    );
     res.status(200).json(payload);
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : "erro desconhecido";
-    console.error(`[mro-login:${requestId}] falha no PostgreSQL: ${message}`);
+    const code = typeof error === "object" && error && "code" in error ? String(error.code) : "sem_codigo";
+    console.error(`[mro-login:${requestId}] etapa=postgres resultado=erro code=${code} message=${JSON.stringify(message)}`);
     res.status(503).json({ success: false, error: "Erro temporário na comunicação com o servidor", request_id: requestId });
     return true;
   }
