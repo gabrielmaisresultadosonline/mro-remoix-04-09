@@ -156,7 +156,7 @@ check_cors() {
   echo "    allow-methods: ${methods:-ausente}"
   echo "    allow-headers: ${allowed:-ausente}"
 
-  if [[ "$status" != "$expected_status" || "$count" != "1" || ( "$origin" != "*" && "$origin" != "$SITE_ORIGIN" ) ]]; then
+  if [[ "$status" != "$expected_status" || "$count" != "1" || "$origin" != "$request_origin" ]]; then
     echo "  allow-methods: ${methods:-ausente}"
     echo "  allow-headers: ${allowed:-ausente}"
     head -c 1500 "$body" 2>/dev/null || true; echo

@@ -1,22 +1,26 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
-// CORS aplicado em TODAS as respostas (incluindo erros) e no preflight OPTIONS.
-const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-requested-with, accept, accept-profile, content-profile, prefer, range, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Expose-Headers": "content-length, content-range",
-  "Access-Control-Max-Age": "86400",
-  Vary: "Origin, Access-Control-Request-Headers",
-};
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
+function createCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin");
+  const requestedHeaders = req.headers.get("access-control-request-headers");
+  return {
+    ...(origin
+      ? {
+          "Access-Control-Allow-Origin": origin,
+          "Access-Control-Allow-Credentials": "true",
+        }
+      : {}),
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers":
+      requestedHeaders ??
+      "authorization, x-client-info, apikey, content-type, x-requested-with, accept, accept-profile, content-profile, prefer, range, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Expose-Headers": "content-length, content-range",
+    "Access-Control-Max-Age": "86400",
+    "Cache-Control": "no-store",
+    Vary: "Origin, Access-Control-Request-Headers",
+  };
+}
 
 /** Vitalício threshold — qualquer valor >= 999999 é considerado acesso vitalício. */
 const LIFETIME_DAYS = 999999;
@@ -179,18 +183,21 @@ function totalSlots(user: MroUserRow): number {
 }
 
 serve(async (req) => {
+  const corsHeaders = createCorsHeaders(req);
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   // Preflight: responde 204 com todos os headers CORS, refletindo os headers pedidos.
   if (req.method === "OPTIONS") {
-    const requested = req.headers.get("access-control-request-headers");
     console.log(
-      `[MRO-TOOL-CORS] OPTIONS liberado origin=${req.headers.get("origin") ?? "sem-origin"} headers=${requested ?? "padrão"}`,
+      `[MRO-TOOL-CORS] OPTIONS liberado origin=${req.headers.get("origin") ?? "sem-origin"} headers=${req.headers.get("access-control-request-headers") ?? "padrão"}`,
     );
     return new Response(null, {
       status: 204,
-      headers: {
-        ...corsHeaders,
-        ...(requested ? { "Access-Control-Allow-Headers": requested } : {}),
-      },
+      headers: corsHeaders,
     });
   }
 
