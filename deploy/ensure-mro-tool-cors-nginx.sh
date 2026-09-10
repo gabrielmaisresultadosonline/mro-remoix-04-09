@@ -75,6 +75,7 @@ block = f'''    {start_marker}
 '''
 
 server_pattern = re.compile(r"(?m)^\s*server\s*\{")
+insertions = []
 for server_match in server_pattern.finditer(text):
     opening = text.find("{", server_match.start())
     depth = 0
@@ -92,11 +93,15 @@ for server_match in server_pattern.finditer(text):
     server = text[server_match.start():closing + 1]
     if not re.search(r"server_name[^;]*\b" + re.escape(domain) + r"\b", server):
         continue
-    insertion = server_match.start() + server.find("\n") + 1
-    text = text[:insertion] + block + "\n" + text[insertion:]
-    break
-else:
+    insertions.append(server_match.start() + server.find("\n") + 1)
+
+if not insertions:
     raise SystemExit(f"vhost de {domain} não encontrado em {path}")
+
+# Certbot normalmente mantém um bloco HTTP e outro HTTPS para o mesmo domínio.
+# Instalar em todos evita corrigir apenas o redirecionamento da porta 80.
+for insertion in reversed(insertions):
+    text = text[:insertion] + block + "\n" + text[insertion:]
 
 backup = path.with_suffix(path.suffix + ".pre-mro-cors")
 if not backup.exists():
