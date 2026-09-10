@@ -14,6 +14,7 @@
 import "express-async-errors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
+import crypto from "node:crypto";
 import http from "node:http";
 import { env } from "./env.js";
 import { healthCheck } from "./db.js";

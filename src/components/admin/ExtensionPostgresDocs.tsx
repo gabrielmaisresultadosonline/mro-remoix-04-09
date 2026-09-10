@@ -187,54 +187,31 @@ ANON_KEY     = ${LEGACY_ANON_KEY}
 
   const migrationSnippet = useMemo(
     () => `// ===== extensão: config.js =====
-// Mantenha AS DUAS URLs durante a transição.
-const BACKENDS = {
-  supabase: {
-    url: "${meta.legacy}",
-    apikey: "${LEGACY_ANON_KEY}",
-  },
-  postgres: {
-    url: "${endpoint}",
-    apikey: "${anonKey}",
-  },
-};
-
-// Troque para "postgres" na versão nova. Se algo falhar, o fallback
-// automático abaixo devolve o usuário ao backend antigo (zero downtime).
-const PREFER = "postgres";
+// API única da VPS. Fetch nativo direto, sem proxy e sem service worker.
+const API_URL = "${endpoint}";
 
 async function api(body) {
-  const order = PREFER === "postgres" ? ["postgres", "supabase"] : ["supabase", "postgres"];
-  let lastError = null;
+  const res = await fetch(API_URL, {
+    method: "POST",
+    // Não declare Content-Type/apikey/Authorization. A string é enviada como
+    // text/plain, evitando completamente o OPTIONS/preflight no login.
+    credentials: "omit",
+    cache: "no-store",
+    body: JSON.stringify(body),
+  });
 
-  for (const key of order) {
-    const cfg = BACKENDS[key];
-    try {
-      const res = await fetch(cfg.url, {
-        method: "POST",
-        // Na VPS, não declare Content-Type/apikey/Authorization. O navegador
-        // enviará esta string como text/plain, evitando OPTIONS/preflight.
-        // O endpoint lê req.text() e valida o JSON normalmente.
-        ...(key === "supabase" ? {
-          headers: {
-            "Content-Type": "application/json",
-            apikey: cfg.apikey,
-            Authorization: "Bearer " + cfg.apikey,
-          },
-        } : {}),
-        credentials: "omit",
-        cache: "no-store",
-        body: JSON.stringify(body),
-      });
-      if (!res.ok && res.status >= 500) throw new Error("backend " + key + " indisponível");
-      return { ...(await res.json()), _backend: key };
-    } catch (error) {
-      lastError = error;   // tenta o próximo backend
-    }
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("API retornou resposta inválida (HTTP " + res.status + ")");
   }
-  throw lastError ?? new Error("Nenhum backend respondeu");
+
+  if (!res.ok) throw new Error(data?.error || "HTTP " + res.status);
+  return data;
 }`,
-    [endpoint, meta.legacy, anonKey],
+    [endpoint],
   );
 
   // ⚠️ Avisos: leitura direta do Storage, SEM proxy CORS público.
