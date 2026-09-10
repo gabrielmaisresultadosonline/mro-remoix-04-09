@@ -41,7 +41,10 @@ block = f'''    {start_marker}
     # acrescentados por versões antigas da extensão.
     location ^~ /functions/v1/mro-tool-api {{
         if ($request_method = OPTIONS) {{
-            add_header Access-Control-Allow-Origin "*" always;
+            # Reflete a origem para aceitar também XMLHttpRequest/fetch com
+            # credentials=include. Wildcard é rejeitado pelo navegador nesse modo.
+            add_header Access-Control-Allow-Origin "$http_origin" always;
+            add_header Access-Control-Allow-Credentials "true" always;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
             # Reflete todos os headers pedidos pela extensão. Assim versões novas
             # não voltam a falhar por acrescentarem um header próprio.
@@ -54,11 +57,13 @@ block = f'''    {start_marker}
         }}
 
         proxy_hide_header Access-Control-Allow-Origin;
+        proxy_hide_header Access-Control-Allow-Credentials;
         proxy_hide_header Access-Control-Allow-Methods;
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Expose-Headers;
         proxy_hide_header Access-Control-Max-Age;
-        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Origin "$http_origin" always;
+        add_header Access-Control-Allow-Credentials "true" always;
         add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
         add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
         add_header Access-Control-Expose-Headers "Content-Length, Content-Range, Content-Type, X-MRO-Request-Id, X-MRO-Handler" always;
@@ -66,6 +71,7 @@ block = f'''    {start_marker}
         add_header Access-Control-Allow-Private-Network "true" always;
         add_header Cross-Origin-Resource-Policy "cross-origin" always;
         add_header Cache-Control "no-store" always;
+        add_header Vary "Origin, Access-Control-Request-Headers" always;
         add_header X-Cors-Owner "nginx-mro-tool" always;
 
         access_log /var/log/nginx/mro-tool-access.log combined;
@@ -128,7 +134,7 @@ else
 fi
 
 check_url() {
-  local label="$1" url="$2" headers status count origin allowed methods owner
+  local label="$1" url="$2" headers status count origin credentials allowed methods owner
   headers="$(mktemp)"
   status="$(curl -sS --max-time 20 -X OPTIONS -o /dev/null -D "$headers" -w '%{http_code}' \
     -H 'Origin: chrome-extension://mro-ferramenta' \
@@ -137,10 +143,12 @@ check_url() {
     "$url" || true)"
   count="$(grep -ci '^access-control-allow-origin:' "$headers" || true)"
   origin="$(grep -i '^access-control-allow-origin:' "$headers" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
+  credentials="$(grep -i '^access-control-allow-credentials:' "$headers" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
   allowed="$(grep -i '^access-control-allow-headers:' "$headers" | head -1 | tr '[:upper:]' '[:lower:]' || true)"
   methods="$(grep -i '^access-control-allow-methods:' "$headers" | head -1 | tr '[:lower:]' '[:upper:]' || true)"
   owner="$(grep -i '^x-cors-owner:' "$headers" | head -1 | tr -d '\r' || true)"
-  if [[ "$status" != "204" || "$count" != "1" || "$origin" != "*" \
+  if [[ "$status" != "204" || "$count" != "1" || "$origin" != "chrome-extension://mro-ferramenta" \
+      || "$credentials" != "true" \
       || "$methods" != *"POST"* || "$allowed" != *"authorization"* \
       || "$allowed" != *"apikey"* || "$allowed" != *"content-type"* \
       || "$allowed" != *"x-client-info"* || "$allowed" != *"x-supabase-client-platform"* ]]; then
@@ -149,7 +157,7 @@ check_url() {
     rm -f "$headers"
     return 1
   fi
-  echo "OK: $label liberado (HTTP 204, origem *, um único header; ${owner:-rota local})."
+  echo "OK: $label liberado (HTTP 204, origem refletida, credenciais aceitas; ${owner:-rota local})."
   rm -f "$headers"
 }
 
@@ -208,9 +216,10 @@ DIRECT_BODY="$(curl -sS --max-time 15 -X POST -D "$DIRECT_HEADERS" \
   "https://${API_DOMAIN}/functions/v1/mro-tool-api" || true)"
 DIRECT_DURATION="$(( $(date +%s) - DIRECT_STARTED ))"
 DIRECT_ORIGIN="$(grep -i '^access-control-allow-origin:' "$DIRECT_HEADERS" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
+DIRECT_CREDENTIALS="$(grep -i '^access-control-allow-credentials:' "$DIRECT_HEADERS" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
 DIRECT_STATUS="$(head -1 "$DIRECT_HEADERS" | awk '{print $2}' || true)"
 rm -f "$DIRECT_HEADERS"
-if [[ "$DIRECT_STATUS" != "200" || "$DIRECT_ORIGIN" != "*" ]] \
+if [[ "$DIRECT_STATUS" != "200" || "$DIRECT_ORIGIN" != "https://www.instagram.com" || "$DIRECT_CREDENTIALS" != "true" ]] \
     || ! printf '%s' "$DIRECT_BODY" | grep -q '"success":false'; then
   echo "ERRO: o POST real da extensão não retornou HTTP 200, JSON e CORS válidos." >&2
   exit 1

@@ -30,4 +30,5 @@
 - [x] Preservar o contrato original da extensão e atender o login diretamente no PostgreSQL, sem depender do processo Deno
 - [x] Adicionar rastreamento seguro por requisição e monitor ao vivo do login da extensão na VPS
 - [x] Rastrear URL da extensão no acesso geral do Nginx e aceitar variações com barra/caminho adicional
+- [x] Substituir wildcard pela origem refletida com credenciais, compatível com XMLHttpRequest direto da extensão
 - [ ] Executar a atualização na VPS e confirmar um login real da extensão (bloqueado até o código chegar ao servidor)

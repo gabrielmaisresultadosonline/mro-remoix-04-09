@@ -31,7 +31,7 @@ curl -sS --max-time 15 -o /dev/null -D - -X OPTIONS \
   -H 'Access-Control-Request-Method: POST' \
   -H 'Access-Control-Request-Headers: authorization,apikey,content-type,x-client-info,x-supabase-client-platform' \
   "https://${API_DOMAIN}/functions/v1/mro-tool-api" \
-  | grep -iE '^(HTTP/|access-control-|x-cors-owner|server:|cf-ray:)' || true
+  | grep -iE '^(HTTP/|access-control-|vary:|x-cors-owner|server:|cf-ray:)' || true
 echo
 
 echo "[3/4] POST de diagnóstico sem credencial real"
@@ -45,7 +45,7 @@ STATUS="$(curl -sS --max-time 15 -o "$BODY" -D "$HEADERS" -w '%{http_code}' -X P
   --data-binary '{"action":"login","username":"__mro_log_probe__","password":"__invalid__"}' \
   "https://${API_DOMAIN}/functions/v1/mro-tool-api" || true)"
 echo "HTTP ${STATUS:-000}"
-grep -iE '^(access-control-allow-origin|access-control-expose-headers|x-mro-request-id|x-mro-handler|x-cors-owner|content-type):' "$HEADERS" || true
+grep -iE '^(access-control-allow-origin|access-control-allow-credentials|access-control-expose-headers|vary|x-mro-request-id|x-mro-handler|x-cors-owner|content-type):' "$HEADERS" || true
 python3 - "$BODY" <<'PY' || true
 import json, pathlib, sys
 try:
