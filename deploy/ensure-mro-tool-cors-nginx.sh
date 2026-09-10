@@ -45,6 +45,8 @@ block = f'''    {start_marker}
             # não voltam a falhar por acrescentarem um header próprio.
             add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
             add_header Access-Control-Max-Age "86400" always;
+            add_header Access-Control-Allow-Private-Network "true" always;
+            add_header Cross-Origin-Resource-Policy "cross-origin" always;
             add_header Cache-Control "no-store" always;
             return 204;
         }}
@@ -59,6 +61,9 @@ block = f'''    {start_marker}
         add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
         add_header Access-Control-Expose-Headers "Content-Length, Content-Range, Content-Type" always;
         add_header Access-Control-Max-Age "86400" always;
+        add_header Access-Control-Allow-Private-Network "true" always;
+        add_header Cross-Origin-Resource-Policy "cross-origin" always;
+        add_header Cache-Control "no-store" always;
         add_header X-Cors-Owner "nginx-mro-tool" always;
 
         proxy_pass http://127.0.0.1:{port};
@@ -184,5 +189,18 @@ if [[ "$BACKEND_READY" != "true" ]]; then
 fi
 
 check_url "CORS local" "http://127.0.0.1:${BACKEND_PORT}/functions/v1/mro-tool-api"
+
+# O modo recomendado da extensão não envia headers customizados. Este POST é
+# uma requisição simples (text/plain implícito) e não depende de preflight nem
+# de service worker. Credenciais deliberadamente inválidas devem retornar JSON.
+DIRECT_BODY="$(curl -sS --max-time 30 -X POST \
+  -H 'Origin: https://www.instagram.com' \
+  --data-binary '{"action":"login","username":"__mro_cors_probe__","password":"__invalid__"}' \
+  "https://${API_DOMAIN}/functions/v1/mro-tool-api" || true)"
+if ! printf '%s' "$DIRECT_BODY" | grep -q '"success":false'; then
+  echo "ERRO: o POST nativo direto da extensão não retornou JSON válido." >&2
+  exit 1
+fi
+echo "OK: login por fetch nativo direto respondeu sem preflight e sem service worker."
 
 echo "CORS permanente da mro-tool-api instalado e comprovado."
