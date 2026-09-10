@@ -231,4 +231,7 @@ Testar o backend próprio em paralelo, sem cortar nada:
 
 Somente quando tiver 100% de certeza:
   ./deploy.sh --cutover
+
+Para acompanhar uma tentativa real de login da extensão no terminal:
+  sudo bash deploy/watch-mro-tool-login.sh
 EOF

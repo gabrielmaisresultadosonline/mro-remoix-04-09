@@ -59,7 +59,7 @@ block = f'''    {start_marker}
         add_header Access-Control-Allow-Origin "*" always;
         add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
         add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
-        add_header Access-Control-Expose-Headers "Content-Length, Content-Range, Content-Type" always;
+        add_header Access-Control-Expose-Headers "Content-Length, Content-Range, Content-Type, X-MRO-Request-Id, X-MRO-Handler" always;
         add_header Access-Control-Max-Age "86400" always;
         add_header Access-Control-Allow-Private-Network "true" always;
         add_header Cross-Origin-Resource-Policy "cross-origin" always;

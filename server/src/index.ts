@@ -74,7 +74,10 @@ app.use((req, res, next) => {
     requestedHeaders ??
       "authorization, x-client-info, apikey, content-type, x-requested-with, accept, accept-profile, content-profile, prefer, range, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   );
-  res.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range, Content-Type");
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "Content-Length, Content-Range, Content-Type, X-MRO-Request-Id, X-MRO-Handler",
+  );
   res.setHeader("Access-Control-Max-Age", "86400");
   res.setHeader("Access-Control-Allow-Private-Network", "true");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
@@ -84,7 +87,8 @@ app.use((req, res, next) => {
 
   if (req.method === "OPTIONS") {
     console.info(
-      `[MRO-CORS] OPTIONS liberado origin=${origin} headers=${requestedHeaders ?? "padrão"}`,
+      `[MRO-CORS:${requestId}] OPTIONS liberado origin=${origin} headers=${requestedHeaders ?? "padrão"} ` +
+        `user_agent=${JSON.stringify(req.header("user-agent") ?? "ausente")}`,
     );
     res.status(204).end();
     return;
@@ -93,7 +97,9 @@ app.use((req, res, next) => {
   const startedAt = Date.now();
   res.once("finish", () => {
     console.info(
-      `[MRO-API:${requestId}] ${req.method} status=${res.statusCode} origin=${origin} duration_ms=${Date.now() - startedAt}`,
+      `[MRO-API:${requestId}] ${req.method} status=${res.statusCode} origin=${origin} ` +
+        `content_type=${JSON.stringify(req.header("content-type") ?? "ausente")} ` +
+        `content_length=${req.header("content-length") ?? "ausente"} duration_ms=${Date.now() - startedAt}`,
     );
   });
   next();
