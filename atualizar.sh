@@ -173,10 +173,6 @@ if command -v pm2 >/dev/null 2>&1; then
 else
   warn "PM2 não instalado (npm i -g pm2)."
 fi
-if command -v systemctl >/dev/null 2>&1; then
-  sudo systemctl reload nginx && ok "Nginx recarregado."
-fi
-
 # O PM2 confirma o comando antes de o processo Node abrir a porta. Aguarde a
 # saúde real para não confundir inicialização lenta com bloqueio de CORS.
 PORT_LOCAL="${PORT:-8787}"
