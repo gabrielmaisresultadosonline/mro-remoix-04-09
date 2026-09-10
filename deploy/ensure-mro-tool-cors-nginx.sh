@@ -142,6 +142,15 @@ check_url() {
   rm -f "$headers"
 }
 
+echo "Aguardando backend na porta ${BACKEND_PORT}..."
+for i in {1..30}; do
+  if curl -s "http://127.0.0.1:${BACKEND_PORT}/health" > /dev/null; then
+    echo "Backend pronto."
+    break
+  fi
+  sleep 1
+done
+
 check_url "CORS local" "http://127.0.0.1:${BACKEND_PORT}/functions/v1/mro-tool-api"
 check_url "CORS público" "https://${API_DOMAIN}/functions/v1/mro-tool-api"
 

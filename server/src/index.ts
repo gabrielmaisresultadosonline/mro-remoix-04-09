@@ -262,6 +262,9 @@ async function startServer(): Promise<void> {
     console.log(`[api] backend no ar em http://127.0.0.1:${env.port}`);
     console.log(`[api] funções disponíveis: ${listAvailableFunctions().length}`);
     console.log(`[api] storage gravável em ${env.storage.root}`);
+    if (process.send) {
+      process.send("ready");
+    }
   });
 }
 
