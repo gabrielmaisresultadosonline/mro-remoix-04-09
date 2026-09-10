@@ -1012,7 +1012,8 @@ serve(async (req) => {
       if (!body.id) return json({ success: false, error: "ID é obrigatório" }, 400);
       const { error } = await supabase
         .from("mro_tool_users")
-        .update({ trials_used: 0, trials_period_start: monthStart() })
+        .update({ trials_used: 0, trials_period_start: todayISO() })
+
         .eq("id", body.id);
       if (error) return json({ success: false, error: error.message }, 500);
       return json({ success: true });
