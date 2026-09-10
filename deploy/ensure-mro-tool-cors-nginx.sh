@@ -11,29 +11,31 @@ BACKEND_PORT="${BACKEND_PORT:-8787}"
 command -v nginx >/dev/null 2>&1 || { echo "ERRO: nginx não encontrado." >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "ERRO: python3 não encontrado." >&2; exit 1; }
 
-CONFIG_FILE="$(grep -RlE --include='*.conf' --include='*mro*' --include='*api*' \
-  "server_name.*${API_DOMAIN//./\\.}" /etc/nginx 2>/dev/null \
-  | grep -vE '\.(pre-media-hotfix|pre-mro-cors|bak|backup|disabled)$' | head -1 || true)"
+mapfile -t ACTIVE_CONFIG_FILES < <(
+  nginx -T 2>&1 \
+    | sed -n 's|^# configuration file \([^:][^:]*\):$|\1|p' \
+    | awk '!seen[$0]++'
+)
 
-[[ -n "$CONFIG_FILE" ]] || { echo "ERRO: vhost de $API_DOMAIN não encontrado." >&2; exit 1; }
+[[ "${#ACTIVE_CONFIG_FILES[@]}" -gt 0 ]] || {
+  echo "ERRO: nginx -T não informou os arquivos de configuração ativos." >&2
+  exit 1
+}
 
-python3 - "$CONFIG_FILE" "$API_DOMAIN" "$BACKEND_PORT" <<'PY'
+# Não use grep em /etc/nginx para escolher apenas o primeiro resultado: arquivos
+# em sites-available, backups e vhosts antigos podem existir no disco sem serem
+# carregados. nginx -T é a fonte de verdade sobre a configuração em execução.
+python3 - "$API_DOMAIN" "$BACKEND_PORT" "${ACTIVE_CONFIG_FILES[@]}" <<'PY'
 import pathlib
 import re
 import sys
 
-path = pathlib.Path(sys.argv[1])
-domain = sys.argv[2]
-port = sys.argv[3]
-text = path.read_text(encoding="utf-8")
+domain = sys.argv[1]
+port = sys.argv[2]
+config_paths = [pathlib.Path(value) for value in sys.argv[3:]]
 
 start_marker = "# MRO-TOOL-CORS-BEGIN"
 end_marker = "# MRO-TOOL-CORS-END"
-text = re.sub(
-    rf"(?ms)^\s*{re.escape(start_marker)}.*?^\s*{re.escape(end_marker)}\s*\n?",
-    "",
-    text,
-)
 
 block = f'''    {start_marker}
     # Rota pública usada por extensões externas. Não usa cookies.
@@ -92,38 +94,56 @@ block = f'''    {start_marker}
 '''
 
 server_pattern = re.compile(r"(?m)^\s*server\s*\{")
-insertions = []
-for server_match in server_pattern.finditer(text):
-    opening = text.find("{", server_match.start())
-    depth = 0
-    closing = -1
-    for index in range(opening, len(text)):
-        if text[index] == "{":
-            depth += 1
-        elif text[index] == "}":
-            depth -= 1
-            if depth == 0:
-                closing = index
-                break
-    if closing < 0:
+patched = []
+
+for path in config_paths:
+    if not path.is_file():
         continue
-    server = text[server_match.start():closing + 1]
-    if not re.search(r"server_name[^;]*\b" + re.escape(domain) + r"\b", server):
+    original = path.read_text(encoding="utf-8")
+    text = re.sub(
+        rf"(?ms)^\s*{re.escape(start_marker)}.*?^\s*{re.escape(end_marker)}\s*\n?",
+        "",
+        original,
+    )
+    insertions = []
+    for server_match in server_pattern.finditer(text):
+        opening = text.find("{", server_match.start())
+        depth = 0
+        closing = -1
+        for index in range(opening, len(text)):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    closing = index
+                    break
+        if closing < 0:
+            continue
+        server = text[server_match.start():closing + 1]
+        if not re.search(r"server_name[^;]*\b" + re.escape(domain) + r"\b", server):
+            continue
+        insertions.append(server_match.start() + server.find("\n") + 1)
+
+    if not insertions:
         continue
-    insertions.append(server_match.start() + server.find("\n") + 1)
 
-if not insertions:
-    raise SystemExit(f"vhost de {domain} não encontrado em {path}")
+    # Certbot pode manter blocos HTTP e HTTPS em um ou mais includes ativos.
+    for insertion in reversed(insertions):
+        text = text[:insertion] + block + "\n" + text[insertion:]
 
-# Certbot normalmente mantém um bloco HTTP e outro HTTPS para o mesmo domínio.
-# Instalar em todos evita corrigir apenas o redirecionamento da porta 80.
-for insertion in reversed(insertions):
-    text = text[:insertion] + block + "\n" + text[insertion:]
+    backup = path.with_suffix(path.suffix + ".pre-mro-cors")
+    if not backup.exists():
+        backup.write_text(original, encoding="utf-8")
+    path.write_text(text, encoding="utf-8")
+    patched.append(str(path))
 
-backup = path.with_suffix(path.suffix + ".pre-mro-cors")
-if not backup.exists():
-    backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-path.write_text(text, encoding="utf-8")
+if not patched:
+    raise SystemExit(f"vhost ativo de {domain} não encontrado nos arquivos de nginx -T")
+
+print("Configurações ativas corrigidas:")
+for value in patched:
+    print(f"  - {value}")
 PY
 
 nginx -t
@@ -173,6 +193,11 @@ done
 # O preflight público é responsabilidade do Nginx e deve funcionar mesmo durante
 # o reinício do backend. Testamos essa garantia antes de depender da porta 8787.
 check_url "CORS público" "https://${API_DOMAIN}/functions/v1/mro-tool-api"
+
+# Valida o Nginx da própria VPS, não apenas o Express na porta 8787. Isso separa
+# erro de vhost/precedência de qualquer transformação feita pelo Cloudflare.
+check_url "CORS no Nginx local" "http://127.0.0.1/functions/v1/mro-tool-api" \
+  -H "Host: ${API_DOMAIN}"
 
 # POSTs reais ainda dependem do backend. startOrReload retorna antes de o Node
 # terminar a inicialização, portanto aguarde a saúde em vez de tratar um
