@@ -336,16 +336,24 @@ serve(async (req) => {
     }
 
 
-    /** Reinicia o contador de testes quando muda o mês. */
+    /**
+     * Reinicia o contador de testes somente após 30 dias corridos
+     * desde o início do período atual (ou quando o admin renova manualmente).
+     */
     async function ensureTrialPeriod(user: MroUserRow): Promise<MroUserRow> {
-      const start = monthStart();
-      if (user.trials_period_start >= start) return user;
+      const startStr = String(user.trials_period_start || "").slice(0, 10);
+      const startMs = startStr ? Date.parse(`${startStr}T00:00:00Z`) : NaN;
+      const expired =
+        !Number.isFinite(startMs) || Date.now() - startMs >= TRIAL_PERIOD_DAYS * 86_400_000;
+      if (!expired) return user;
+      const today = todayISO();
       await supabase
         .from("mro_tool_users")
-        .update({ trials_used: 0, trials_period_start: start })
+        .update({ trials_used: 0, trials_period_start: today })
         .eq("id", user.id);
-      return { ...user, trials_used: 0, trials_period_start: start };
+      return { ...user, trials_used: 0, trials_period_start: today };
     }
+
 
     async function fullPayload(user: MroUserRow) {
       const accounts = await getAccounts(user.id);
