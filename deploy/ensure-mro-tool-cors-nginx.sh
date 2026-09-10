@@ -22,7 +22,8 @@ for enabled_dir in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
     backup_name="$(basename "$stale_backup").$(date +%s).$$"
     mv "$stale_backup" "$NGINX_BACKUP_DIR/$backup_name"
     echo "Backup inativo removido do include do Nginx: $stale_backup"
-  done < <(find "$enabled_dir" -maxdepth 1 \( -type f -o -type l \) -name '*.pre-mro-cors' -print0)
+  done < <(find "$enabled_dir" -maxdepth 1 \( -type f -o -type l \) \
+    \( -name '*.pre-mro-cors' -o -name '*.pre-media-hotfix' \) -print0)
 done
 
 # Recupera a configuração antes de usar nginx -T como fonte de verdade.

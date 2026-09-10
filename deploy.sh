@@ -487,10 +487,17 @@ else:
     if generic_location:
         updated = updated[:generic_location.start()] + functions_block + "\n\n" + updated[generic_location.start():]
 if updated != text:
-    config_path.with_suffix(config_path.suffix + ".pre-media-hotfix").write_text(text)
+    # Backups dentro de sites-enabled/conf.d também são carregados pelo include
+    # `*` do Nginx e duplicam listen/server. Guarde-os fora da configuração ativa.
+    backup_root = pathlib.Path("/var/backups/mro-nginx")
+    backup_root.mkdir(parents=True, exist_ok=True)
+    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(config_path).strip("/"))
+    backup = backup_root / f"{safe_name}.pre-media-hotfix"
+    if not backup.exists():
+        backup.write_text(text)
     config_path.write_text(updated)
 PY
-    sudo nginx -t || fail "Configuração do Nginx inválida; o arquivo anterior foi preservado em .pre-media-hotfix."
+    sudo nginx -t || fail "Configuração do Nginx inválida; o backup foi preservado em /var/backups/mro-nginx."
     ok "Funções, uploads e mídias públicas encaminhados ao backend local."
   else
     warn "Virtual host da API não localizado; preservando a configuração atual."
