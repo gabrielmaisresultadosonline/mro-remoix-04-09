@@ -32,4 +32,5 @@
 - [x] Rastrear URL da extensão no acesso geral do Nginx e aceitar variações com barra/caminho adicional
 - [x] Substituir wildcard pela origem refletida com credenciais, compatível com XMLHttpRequest direto da extensão
 - [x] Restaurar paridade estrita do JSON de login antigo e normalizar campos numéricos do PostgreSQL
+- [x] Eliminar headers CORS/PNA duplicados no POST direto sem service worker e validar o modo Chromium
 - [ ] Executar a atualização na VPS e confirmar um login real da extensão (bloqueado até o código chegar ao servidor)
