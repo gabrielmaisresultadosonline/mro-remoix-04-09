@@ -601,7 +601,7 @@ if [ "$CUTOVER" = true ]; then
   MRO_CORS_ALLOWED="$(grep -i '^access-control-allow-headers:' "$MRO_CORS_HEADERS" | head -1 | tr -d '\r' || true)"
   if [ "$MRO_CORS_STATUS" = "204" ] \
       && [ "$MRO_CORS_COUNT" = "1" ] \
-      && { [ "$MRO_CORS_ORIGIN" = "*" ] || [ "$MRO_CORS_ORIGIN" = "chrome-extension://mroferramenta" ]; } \
+      && [ "$MRO_CORS_ORIGIN" = "chrome-extension://mroferramenta" ] \
       && [[ "$MRO_CORS_METHODS" == *"POST"* ]] \
       && [[ "${MRO_CORS_ALLOWED,,}" == *"authorization"* ]] \
       && [[ "${MRO_CORS_ALLOWED,,}" == *"apikey"* ]] \
