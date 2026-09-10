@@ -66,6 +66,14 @@ block = f'''    {start_marker}
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Expose-Headers;
         proxy_hide_header Access-Control-Max-Age;
+        # O Express também envia estes headers. Sem ocultá-los, o POST público
+        # recebe valores duplicados (ex.: "true, true"). Chromium aceita a
+        # chamada via service worker/host_permissions, mas rejeita o fetch CORS
+        # direto da página quando o Private Network Access não é exatamente true.
+        proxy_hide_header Access-Control-Allow-Private-Network;
+        proxy_hide_header Cross-Origin-Resource-Policy;
+        proxy_hide_header Cache-Control;
+        proxy_hide_header Vary;
         add_header Access-Control-Allow-Origin "$http_origin" always;
         add_header Access-Control-Allow-Credentials "true" always;
         add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
@@ -156,7 +164,7 @@ else
 fi
 
 check_url() {
-  local label="$1" url="$2" headers status count origin credentials allowed methods owner
+  local label="$1" url="$2" headers status count origin credentials allowed methods owner private_network private_count
   shift 2
   local -a curl_args=("$@")
   headers="$(mktemp)"
@@ -164,16 +172,20 @@ check_url() {
     "${curl_args[@]}" \
     -H 'Origin: chrome-extension://mro-ferramenta' \
     -H 'Access-Control-Request-Method: POST' \
+    -H 'Access-Control-Request-Private-Network: true' \
     -H 'Access-Control-Request-Headers: authorization,apikey,content-type,x-client-info,x-supabase-client-platform' \
     "$url" || true)"
   count="$(grep -ci '^access-control-allow-origin:' "$headers" || true)"
   origin="$(grep -i '^access-control-allow-origin:' "$headers" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
   credentials="$(grep -i '^access-control-allow-credentials:' "$headers" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
+  private_count="$(grep -ci '^access-control-allow-private-network:' "$headers" || true)"
+  private_network="$(grep -i '^access-control-allow-private-network:' "$headers" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
   allowed="$(grep -i '^access-control-allow-headers:' "$headers" | head -1 | tr '[:upper:]' '[:lower:]' || true)"
   methods="$(grep -i '^access-control-allow-methods:' "$headers" | head -1 | tr '[:lower:]' '[:upper:]' || true)"
   owner="$(grep -i '^x-cors-owner:' "$headers" | head -1 | tr -d '\r' || true)"
   if [[ "$status" != "204" || "$count" != "1" || "$origin" != "chrome-extension://mro-ferramenta" \
       || "$credentials" != "true" \
+      || "$private_count" != "1" || "$private_network" != "true" \
       || "$methods" != *"POST"* || "$allowed" != *"authorization"* \
       || "$allowed" != *"apikey"* || "$allowed" != *"content-type"* \
       || "$allowed" != *"x-client-info"* || "$allowed" != *"x-supabase-client-platform"* ]]; then
@@ -248,11 +260,18 @@ DIRECT_BODY="$(curl -sS --max-time 15 -X POST -D "$DIRECT_HEADERS" \
 DIRECT_DURATION="$(( $(date +%s) - DIRECT_STARTED ))"
 DIRECT_ORIGIN="$(grep -i '^access-control-allow-origin:' "$DIRECT_HEADERS" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
 DIRECT_CREDENTIALS="$(grep -i '^access-control-allow-credentials:' "$DIRECT_HEADERS" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
+DIRECT_ORIGIN_COUNT="$(grep -ci '^access-control-allow-origin:' "$DIRECT_HEADERS" || true)"
+DIRECT_CREDENTIALS_COUNT="$(grep -ci '^access-control-allow-credentials:' "$DIRECT_HEADERS" || true)"
+DIRECT_PRIVATE_NETWORK="$(grep -i '^access-control-allow-private-network:' "$DIRECT_HEADERS" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
+DIRECT_PRIVATE_NETWORK_COUNT="$(grep -ci '^access-control-allow-private-network:' "$DIRECT_HEADERS" || true)"
+DIRECT_CORP_COUNT="$(grep -ci '^cross-origin-resource-policy:' "$DIRECT_HEADERS" || true)"
 DIRECT_STATUS="$(head -1 "$DIRECT_HEADERS" | awk '{print $2}' || true)"
 rm -f "$DIRECT_HEADERS"
 if [[ "$DIRECT_STATUS" != "200" || "$DIRECT_ORIGIN" != "https://www.instagram.com" || "$DIRECT_CREDENTIALS" != "true" ]] \
+    || [[ "$DIRECT_ORIGIN_COUNT" != "1" || "$DIRECT_CREDENTIALS_COUNT" != "1" ]] \
+    || [[ "$DIRECT_PRIVATE_NETWORK" != "true" || "$DIRECT_PRIVATE_NETWORK_COUNT" != "1" || "$DIRECT_CORP_COUNT" != "1" ]] \
     || ! printf '%s' "$DIRECT_BODY" | grep -q '"success":false'; then
-  echo "ERRO: o POST real da extensão não retornou HTTP 200, JSON e CORS válidos." >&2
+  echo "ERRO: o POST direto não retornou HTTP 200, JSON e headers CORS/PNA únicos." >&2
   exit 1
 fi
 echo "OK: login no contrato original respondeu pelo servidor em ${DIRECT_DURATION}s, com JSON e CORS."
