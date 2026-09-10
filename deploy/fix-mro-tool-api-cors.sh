@@ -67,6 +67,9 @@ env -u REPO_URL ./deploy.sh --cutover
 ok "Build, banco, frontend, backend e funções atualizados."
 
 log "4/6 Conferindo o proxy correto do Nginx"
+API_DOMAIN="$API_DOMAIN" BACKEND_PORT="$BACKEND_PORT" \
+  bash deploy/ensure-mro-tool-cors-nginx.sh \
+  || die "Falha ao instalar a rota CORS exclusiva no Nginx."
 NGINX_DUMP="$(mktemp)"
 trap 'rm -f "$NGINX_DUMP"' EXIT
 nginx -T >"$NGINX_DUMP" 2>&1 || die "nginx -T falhou."
@@ -106,7 +109,7 @@ if not re.search(r"proxy_pass\s+http://127\.0\.0\.1:" + re.escape(port) + r"\s*;
 if re.search(r"add_header\s+['\"]?Access-Control-", block, flags=re.I):
     raise SystemExit("CORS duplicado no Nginx; os headers devem vir do backend/função")
 PY
-ok "Nginx encaminha funções ao Express em 127.0.0.1:${BACKEND_PORT}, sem CORS duplicado."
+ok "Nginx mantém a rota geral sem duplicação e protege a mro-tool-api com rota CORS exclusiva."
 
 log "5/6 Reiniciando o runtime e aguardando saúde"
 pm2 restart mro-api --update-env >/dev/null || die "PM2 não conseguiu reiniciar mro-api."

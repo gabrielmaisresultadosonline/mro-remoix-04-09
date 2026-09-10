@@ -177,6 +177,21 @@ if command -v systemctl >/dev/null 2>&1; then
   sudo systemctl reload nginx && ok "Nginx recarregado."
 fi
 
+# A extensão depende de preflight público. A rota exclusiva no Nginx responde
+# OPTIONS mesmo se Express/Deno estiver reiniciando e inclui CORS até em 4xx/5xx.
+# O instalador também testa o domínio público e interrompe a atualização se
+# algum proxy/CDN remover ou duplicar Access-Control-Allow-Origin.
+if [ -f deploy/ensure-mro-tool-cors-nginx.sh ]; then
+  sudo env \
+    API_DOMAIN="${API_DOMAIN:-api.maisresultadosonline.com.br}" \
+    BACKEND_PORT="${PORT:-8787}" \
+    bash deploy/ensure-mro-tool-cors-nginx.sh \
+    && ok "CORS permanente da mro-tool-api validado localmente e pelo domínio público." \
+    || fail "Atualização bloqueada: CORS externo da mro-tool-api não foi comprovado."
+else
+  fail "Instalador permanente de CORS ausente nesta revisão."
+fi
+
 # ---------- 7. Verificação ----------
 step "7/7 Conferência"
 if [ "$DB_PRONTO" = true ] && [ "$RAPIDO" = false ]; then

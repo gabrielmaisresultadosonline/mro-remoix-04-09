@@ -497,6 +497,16 @@ PY
   fi
 fi
 
+# Instala uma rota exata para a API usada pela extensão. Ela responde OPTIONS
+# no próprio Nginx e acrescenta CORS inclusive quando o upstream devolve 502.
+# proxy_hide_header impede duplicação com os headers do Express/Deno.
+if command -v nginx >/dev/null 2>&1 && [ -f deploy/ensure-mro-tool-cors-nginx.sh ]; then
+  sudo env API_DOMAIN="${API_DOMAIN:-api.maisresultadosonline.com.br}" BACKEND_PORT="${PORT:-8787}" \
+    bash deploy/ensure-mro-tool-cors-nginx.sh \
+    || fail "Não foi possível instalar ou comprovar o CORS permanente da mro-tool-api."
+  ok "Rota CORS exclusiva da mro-tool-api instalada e validada."
+fi
+
 # Recarrega o Nginx (site estático em dist/) para servir o build novo.
 command -v systemctl >/dev/null 2>&1 && sudo systemctl reload nginx && ok "Nginx recarregado."
 
