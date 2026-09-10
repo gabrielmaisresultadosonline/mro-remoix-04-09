@@ -225,7 +225,7 @@ async function api(body) {
       if (!res.ok && res.status >= 500) throw new Error("backend " + key + " indisponível");
       return { ...(await res.json()), _backend: key };
     } catch (error) {
-      lastError = error;
+      lastError = error;   // tenta o próximo backend
     }
   }
   throw lastError ?? new Error("Nenhum backend respondeu");
@@ -287,7 +287,8 @@ async function loadAnnouncementsSafe() {
   "name": "${meta.label}",
   "version": "1.0.0",
 
-  // libera o fetch direto na API/Storage da VPS e no backend antigo
+  // 👇 libera o fetch direto na API/Storage da VPS (e no backend antigo
+  //    enquanto a transição não terminar). É isto que elimina o proxy CORS.
   "host_permissions": [
     "${base}/*",
     "${LEGACY_ORIGIN}/*"
@@ -304,7 +305,8 @@ async function loadAnnouncementsSafe() {
   ]
 }
 
-// Se preferir centralizar as chamadas no service worker, use:
+// Se preferir centralizar as chamadas no service worker (recomendado, pois
+// ele não sofre a política da página), use:
 //   chrome.runtime.sendMessage({ type: "GET_ANNOUNCEMENTS" })
 // e no background.js responda com o fetch direto mostrado no bloco anterior.`,
     [base, meta.label],

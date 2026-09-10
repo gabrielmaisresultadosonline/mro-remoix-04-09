@@ -28,3 +28,4 @@
 - [x] Tornar o CORS da `mro-tool-api` permanente no Nginx, inclusive em 4xx/5xx, e bloquear atualizações sem validação pública
 - [x] Aguardar a saúde da porta 8787 antes do teste local e refletir qualquer header solicitado pelas extensões
 - [x] Preservar o contrato original da extensão e atender o login diretamente no PostgreSQL, sem depender do processo Deno
+- [ ] Executar a atualização na VPS e confirmar um login real da extensão (bloqueado até o código chegar ao servidor)
