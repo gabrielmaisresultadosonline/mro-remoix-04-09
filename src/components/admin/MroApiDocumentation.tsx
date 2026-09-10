@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileCode } from 'lucide-react';
 
-const ENDPOINT = 'https://api.maisresultadosonline.com.br/functions/v1/mro-tool-api';
+const ENDPOINT = 'https://adljdeekwifwcdcgbpit.supabase.co/functions/v1/mro-tool-api';
 
 const Block: React.FC<{ title: string; description?: string; code: string }> = ({ title, description, code }) => (
   <Card className="p-4 space-y-2">
@@ -242,18 +242,7 @@ const MroApiDocumentation: React.FC = () => (
     <Block
       title="10) Fluxo completo na extensão (login → cadastro fixo ou teste 6h → área de membros)"
       code={`const API = "${ENDPOINT}";
-// Fetch nativo direto, sem service worker e sem headers customizados.
-// A string é enviada como text/plain e não dispara preflight OPTIONS.
-const post = (b) => fetch(API, {
-  method: "POST",
-  credentials: "omit",
-  cache: "no-store",
-  body: JSON.stringify(b)
-}).then(async (r) => {
-  const data = await r.json();
-  if (!r.ok) throw new Error(data?.error || "HTTP " + r.status);
-  return data;
-});
+const post = (b) => fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(r => r.json());
 
 // 1) login com o @ logado no navegador
 const instagram = getLoggedInstagramUsername();

@@ -190,17 +190,27 @@ fi
 
 check_url "CORS local" "http://127.0.0.1:${BACKEND_PORT}/functions/v1/mro-tool-api"
 
-# O modo recomendado da extensão não envia headers customizados. Este POST é
-# uma requisição simples (text/plain implícito) e não depende de preflight nem
-# de service worker. Credenciais deliberadamente inválidas devem retornar JSON.
-DIRECT_BODY="$(curl -sS --max-time 30 -X POST \
+# Repete o contrato original da extensão: JSON + headers de autenticação.
+# Credenciais deliberadamente inválidas devem retornar JSON pelo handler nativo,
+# sem iniciar uma função Deno nem depender de uma porta interna adicional.
+DIRECT_HEADERS="$(mktemp)"
+DIRECT_STARTED="$(date +%s)"
+DIRECT_BODY="$(curl -sS --max-time 15 -X POST -D "$DIRECT_HEADERS" \
   -H 'Origin: https://www.instagram.com' \
+  -H 'Content-Type: application/json' \
+  -H 'apikey: diagnostic-probe' \
+  -H 'Authorization: Bearer diagnostic-probe' \
   --data-binary '{"action":"login","username":"__mro_cors_probe__","password":"__invalid__"}' \
   "https://${API_DOMAIN}/functions/v1/mro-tool-api" || true)"
-if ! printf '%s' "$DIRECT_BODY" | grep -q '"success":false'; then
-  echo "ERRO: o POST nativo direto da extensão não retornou JSON válido." >&2
+DIRECT_DURATION="$(( $(date +%s) - DIRECT_STARTED ))"
+DIRECT_ORIGIN="$(grep -i '^access-control-allow-origin:' "$DIRECT_HEADERS" | head -1 | tr -d '\r' | cut -d: -f2- | xargs || true)"
+DIRECT_STATUS="$(head -1 "$DIRECT_HEADERS" | awk '{print $2}' || true)"
+rm -f "$DIRECT_HEADERS"
+if [[ "$DIRECT_STATUS" != "200" || "$DIRECT_ORIGIN" != "*" ]] \
+    || ! printf '%s' "$DIRECT_BODY" | grep -q '"success":false'; then
+  echo "ERRO: o POST real da extensão não retornou HTTP 200, JSON e CORS válidos." >&2
   exit 1
 fi
-echo "OK: login por fetch nativo direto respondeu sem preflight e sem service worker."
+echo "OK: login no contrato original respondeu pelo servidor em ${DIRECT_DURATION}s, com JSON e CORS."
 
 echo "CORS permanente da mro-tool-api instalado e comprovado."
