@@ -55,6 +55,8 @@ block = f'''    {start_marker}
             add_header Access-Control-Allow-Private-Network "true" always;
             add_header Cross-Origin-Resource-Policy "cross-origin" always;
             add_header Cache-Control "no-store" always;
+            add_header Vary "Origin, Access-Control-Request-Headers" always;
+            add_header X-Cors-Owner "nginx-mro-tool" always;
             return 204;
         }}
 
@@ -155,8 +157,11 @@ fi
 
 check_url() {
   local label="$1" url="$2" headers status count origin credentials allowed methods owner
+  shift 2
+  local -a curl_args=("$@")
   headers="$(mktemp)"
   status="$(curl -sS --max-time 20 -X OPTIONS -o /dev/null -D "$headers" -w '%{http_code}' \
+    "${curl_args[@]}" \
     -H 'Origin: chrome-extension://mro-ferramenta' \
     -H 'Access-Control-Request-Method: POST' \
     -H 'Access-Control-Request-Headers: authorization,apikey,content-type,x-client-info,x-supabase-client-platform' \
@@ -190,14 +195,15 @@ for i in {1..30}; do
   sleep 1
 done
 
-# O preflight público é responsabilidade do Nginx e deve funcionar mesmo durante
-# o reinício do backend. Testamos essa garantia antes de depender da porta 8787.
-check_url "CORS público" "https://${API_DOMAIN}/functions/v1/mro-tool-api"
-
 # Valida o Nginx da própria VPS, não apenas o Express na porta 8787. Isso separa
 # erro de vhost/precedência de qualquer transformação feita pelo Cloudflare.
-check_url "CORS no Nginx local" "http://127.0.0.1/functions/v1/mro-tool-api" \
-  -H "Host: ${API_DOMAIN}"
+check_url "CORS no Nginx local" "https://${API_DOMAIN}/functions/v1/mro-tool-api?cors_probe=$(date +%s)" \
+  --resolve "${API_DOMAIN}:443:127.0.0.1"
+
+# O preflight público é responsabilidade do Nginx e deve funcionar mesmo durante
+# o reinício do backend. O parâmetro único impede reaproveitamento de resposta
+# antiga por cache intermediário durante a atualização.
+check_url "CORS público" "https://${API_DOMAIN}/functions/v1/mro-tool-api?cors_probe=$(date +%s)"
 
 # POSTs reais ainda dependem do backend. startOrReload retorna antes de o Node
 # terminar a inicialização, portanto aguarde a saúde em vez de tratar um
