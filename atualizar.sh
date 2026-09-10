@@ -177,6 +177,29 @@ if command -v systemctl >/dev/null 2>&1; then
   sudo systemctl reload nginx && ok "Nginx recarregado."
 fi
 
+# O PM2 confirma o comando antes de o processo Node abrir a porta. Aguarde a
+# saúde real para não confundir inicialização lenta com bloqueio de CORS.
+PORT_LOCAL="${PORT:-8787}"
+BACKEND_OK=false
+for i in $(seq 1 90); do
+  if HEALTH_JSON="$(curl -sf --max-time 3 "http://127.0.0.1:${PORT_LOCAL}/health" 2>/dev/null)" \
+    && printf '%s' "$HEALTH_JSON" | grep -q '"ok":true'; then
+    ok "Backend local respondendo na porta ${PORT_LOCAL}."
+    BACKEND_OK=true
+    break
+  fi
+  [ "$i" = "1" ] && warn "Aguardando a API concluir a inicialização..."
+  sleep 1
+done
+
+if [ "$BACKEND_OK" != true ]; then
+  warn "Backend local não ficou saudável. Diagnóstico sem credenciais:"
+  pm2 describe mro-api 2>/dev/null | grep -E 'status|script path|exec cwd|restarts|uptime' || true
+  tail -n 80 /var/log/mro/api-out.log 2>/dev/null || true
+  tail -n 120 /var/log/mro/api-error.log 2>/dev/null || true
+  fail "Backend local indisponível; a atualização foi bloqueada antes dos testes da extensão."
+fi
+
 # A extensão depende de preflight público. A rota exclusiva no Nginx responde
 # OPTIONS mesmo se Express/Deno estiver reiniciando e inclui CORS até em 4xx/5xx.
 # O instalador também testa o domínio público e interrompe a atualização se
@@ -197,25 +220,6 @@ step "7/7 Conferência"
 if [ "$DB_PRONTO" = true ] && [ "$RAPIDO" = false ]; then
   (cd server && npm run migrate:verify) || warn "Conferência apontou divergências (veja acima)."
 fi
-PORT_LOCAL="${PORT:-8787}"
-BACKEND_OK=false
-for i in $(seq 1 30); do
-  if HEALTH_JSON="$(curl -sf --max-time 3 "http://127.0.0.1:${PORT_LOCAL}/health")" \
-    && printf '%s' "$HEALTH_JSON" | grep -q '"ok":true'; then
-    ok "Backend local respondendo na porta ${PORT_LOCAL}."
-    BACKEND_OK=true
-    break
-  fi
-  if [ "$i" = "30" ]; then
-    warn "Backend local não ficou saudável em /health. Últimos logs:"
-    pm2 status mro-api 2>/dev/null || true
-    tail -n 40 /var/log/mro/api-error.log 2>/dev/null || true
-  fi
-  sleep 1
-done
-
-[ "$BACKEND_OK" = true ] || fail "Backend local indisponível; o corte foi bloqueado. O site atual continua no Lovable Cloud."
-
 cat <<EOF
 
 $(echo -e "${G}═══ Atualização concluída ═══${N}")
