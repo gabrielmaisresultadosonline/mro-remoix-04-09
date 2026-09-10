@@ -11,6 +11,24 @@ BACKEND_PORT="${BACKEND_PORT:-8787}"
 command -v nginx >/dev/null 2>&1 || { echo "ERRO: nginx não encontrado." >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "ERRO: python3 não encontrado." >&2; exit 1; }
 
+# Versões anteriores salvavam `<vhost>.pre-mro-cors` ao lado do arquivo ativo.
+# O include padrão `sites-enabled/*` carregava também esse backup, duplicava
+# listen/server e impedia o Nginx de recarregar. Retire somente esses backups.
+NGINX_BACKUP_DIR="${NGINX_BACKUP_DIR:-/var/backups/mro-nginx}"
+mkdir -p "$NGINX_BACKUP_DIR"
+for enabled_dir in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
+  [[ -d "$enabled_dir" ]] || continue
+  while IFS= read -r -d '' stale_backup; do
+    backup_name="$(basename "$stale_backup").$(date +%s).$$"
+    mv "$stale_backup" "$NGINX_BACKUP_DIR/$backup_name"
+    echo "Backup inativo removido do include do Nginx: $stale_backup"
+  done < <(find "$enabled_dir" -maxdepth 1 \( -type f -o -type l \) \
+    \( -name '*.pre-mro-cors' -o -name '*.pre-media-hotfix' \) -print0)
+done
+
+# Recupera a configuração antes de usar nginx -T como fonte de verdade.
+nginx -t
+
 mapfile -t ACTIVE_CONFIG_FILES < <(
   nginx -T 2>&1 \
     | sed -n 's|^# configuration file \([^:][^:]*\):$|\1|p' \
@@ -142,7 +160,12 @@ for path in config_paths:
     for insertion in reversed(insertions):
         text = text[:insertion] + block + "\n" + text[insertion:]
 
-    backup = path.with_suffix(path.suffix + ".pre-mro-cors")
+    # Nunca grave backups em sites-enabled/conf.d: o wildcard do Nginx carrega
+    # qualquer nome nesses diretórios. A cópia fica fora de todos os includes.
+    backup_root = pathlib.Path("/var/backups/mro-nginx")
+    backup_root.mkdir(parents=True, exist_ok=True)
+    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(path).strip("/"))
+    backup = backup_root / f"{safe_name}.pre-mro-cors"
     if not backup.exists():
         backup.write_text(original, encoding="utf-8")
     path.write_text(text, encoding="utf-8")
