@@ -179,6 +179,13 @@ for link in /etc/nginx/sites-enabled/*; do
     case "$base" in
         "$APP_NAME"|video-server) continue ;;
     esac
+    # O vhost api.$DOMAIN contém naturalmente o texto do domínio principal.
+    # Nunca remova essa configuração: ela atende autenticação, Storage e Edge
+    # Functions na porta 8787. O teste anterior apagava esse vhost por engano.
+    if grep -qsE "server_name[^;]*api\.${DOMAIN//./\\.}([[:space:];]|$)" "$link"; then
+        echo "✅ Preservando configuração da API: $base"
+        continue
+    fi
     if grep -qs "$DOMAIN" "$link"; then
         echo "⚠️  Removendo config conflitante: $base"
         $SUDO rm -f "$link"
@@ -268,6 +275,20 @@ if $SUDO nginx -t; then
     echo "✅ Nginx OK."
     echo "🔄 Recarregando Nginx sem reiniciar os serviços..."
     $SUDO systemctl reload nginx
+
+    # A atualização só termina se a rota usada pela extensão continuar pública.
+    # Este instalador é idempotente e valida OPTIONS local e pelo domínio HTTPS.
+    if [ -f "$APP_DIR/deploy/ensure-mro-tool-cors-nginx.sh" ]; then
+        echo "🔐 Reaplicando e validando CORS permanente da mro-tool-api..."
+        $SUDO env \
+            API_DOMAIN="api.$DOMAIN" \
+            BACKEND_PORT="${PORT:-8787}" \
+            bash "$APP_DIR/deploy/ensure-mro-tool-cors-nginx.sh" \
+            || { echo "❌ CORS da mro-tool-api não foi validado; atualização interrompida."; exit 1; }
+    else
+        echo "❌ Instalador CORS ausente; atualização interrompida para proteger o login da extensão."
+        exit 1
+    fi
     echo "✅ Nginx recarregado com sucesso."
 else
     echo "❌ ERRO: configuração do Nginx inválida."
