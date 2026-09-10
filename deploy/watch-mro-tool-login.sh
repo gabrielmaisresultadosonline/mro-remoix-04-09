@@ -8,6 +8,7 @@ BACKEND_PORT="${BACKEND_PORT:-8787}"
 API_OUT="${API_OUT:-/var/log/mro/api-out.log}"
 API_ERROR="${API_ERROR:-/var/log/mro/api-error.log}"
 NGINX_ACCESS="${NGINX_ACCESS:-/var/log/nginx/mro-tool-access.log}"
+NGINX_GENERAL_ACCESS="${NGINX_GENERAL_ACCESS:-/var/log/nginx/access.log}"
 NGINX_ERROR="${NGINX_ERROR:-/var/log/nginx/error.log}"
 
 [[ "$(id -u)" == "0" ]] || { echo "Rode como root: sudo bash deploy/watch-mro-tool-login.sh" >&2; exit 1; }
@@ -58,7 +59,23 @@ echo
 echo "[4/4] Logs ao vivo"
 echo "AGORA tente entrar pela extensão. Pare com Ctrl+C."
 echo "Se não surgir MRO-CORS/MRO-API/mro-login, a chamada não chegou ao backend."
+echo "Linhas [NGINX] provam chegada ao domínio; linhas [BACKEND] mostram processamento."
 echo
 touch "$API_OUT" "$API_ERROR" "$NGINX_ACCESS"
-tail -n 0 -F "$API_OUT" "$API_ERROR" "$NGINX_ACCESS" "$NGINX_ERROR" 2>/dev/null \
-  | grep --line-buffered -E 'MRO-CORS|MRO-API|mro-login|erro não tratado|erro do Postgres|inicialização bloqueada|mro-tool-api|upstream|connect\(\) failed'
+
+tail -n 0 -F "$API_OUT" "$API_ERROR" 2>/dev/null \
+  | grep --line-buffered -E 'MRO-CORS|MRO-API|mro-login|erro não tratado|erro do Postgres|inicialização bloqueada' \
+  | sed -u 's/^/[BACKEND] /' &
+BACKEND_TAIL_PID=$!
+
+tail -n 0 -F "$NGINX_ACCESS" "$NGINX_GENERAL_ACCESS" "$NGINX_ERROR" 2>/dev/null \
+  | grep --line-buffered -E 'mro-tool-api|upstream|connect\(\) failed' \
+  | sed -u 's/^/[NGINX] /' &
+NGINX_TAIL_PID=$!
+
+cleanup() {
+  kill "$BACKEND_TAIL_PID" "$NGINX_TAIL_PID" 2>/dev/null || true
+}
+trap 'rm -f "$HEADERS" "$BODY"; cleanup' EXIT
+
+wait "$BACKEND_TAIL_PID" "$NGINX_TAIL_PID"

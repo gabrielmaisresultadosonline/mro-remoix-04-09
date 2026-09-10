@@ -51,7 +51,7 @@ function isPublicStorageRead(req: Request): boolean {
 }
 
 function isMroToolApiRequest(req: Request): boolean {
-  return req.path === MRO_TOOL_API_PATH || req.path === `${MRO_TOOL_API_PATH}/`;
+  return req.path === MRO_TOOL_API_PATH || req.path.startsWith(`${MRO_TOOL_API_PATH}/`);
 }
 
 /**
