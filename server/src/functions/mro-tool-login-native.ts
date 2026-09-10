@@ -189,7 +189,7 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
   );
   if (!identifier || !password || identifier.length > 255 || password.length > 255) {
     console.warn(`[mro-login:${requestId}] etapa=validacao resultado=entrada_invalida identifier_fp=${fingerprint}`);
-    res.status(400).json({ success: false, error: "Usuário/email e senha são obrigatórios", request_id: requestId });
+    res.status(400).json({ success: false, error: "Usuário/email e senha são obrigatórios" });
     return true;
   }
 
@@ -217,7 +217,7 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
           `identifier_fp=${fingerprint} usuario_encontrado=${Boolean(user)} hash_presente=${Boolean(user?.password_hash)} ` +
           `legado_presente=${Boolean(user?.password_plain)}`,
       );
-      res.status(200).json({ success: false, error: "Usuário ou senha incorretos", request_id: requestId });
+      res.status(200).json({ success: false, error: "Usuário ou senha incorretos" });
       return true;
     }
 
@@ -243,7 +243,6 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
         expired: info.expired,
         needs_renewal: true,
         whatsapp: RENEWAL_WHATSAPP_LINK,
-        request_id: requestId,
       });
       return true;
     }
@@ -270,7 +269,6 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
         instagram_not_registered: true,
         instagram,
         error: `O Instagram @${instagram} não está cadastrado na sua conta. Cadastre o perfil na área /instagram antes de usar a ferramenta.`,
-        request_id: requestId,
       });
       return true;
     }
@@ -295,10 +293,10 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
         email: user.email,
         name: user.name,
         is_active: user.is_active,
-        plan_accounts: user.plan_accounts,
+        plan_accounts: Math.max(0, Number(user.plan_accounts) || 0),
         extra_accounts: Math.max(0, Number(user.extra_accounts) || 0),
         total_accounts: totalSlots(user),
-        expiration_days: user.expiration_days,
+        expiration_days: Math.max(0, Number(user.expiration_days) || 0),
         last_access: user.last_access,
         created_at: user.created_at,
         ...info,
@@ -307,8 +305,8 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
       trial_accounts: trialAccounts,
       trials: {
         limit: MONTHLY_TRIALS,
-        used: user.trials_used,
-        remaining: Math.max(0, MONTHLY_TRIALS - user.trials_used),
+        used: Math.max(0, Number(user.trials_used) || 0),
+        remaining: Math.max(0, MONTHLY_TRIALS - (Number(user.trials_used) || 0)),
         duration_days: 1,
         period_start: user.trials_period_start,
       },
@@ -317,7 +315,6 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
         used: fixedAccounts.length,
         available: Math.max(0, totalSlots(user) - fixedAccounts.length),
       },
-      request_id: requestId,
     };
 
     console.info(
@@ -330,7 +327,7 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
     const message = error instanceof Error ? error.message : "erro desconhecido";
     const code = typeof error === "object" && error && "code" in error ? String(error.code) : "sem_codigo";
     console.error(`[mro-login:${requestId}] etapa=postgres resultado=erro code=${code} message=${JSON.stringify(message)}`);
-    res.status(503).json({ success: false, error: "Erro temporário na comunicação com o servidor", request_id: requestId });
+    res.status(503).json({ success: false, error: "Erro temporário na comunicação com o servidor" });
     return true;
   }
 }

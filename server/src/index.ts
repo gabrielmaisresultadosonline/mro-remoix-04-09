@@ -59,15 +59,20 @@ function isMroToolApiRequest(req: Request): boolean {
  *
  * O preflight termina no Express, antes de iniciar o processo Deno. Isso evita
  * que cold start, timeout ou falha da função sejam interpretados pelo navegador
- * como ausência de CORS. A rota não usa cookies, portanto wildcard é seguro.
+ * como ausência de CORS. A origem é refletida porque versões legadas da extensão
+ * usam XMLHttpRequest com credentials=include, combinação incompatível com '*'.
  */
 app.use((req, res, next) => {
   if (!isMroToolApiRequest(req)) return next();
 
-  const origin = req.header("origin") ?? "sem-origin";
+  const requestOrigin = req.header("origin");
+  const origin = requestOrigin ?? "sem-origin";
   const requestedHeaders = req.header("access-control-request-headers");
   const requestId = req.header("cf-ray") ?? crypto.randomUUID();
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  if (requestOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
