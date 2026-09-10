@@ -13,6 +13,8 @@ module.exports = {
       args: "start",
       instances: 1,
       exec_mode: "fork",
+      wait_ready: true,
+      listen_timeout: 30000,
       autorestart: true,
       max_restarts: 10,
       min_uptime: "20s",

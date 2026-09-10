@@ -41,7 +41,9 @@ block = f'''    {start_marker}
         if ($request_method = OPTIONS) {{
             add_header Access-Control-Allow-Origin "*" always;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
-            add_header Access-Control-Allow-Headers "authorization, apikey, content-type, x-client-info, x-requested-with, accept, accept-profile, content-profile, prefer, range, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version" always;
+            # Reflete todos os headers pedidos pela extensão. Assim versões novas
+            # não voltam a falhar por acrescentarem um header próprio.
+            add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
             add_header Access-Control-Max-Age "86400" always;
             add_header Cache-Control "no-store" always;
             return 204;
@@ -54,7 +56,7 @@ block = f'''    {start_marker}
         proxy_hide_header Access-Control-Max-Age;
         add_header Access-Control-Allow-Origin "*" always;
         add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
-        add_header Access-Control-Allow-Headers "authorization, apikey, content-type, x-client-info, x-requested-with, accept, accept-profile, content-profile, prefer, range, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version" always;
+        add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
         add_header Access-Control-Expose-Headers "Content-Length, Content-Range, Content-Type" always;
         add_header Access-Control-Max-Age "86400" always;
         add_header X-Cors-Owner "nginx-mro-tool" always;
@@ -142,7 +144,45 @@ check_url() {
   rm -f "$headers"
 }
 
-check_url "CORS local" "http://127.0.0.1:${BACKEND_PORT}/functions/v1/mro-tool-api"
+echo "Aguardando backend na porta ${BACKEND_PORT}..."
+for i in {1..30}; do
+  if curl -s "http://127.0.0.1:${BACKEND_PORT}/health" > /dev/null; then
+    echo "Backend pronto."
+    break
+  fi
+  sleep 1
+done
+
+# O preflight público é responsabilidade do Nginx e deve funcionar mesmo durante
+# o reinício do backend. Testamos essa garantia antes de depender da porta 8787.
 check_url "CORS público" "https://${API_DOMAIN}/functions/v1/mro-tool-api"
+
+# POSTs reais ainda dependem do backend. startOrReload retorna antes de o Node
+# terminar a inicialização, portanto aguarde a saúde em vez de tratar um
+# connection refused transitório como falha de CORS.
+BACKEND_READY=false
+for attempt in $(seq 1 90); do
+  if health="$(curl -sf --max-time 3 "http://127.0.0.1:${BACKEND_PORT}/health" 2>/dev/null)" \
+      && printf '%s' "$health" | grep -q '"ok":true'; then
+    BACKEND_READY=true
+    break
+  fi
+  if [[ "$attempt" == "1" ]]; then
+    echo "Aguardando a API iniciar na porta ${BACKEND_PORT}..."
+  fi
+  sleep 1
+done
+
+if [[ "$BACKEND_READY" != "true" ]]; then
+  echo "ERRO: a API não ficou saudável na porta ${BACKEND_PORT}; o CORS público do Nginx está ativo, mas requisições POST não podem ser atendidas." >&2
+  if command -v pm2 >/dev/null 2>&1; then
+    pm2 describe mro-api 2>/dev/null | grep -E 'status|script path|exec cwd|restarts|uptime' >&2 || true
+  fi
+  tail -n 120 /var/log/mro/api-out.log 2>/dev/null >&2 || true
+  tail -n 120 /var/log/mro/api-error.log 2>/dev/null >&2 || true
+  exit 1
+fi
+
+check_url "CORS local" "http://127.0.0.1:${BACKEND_PORT}/functions/v1/mro-tool-api"
 
 echo "CORS permanente da mro-tool-api instalado e comprovado."
