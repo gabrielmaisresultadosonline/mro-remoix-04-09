@@ -130,6 +130,13 @@ const monthStart = () => {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString().slice(0, 10);
 };
 
+/** Duração fixa das contas de teste (6 horas). */
+const TRIAL_HOURS = 6;
+/** Janela de renovação dos testes: 30 dias corridos. */
+const TRIAL_PERIOD_DAYS = 30;
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+
 /**
  * Normaliza os dias de acesso:
  * - valores inválidos/negativos viram 0
