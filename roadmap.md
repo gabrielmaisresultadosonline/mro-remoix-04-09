@@ -27,4 +27,4 @@
 - [x] Atender preflight da `mro-tool-api` diretamente no Express e registrar diagnóstico persistente por origem
 - [x] Tornar o CORS da `mro-tool-api` permanente no Nginx, inclusive em 4xx/5xx, e bloquear atualizações sem validação pública
 - [x] Aguardar a saúde da porta 8787 antes do teste local e refletir qualquer header solicitado pelas extensões
-- [x] Tornar o login direto da extensão uma requisição simples sem preflight, sem service worker e sem credenciais do navegador
+- [x] Preservar o contrato original da extensão e atender o login diretamente no PostgreSQL, sem depender do processo Deno

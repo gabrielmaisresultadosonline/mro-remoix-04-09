@@ -23,6 +23,7 @@ import { env } from "../env.js";
 import { RestError } from "../rest/identifiers.js";
 import { handleNativeUserCloudStorage } from "./user-cloud-storage-native.js";
 import { handleNativeLovablackAdminLogin } from "./lovablack-admin-native.js";
+import { handleNativeMroToolLogin } from "./mro-tool-login-native.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const functionsDir = path.resolve(here, "../../", env.functions.dir);
@@ -261,6 +262,10 @@ functionsRouter.all("/:name", async (req, res) => {
   const name = req.params.name;
 
   if (name === "lovablack-api" && await handleNativeLovablackAdminLogin(req, res)) {
+    return;
+  }
+
+  if (name === "mro-tool-api" && await handleNativeMroToolLogin(req, res)) {
     return;
   }
 
