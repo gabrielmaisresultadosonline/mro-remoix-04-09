@@ -25,3 +25,4 @@
 - [x] Bloquear deploy vindo de `mro-projeto-02` e exigir o handler nativo antes do build
 - [x] Automatizar correção e validação ponta a ponta do CORS da `mro-tool-api` na VPS
 - [x] Atender preflight da `mro-tool-api` diretamente no Express e registrar diagnóstico persistente por origem
+- [x] Tornar o CORS da `mro-tool-api` permanente no Nginx, inclusive em 4xx/5xx, e bloquear atualizações sem validação pública
