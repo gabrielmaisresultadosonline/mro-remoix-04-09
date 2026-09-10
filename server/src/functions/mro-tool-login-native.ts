@@ -42,6 +42,11 @@ interface MroAccountRow {
 
 const LIFETIME_DAYS = 999999;
 const MONTHLY_TRIALS = 5;
+/** Contas de teste duram exatamente 6 horas. */
+const TRIAL_HOURS = 6;
+/** Os 5 testes só renovam depois de 30 dias corridos (ou pelo admin). */
+const TRIAL_PERIOD_DAYS = 30;
+
 const RENEWAL_WHATSAPP_LINK =
   "https://wa.me/555192835863?text=" +
   encodeURIComponent("Olá vim pelo renda extra, já usei 30 dias gostaria de saber sobre o desconto.");
@@ -71,10 +76,6 @@ function normalizeInstagram(value: unknown): string {
   return String(value ?? "").trim().toLowerCase().replace(/^@/, "");
 }
 
-function monthStart(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
-}
 
 function identifierFingerprint(identifier: string): string {
   return crypto.createHash("sha256").update(identifier).digest("hex").slice(0, 12);
@@ -247,15 +248,28 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
       return true;
     }
 
-    const currentMonth = monthStart();
+    // Remove contas de teste vencidas (6h) antes de qualquer verificação.
+    await adminQuery(
+      `DELETE FROM public.mro_tool_accounts
+        WHERE user_id = $1 AND is_trial = true
+          AND trial_expires_at IS NOT NULL AND trial_expires_at < now()`,
+      [user.id],
+    );
+
+    // Os testes só renovam depois de 30 dias corridos do início do período.
     const storedPeriod = new Date(user.trials_period_start).toISOString().slice(0, 10);
-    if (storedPeriod < currentMonth) {
+    const storedMs = Date.parse(`${storedPeriod}T00:00:00Z`);
+    const periodExpired =
+      !Number.isFinite(storedMs) || Date.now() - storedMs >= TRIAL_PERIOD_DAYS * 86_400_000;
+    if (periodExpired) {
+      const today = new Date().toISOString().slice(0, 10);
       await adminQuery(
         "UPDATE public.mro_tool_users SET trials_used = 0, trials_period_start = $2 WHERE id = $1",
-        [user.id, currentMonth],
+        [user.id, today],
       );
-      user = { ...user, trials_used: 0, trials_period_start: currentMonth };
+      user = { ...user, trials_used: 0, trials_period_start: today };
     }
+
 
     const instagram = normalizeInstagram(body.instagram ?? body.instagram_username);
     const instagramCheck = instagram ? await resolveInstagram(user, instagram) : null;
@@ -307,7 +321,10 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
         limit: MONTHLY_TRIALS,
         used: Math.max(0, Number(user.trials_used) || 0),
         remaining: Math.max(0, MONTHLY_TRIALS - (Number(user.trials_used) || 0)),
-        duration_days: 1,
+        duration_days: TRIAL_HOURS / 24,
+        duration_hours: TRIAL_HOURS,
+        period_days: TRIAL_PERIOD_DAYS,
+
         period_start: user.trials_period_start,
       },
       slots: {

@@ -125,10 +125,13 @@ async function fetchAllRows<Row>(
   return { data: rows, error: null };
 }
 
-const monthStart = () => {
-  const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString().slice(0, 10);
-};
+
+/** Duração fixa das contas de teste (6 horas). */
+const TRIAL_HOURS = 6;
+/** Janela de renovação dos testes: 30 dias corridos. */
+const TRIAL_PERIOD_DAYS = 30;
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
 
 /**
  * Normaliza os dias de acesso:
@@ -237,11 +240,26 @@ serve(async (req) => {
     }
 
     /**
-     * Devolve as contas fixas válidas do usuário.
-     * A limpeza de contas de teste expiradas foi movida para o trigger SQL
-     * (ver migration: auto_cleanup_expired_trials) para não travar o login.
+     * Remove contas de TESTE já vencidas (6h). Não toca em contas fixas.
+     * Quando `userId` é omitido, limpa todos os testes vencidos da base.
      */
+    async function purgeExpiredTrials(userId?: string): Promise<void> {
+      try {
+        let query = supabase
+          .from("mro_tool_accounts")
+          .delete()
+          .eq("is_trial", true)
+          .lt("trial_expires_at", new Date().toISOString());
+        if (userId) query = query.eq("user_id", userId);
+        await query;
+      } catch (err) {
+        console.error("[MRO-TOOL-API] purgeExpiredTrials:", err);
+      }
+    }
+
+    /** Devolve as contas válidas do usuário (testes vencidos já removidos). */
     async function getAccounts(userId: string): Promise<MroAccountRow[]> {
+      await purgeExpiredTrials(userId);
       const { data } = await supabase
         .from("mro_tool_accounts")
         .select("*")
@@ -249,6 +267,7 @@ serve(async (req) => {
         .order("created_at", { ascending: true });
       return (data || []) as MroAccountRow[];
     }
+
 
     /**
      * Resolve onde um @instagram está cadastrado para o usuário informado.
@@ -313,16 +332,24 @@ serve(async (req) => {
     }
 
 
-    /** Reinicia o contador de testes quando muda o mês. */
+    /**
+     * Reinicia o contador de testes somente após 30 dias corridos
+     * desde o início do período atual (ou quando o admin renova manualmente).
+     */
     async function ensureTrialPeriod(user: MroUserRow): Promise<MroUserRow> {
-      const start = monthStart();
-      if (user.trials_period_start >= start) return user;
+      const startStr = String(user.trials_period_start || "").slice(0, 10);
+      const startMs = startStr ? Date.parse(`${startStr}T00:00:00Z`) : NaN;
+      const expired =
+        !Number.isFinite(startMs) || Date.now() - startMs >= TRIAL_PERIOD_DAYS * 86_400_000;
+      if (!expired) return user;
+      const today = todayISO();
       await supabase
         .from("mro_tool_users")
-        .update({ trials_used: 0, trials_period_start: start })
+        .update({ trials_used: 0, trials_period_start: today })
         .eq("id", user.id);
-      return { ...user, trials_used: 0, trials_period_start: start };
+      return { ...user, trials_used: 0, trials_period_start: today };
     }
+
 
     async function fullPayload(user: MroUserRow) {
       const accounts = await getAccounts(user.id);
@@ -349,9 +376,12 @@ serve(async (req) => {
           limit: MONTHLY_TRIALS,
           used: user.trials_used,
           remaining: Math.max(0, MONTHLY_TRIALS - user.trials_used),
-          duration_days: 1,
+          duration_days: TRIAL_HOURS / 24,
+          duration_hours: TRIAL_HOURS,
           period_start: user.trials_period_start,
+          period_days: TRIAL_PERIOD_DAYS,
         },
+
         slots: {
           total: totalSlots(user),
           used: fixed.length,
@@ -525,12 +555,16 @@ serve(async (req) => {
 
       if (isTrial) {
         if (user.trials_used >= MONTHLY_TRIALS) {
-          return json({ success: false, error: `Você já usou seus ${MONTHLY_TRIALS} testes deste mês`, trials_exhausted: true });
+          return json({
+            success: false,
+            error: `Você já usou seus ${MONTHLY_TRIALS} testes. Aguarde a renovação (30 dias) ou peça liberação ao administrador.`,
+            trials_exhausted: true,
+          });
         }
-        // Duração do teste: padrão 24h; a extensão pode pedir 6h (trial_hours: 6)
-        const rawHours = Number(body.trial_hours ?? body.hours ?? 24);
-        const trialHours = Number.isFinite(rawHours) ? Math.min(Math.max(rawHours, 1), 24) : 24;
+        // Duração do teste: SEMPRE 6 horas (não é configurável pelo cliente).
+        const trialHours = TRIAL_HOURS;
         const expires = new Date(Date.now() + trialHours * 60 * 60 * 1000).toISOString();
+
         await supabase.from("mro_tool_accounts").insert({
           user_id: user.id, instagram_username: instagram, is_trial: true, trial_expires_at: expires,
         });
@@ -593,12 +627,17 @@ serve(async (req) => {
 
     // ---------------- ADMIN ----------------
     if (action === "list_users") {
+      // Antes de exibir o painel, remove todas as contas de teste vencidas (6h).
+      await purgeExpiredTrials();
+
       // A tela renderiza em blocos. Carregar milhares de usuários, contas e prints
       // numa única resposta fazia a função atingir o timeout da nuvem.
       const requestedLimit = Number(body.limit);
       const requestedOffset = Number(body.offset);
       const limit = Number.isFinite(requestedLimit) ? Math.min(2000, Math.max(1, Math.floor(requestedLimit))) : 50;
       const offset = Number.isFinite(requestedOffset) ? Math.max(0, Math.floor(requestedOffset)) : 0;
+
+
 
       const { data: usersData, error: usersError, count } = await supabase
         .from("mro_tool_users")
@@ -969,7 +1008,8 @@ serve(async (req) => {
       if (!body.id) return json({ success: false, error: "ID é obrigatório" }, 400);
       const { error } = await supabase
         .from("mro_tool_users")
-        .update({ trials_used: 0, trials_period_start: monthStart() })
+        .update({ trials_used: 0, trials_period_start: todayISO() })
+
         .eq("id", body.id);
       if (error) return json({ success: false, error: error.message }, 500);
       return json({ success: true });
