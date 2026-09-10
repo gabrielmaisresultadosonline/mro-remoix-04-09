@@ -42,6 +42,11 @@ interface MroAccountRow {
 
 const LIFETIME_DAYS = 999999;
 const MONTHLY_TRIALS = 5;
+/** Contas de teste duram exatamente 6 horas. */
+const TRIAL_HOURS = 6;
+/** Os 5 testes só renovam depois de 30 dias corridos (ou pelo admin). */
+const TRIAL_PERIOD_DAYS = 30;
+
 const RENEWAL_WHATSAPP_LINK =
   "https://wa.me/555192835863?text=" +
   encodeURIComponent("Olá vim pelo renda extra, já usei 30 dias gostaria de saber sobre o desconto.");
