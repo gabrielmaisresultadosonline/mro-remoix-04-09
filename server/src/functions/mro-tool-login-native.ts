@@ -252,15 +252,28 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
       return true;
     }
 
-    const currentMonth = monthStart();
+    // Remove contas de teste vencidas (6h) antes de qualquer verificação.
+    await adminQuery(
+      `DELETE FROM public.mro_tool_accounts
+        WHERE user_id = $1 AND is_trial = true
+          AND trial_expires_at IS NOT NULL AND trial_expires_at < now()`,
+      [user.id],
+    );
+
+    // Os testes só renovam depois de 30 dias corridos do início do período.
     const storedPeriod = new Date(user.trials_period_start).toISOString().slice(0, 10);
-    if (storedPeriod < currentMonth) {
+    const storedMs = Date.parse(`${storedPeriod}T00:00:00Z`);
+    const periodExpired =
+      !Number.isFinite(storedMs) || Date.now() - storedMs >= TRIAL_PERIOD_DAYS * 86_400_000;
+    if (periodExpired) {
+      const today = new Date().toISOString().slice(0, 10);
       await adminQuery(
         "UPDATE public.mro_tool_users SET trials_used = 0, trials_period_start = $2 WHERE id = $1",
-        [user.id, currentMonth],
+        [user.id, today],
       );
-      user = { ...user, trials_used: 0, trials_period_start: currentMonth };
+      user = { ...user, trials_used: 0, trials_period_start: today };
     }
+
 
     const instagram = normalizeInstagram(body.instagram ?? body.instagram_username);
     const instagramCheck = instagram ? await resolveInstagram(user, instagram) : null;
