@@ -559,12 +559,16 @@ serve(async (req) => {
 
       if (isTrial) {
         if (user.trials_used >= MONTHLY_TRIALS) {
-          return json({ success: false, error: `Você já usou seus ${MONTHLY_TRIALS} testes deste mês`, trials_exhausted: true });
+          return json({
+            success: false,
+            error: `Você já usou seus ${MONTHLY_TRIALS} testes. Aguarde a renovação (30 dias) ou peça liberação ao administrador.`,
+            trials_exhausted: true,
+          });
         }
-        // Duração do teste: padrão 24h; a extensão pode pedir 6h (trial_hours: 6)
-        const rawHours = Number(body.trial_hours ?? body.hours ?? 24);
-        const trialHours = Number.isFinite(rawHours) ? Math.min(Math.max(rawHours, 1), 24) : 24;
+        // Duração do teste: SEMPRE 6 horas (não é configurável pelo cliente).
+        const trialHours = TRIAL_HOURS;
         const expires = new Date(Date.now() + trialHours * 60 * 60 * 1000).toISOString();
+
         await supabase.from("mro_tool_accounts").insert({
           user_id: user.id, instagram_username: instagram, is_trial: true, trial_expires_at: expires,
         });
