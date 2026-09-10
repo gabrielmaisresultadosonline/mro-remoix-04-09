@@ -37,7 +37,9 @@ text = re.sub(
 
 block = f'''    {start_marker}
     # Rota pública usada por extensões externas. Não usa cookies.
-    location = /functions/v1/mro-tool-api {{
+    # Prefixo deliberado: cobre URL exata, barra final e parâmetros/caminhos
+    # acrescentados por versões antigas da extensão.
+    location ^~ /functions/v1/mro-tool-api {{
         if ($request_method = OPTIONS) {{
             add_header Access-Control-Allow-Origin "*" always;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
