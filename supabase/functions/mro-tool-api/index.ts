@@ -244,11 +244,26 @@ serve(async (req) => {
     }
 
     /**
-     * Devolve as contas fixas válidas do usuário.
-     * A limpeza de contas de teste expiradas foi movida para o trigger SQL
-     * (ver migration: auto_cleanup_expired_trials) para não travar o login.
+     * Remove contas de TESTE já vencidas (6h). Não toca em contas fixas.
+     * Quando `userId` é omitido, limpa todos os testes vencidos da base.
      */
+    async function purgeExpiredTrials(userId?: string): Promise<void> {
+      try {
+        let query = supabase
+          .from("mro_tool_accounts")
+          .delete()
+          .eq("is_trial", true)
+          .lt("trial_expires_at", new Date().toISOString());
+        if (userId) query = query.eq("user_id", userId);
+        await query;
+      } catch (err) {
+        console.error("[MRO-TOOL-API] purgeExpiredTrials:", err);
+      }
+    }
+
+    /** Devolve as contas válidas do usuário (testes vencidos já removidos). */
     async function getAccounts(userId: string): Promise<MroAccountRow[]> {
+      await purgeExpiredTrials(userId);
       const { data } = await supabase
         .from("mro_tool_accounts")
         .select("*")
@@ -256,6 +271,7 @@ serve(async (req) => {
         .order("created_at", { ascending: true });
       return (data || []) as MroAccountRow[];
     }
+
 
     /**
      * Resolve onde um @instagram está cadastrado para o usuário informado.
