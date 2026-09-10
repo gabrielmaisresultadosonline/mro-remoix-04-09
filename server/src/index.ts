@@ -215,8 +215,15 @@ app.use((_req, res) => {
 });
 
 // Handler de erro no formato que o SDK entende (message/code/details/hint).
-app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const requestId = String(res.getHeader("X-MRO-Request-Id") ?? "sem-id");
   if (error instanceof RestError) {
+    if (isMroToolApiRequest(req)) {
+      console.error(
+        `[MRO-API:${requestId}] erro_controlado status=${error.status} code=${error.code ?? "sem_codigo"} ` +
+          `message=${JSON.stringify(error.message)}`,
+      );
+    }
     res.status(error.status).json({
       message: error.message,
       details: error.details ?? null,
@@ -243,7 +250,7 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (isPgError) {
     // Erros de permissão de RLS devem virar 403, não 500.
     const status = pgError.code === "42501" ? 403 : 400;
-    console.error("[api] erro do Postgres:", pgError.code, pgError.message);
+    console.error(`[api:${requestId}] erro do Postgres:`, pgError.code, pgError.message);
     res.status(status).json({
       message: pgError.message ?? "Erro no banco de dados.",
       details: pgError.detail ?? null,
@@ -253,7 +260,7 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
 
-  console.error("[api] erro não tratado:", error);
+  console.error(`[api:${requestId}] erro não tratado:`, error);
   res.status(500).json({
     message: "Erro interno do servidor.",
     details: null,

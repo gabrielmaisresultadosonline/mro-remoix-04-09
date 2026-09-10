@@ -7,6 +7,8 @@ API_DOMAIN="${API_DOMAIN:-api.maisresultadosonline.com.br}"
 BACKEND_PORT="${BACKEND_PORT:-8787}"
 API_OUT="${API_OUT:-/var/log/mro/api-out.log}"
 API_ERROR="${API_ERROR:-/var/log/mro/api-error.log}"
+NGINX_ACCESS="${NGINX_ACCESS:-/var/log/nginx/mro-tool-access.log}"
+NGINX_ERROR="${NGINX_ERROR:-/var/log/nginx/error.log}"
 
 [[ "$(id -u)" == "0" ]] || { echo "Rode como root: sudo bash deploy/watch-mro-tool-login.sh" >&2; exit 1; }
 
@@ -57,6 +59,6 @@ echo "[4/4] Logs ao vivo"
 echo "AGORA tente entrar pela extensão. Pare com Ctrl+C."
 echo "Se não surgir MRO-CORS/MRO-API/mro-login, a chamada não chegou ao backend."
 echo
-touch "$API_OUT" "$API_ERROR"
-tail -n 0 -F "$API_OUT" "$API_ERROR" 2>/dev/null \
-  | grep --line-buffered -E 'MRO-CORS|MRO-API|mro-login|erro não tratado|erro do Postgres|inicialização bloqueada'
+touch "$API_OUT" "$API_ERROR" "$NGINX_ACCESS"
+tail -n 0 -F "$API_OUT" "$API_ERROR" "$NGINX_ACCESS" "$NGINX_ERROR" 2>/dev/null \
+  | grep --line-buffered -E 'MRO-CORS|MRO-API|mro-login|erro não tratado|erro do Postgres|inicialização bloqueada|mro-tool-api|upstream|connect\(\) failed'

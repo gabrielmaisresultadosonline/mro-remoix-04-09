@@ -66,6 +66,8 @@ block = f'''    {start_marker}
         add_header Cache-Control "no-store" always;
         add_header X-Cors-Owner "nginx-mro-tool" always;
 
+        access_log /var/log/nginx/mro-tool-access.log combined;
+
         proxy_pass http://127.0.0.1:{port};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
