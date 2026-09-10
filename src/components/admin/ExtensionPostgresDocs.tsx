@@ -160,19 +160,16 @@ API_URL      = ${LEGACY_ORIGIN}
 ENDPOINT     = ${meta.legacy}
 ANON_KEY     = ${LEGACY_ANON_KEY}
 
-# Headers usados nas duas pontas (idênticos):
-#   Content-Type: application/json
-#   apikey: <ANON_KEY do backend escolhido>
-#   Authorization: Bearer <ANON_KEY ou JWT do usuário>   (HS256, mesmas claims)
+# Login direto da extensão na VPS:
+#   não envie apikey, Authorization nem Content-Type.
+#   O corpo string sai como text/plain (requisição simples, sem preflight).
 # Nunca usar a service_role na extensão — ela é apenas do servidor.`,
     [base, endpoint, anonKey, meta.legacy],
   );
 
   const curl = useMemo(
-    () => `curl -X POST '${endpoint}' \\
-  -H 'Content-Type: application/json' \\
-  -H 'apikey: ${anonKey}' \\
-  -H 'Authorization: Bearer ${anonKey}' \\
+    () => `curl -X POST '${endpoint}' \
+  -H 'Content-Type: text/plain;charset=UTF-8' \
   -d '{"action":"login","username":"usuario","password":"senha"}'`,
     [endpoint, anonKey],
   );
@@ -180,7 +177,7 @@ ANON_KEY     = ${LEGACY_ANON_KEY}
   const actionsSnippet = useMemo(
     () =>
       `POST ${endpoint}\n` +
-      `Headers: Content-Type: application/json | apikey: <ANON_KEY> | Authorization: Bearer <ANON_KEY>\n` +
+      `Login público na VPS: sem headers customizados (body JSON em text/plain, sem preflight)\n` +
       `Body: { "action": "<action>", ...campos }\n\n` +
       meta.actions
         .map((a) => `${a.action.padEnd(22)} ${a.body.padEnd(46)} ${a.note}`)
@@ -215,11 +212,18 @@ async function api(body) {
     try {
       const res = await fetch(cfg.url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: cfg.apikey,
-          Authorization: "Bearer " + cfg.apikey,
-        },
+        // Na VPS, não declare Content-Type/apikey/Authorization. O navegador
+        // enviará esta string como text/plain, evitando OPTIONS/preflight.
+        // O endpoint lê req.text() e valida o JSON normalmente.
+        ...(key === "supabase" ? {
+          headers: {
+            "Content-Type": "application/json",
+            apikey: cfg.apikey,
+            Authorization: "Bearer " + cfg.apikey,
+          },
+        } : {}),
+        credentials: "omit",
+        cache: "no-store",
         body: JSON.stringify(body),
       });
       if (!res.ok && res.status >= 500) throw new Error("backend " + key + " indisponível");
@@ -287,8 +291,7 @@ async function loadAnnouncementsSafe() {
   "name": "${meta.label}",
   "version": "1.0.0",
 
-  // 👇 libera o fetch direto na API/Storage da VPS (e no backend antigo
-  //    enquanto a transição não terminar). É isto que elimina o proxy CORS.
+  // Necessário para a API/Storage; o login abaixo também evita preflight.
   "host_permissions": [
     "${base}/*",
     "${LEGACY_ORIGIN}/*"
@@ -305,10 +308,8 @@ async function loadAnnouncementsSafe() {
   ]
 }
 
-// Se preferir centralizar as chamadas no service worker (recomendado, pois
-// ele não sofre a política da página), use:
-//   chrome.runtime.sendMessage({ type: "GET_ANNOUNCEMENTS" })
-// e no background.js responda com o fetch direto mostrado no bloco anterior.`,
+// Não é necessário service worker: api() usa fetch nativo direto e o login
+// da VPS é uma requisição simples, sem headers que disparem preflight.`,
     [base, meta.label],
   );
 

@@ -65,6 +65,7 @@ app.use((req, res, next) => {
 
   const origin = req.header("origin") ?? "sem-origin";
   const requestedHeaders = req.header("access-control-request-headers");
+  const requestId = req.header("cf-ray") ?? crypto.randomUUID();
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.setHeader(
@@ -74,6 +75,10 @@ app.use((req, res, next) => {
   );
   res.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range, Content-Type");
   res.setHeader("Access-Control-Max-Age", "86400");
+  res.setHeader("Access-Control-Allow-Private-Network", "true");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-MRO-Request-Id", requestId);
   res.setHeader("Vary", "Origin, Access-Control-Request-Headers");
 
   if (req.method === "OPTIONS") {
@@ -84,6 +89,12 @@ app.use((req, res, next) => {
     return;
   }
 
+  const startedAt = Date.now();
+  res.once("finish", () => {
+    console.info(
+      `[MRO-API:${requestId}] ${req.method} status=${res.statusCode} origin=${origin} duration_ms=${Date.now() - startedAt}`,
+    );
+  });
   next();
 });
 

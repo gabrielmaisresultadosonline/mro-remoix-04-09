@@ -45,6 +45,8 @@ block = f'''    {start_marker}
             # não voltam a falhar por acrescentarem um header próprio.
             add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
             add_header Access-Control-Max-Age "86400" always;
+            add_header Access-Control-Allow-Private-Network "true" always;
+            add_header Cross-Origin-Resource-Policy "cross-origin" always;
             add_header Cache-Control "no-store" always;
             return 204;
         }}
@@ -59,6 +61,9 @@ block = f'''    {start_marker}
         add_header Access-Control-Allow-Headers "$http_access_control_request_headers" always;
         add_header Access-Control-Expose-Headers "Content-Length, Content-Range, Content-Type" always;
         add_header Access-Control-Max-Age "86400" always;
+        add_header Access-Control-Allow-Private-Network "true" always;
+        add_header Cross-Origin-Resource-Policy "cross-origin" always;
+        add_header Cache-Control "no-store" always;
         add_header X-Cors-Owner "nginx-mro-tool" always;
 
         proxy_pass http://127.0.0.1:{port};
