@@ -76,10 +76,6 @@ function normalizeInstagram(value: unknown): string {
   return String(value ?? "").trim().toLowerCase().replace(/^@/, "");
 }
 
-function monthStart(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
-}
 
 function identifierFingerprint(identifier: string): string {
   return crypto.createHash("sha256").update(identifier).digest("hex").slice(0, 12);

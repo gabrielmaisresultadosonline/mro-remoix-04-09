@@ -125,10 +125,6 @@ async function fetchAllRows<Row>(
   return { data: rows, error: null };
 }
 
-const monthStart = () => {
-  const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString().slice(0, 10);
-};
 
 /** Duração fixa das contas de teste (6 horas). */
 const TRIAL_HOURS = 6;
