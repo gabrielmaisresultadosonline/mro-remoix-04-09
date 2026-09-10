@@ -631,12 +631,17 @@ serve(async (req) => {
 
     // ---------------- ADMIN ----------------
     if (action === "list_users") {
+      // Antes de exibir o painel, remove todas as contas de teste vencidas (6h).
+      await purgeExpiredTrials();
+
       // A tela renderiza em blocos. Carregar milhares de usuários, contas e prints
       // numa única resposta fazia a função atingir o timeout da nuvem.
       const requestedLimit = Number(body.limit);
       const requestedOffset = Number(body.offset);
       const limit = Number.isFinite(requestedLimit) ? Math.min(2000, Math.max(1, Math.floor(requestedLimit))) : 50;
       const offset = Number.isFinite(requestedOffset) ? Math.max(0, Math.floor(requestedOffset)) : 0;
+
+
 
       const { data: usersData, error: usersError, count } = await supabase
         .from("mro_tool_users")
