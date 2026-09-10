@@ -325,7 +325,10 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
         limit: MONTHLY_TRIALS,
         used: Math.max(0, Number(user.trials_used) || 0),
         remaining: Math.max(0, MONTHLY_TRIALS - (Number(user.trials_used) || 0)),
-        duration_days: 1,
+        duration_days: TRIAL_HOURS / 24,
+        duration_hours: TRIAL_HOURS,
+        period_days: TRIAL_PERIOD_DAYS,
+
         period_start: user.trials_period_start,
       },
       slots: {
