@@ -380,9 +380,12 @@ serve(async (req) => {
           limit: MONTHLY_TRIALS,
           used: user.trials_used,
           remaining: Math.max(0, MONTHLY_TRIALS - user.trials_used),
-          duration_days: 1,
+          duration_days: TRIAL_HOURS / 24,
+          duration_hours: TRIAL_HOURS,
           period_start: user.trials_period_start,
+          period_days: TRIAL_PERIOD_DAYS,
         },
+
         slots: {
           total: totalSlots(user),
           used: fixed.length,
