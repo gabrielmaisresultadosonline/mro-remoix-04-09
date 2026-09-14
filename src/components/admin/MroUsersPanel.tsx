@@ -86,6 +86,8 @@ const MroUsersPanel: React.FC = () => {
   const [newAccount, setNewAccount] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<{ url: string; username: string } | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [extrasDraft, setExtrasDraft] = useState<Record<string, string>>({});
+  const [savingExtras, setSavingExtras] = useState<Record<string, boolean>>({});
   const [userLogs, setUserLogs] = useState<Record<string, any[]>>({});
   const [loadingLogs, setLoadingLogs] = useState<Record<string, boolean>>({});
   const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
@@ -253,6 +255,27 @@ const MroUsersPanel: React.FC = () => {
       loadUsers();
     } catch (err) {
       toast({ title: 'Erro', description: err instanceof Error ? err.message : '', variant: 'destructive' });
+    }
+  };
+
+  const saveExtras = async (userId: string, currentExtras: number, nextValue?: number) => {
+    const rawValue = nextValue === undefined ? (extrasDraft[userId] ?? String(currentExtras)) : String(nextValue);
+    const parsedValue = Number(rawValue);
+    if (!Number.isInteger(parsedValue) || parsedValue < 0) {
+      toast({ title: 'Quantidade inválida', description: 'Digite um número inteiro igual ou maior que zero.', variant: 'destructive' });
+      return;
+    }
+
+    setSavingExtras((previous) => ({ ...previous, [userId]: true }));
+    try {
+      await call({ action: 'set_extras', id: userId, extra_accounts: parsedValue });
+      setExtrasDraft((previous) => ({ ...previous, [userId]: String(parsedValue) }));
+      toast({ title: 'Quantidade de extras salva!' });
+      await loadUsers();
+    } catch (err) {
+      toast({ title: 'Erro', description: err instanceof Error ? err.message : '', variant: 'destructive' });
+    } finally {
+      setSavingExtras((previous) => ({ ...previous, [userId]: false }));
     }
   };
 
@@ -461,19 +484,41 @@ const MroUsersPanel: React.FC = () => {
                     className="h-6 w-6 p-0"
                     aria-label="Remover conta extra"
                     disabled={extras <= 0}
-                    onClick={() => runAction({ action: 'set_extras', id: u.id, delta: -1 }, 'Conta extra removida')}
+                    onClick={() => void saveExtras(u.id, extras, extras - 1)}
                   >
                     <Minus className="w-3 h-3" />
                   </Button>
-                  <span className="text-xs font-semibold w-4 text-center">{extras}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    aria-label={`Quantidade de contas extras de ${u.username}`}
+                    className="h-7 w-16 px-2 text-center text-xs font-semibold"
+                    value={extrasDraft[u.id] ?? String(extras)}
+                    onChange={(event) => setExtrasDraft((previous) => ({ ...previous, [u.id]: event.target.value }))}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') void saveExtras(u.id, extras);
+                    }}
+                  />
                   <Button
                     size="sm"
                     variant="ghost"
                     className="h-6 w-6 p-0"
                     aria-label="Adicionar conta extra"
-                    onClick={() => runAction({ action: 'set_extras', id: u.id, delta: 1 }, 'Conta extra liberada')}
+                    onClick={() => void saveExtras(u.id, extras, extras + 1)}
                   >
                     <Plus className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                    aria-label="Salvar quantidade de contas extras"
+                    disabled={savingExtras[u.id] || (extrasDraft[u.id] ?? String(extras)) === String(extras)}
+                    onClick={() => void saveExtras(u.id, extras)}
+                  >
+                    {savingExtras[u.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                   </Button>
                 </div>
                 <Button size="sm" variant="outline" className="gap-1" onClick={() => runAction({ action: 'reset_trials', id: u.id }, 'Testes reiniciados')}>
