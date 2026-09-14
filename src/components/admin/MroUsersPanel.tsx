@@ -258,8 +258,8 @@ const MroUsersPanel: React.FC = () => {
     }
   };
 
-  const saveExtras = async (userId: string, currentExtras: number) => {
-    const rawValue = extrasDraft[userId] ?? String(currentExtras);
+  const saveExtras = async (userId: string, currentExtras: number, nextValue?: number) => {
+    const rawValue = nextValue === undefined ? (extrasDraft[userId] ?? String(currentExtras)) : String(nextValue);
     const parsedValue = Number(rawValue);
     if (!Number.isInteger(parsedValue) || parsedValue < 0) {
       toast({ title: 'Quantidade inválida', description: 'Digite um número inteiro igual ou maior que zero.', variant: 'destructive' });
@@ -484,7 +484,7 @@ const MroUsersPanel: React.FC = () => {
                     className="h-6 w-6 p-0"
                     aria-label="Remover conta extra"
                     disabled={extras <= 0}
-                    onClick={() => runAction({ action: 'set_extras', id: u.id, delta: -1 }, 'Conta extra removida')}
+                    onClick={() => void saveExtras(u.id, extras, extras - 1)}
                   >
                     <Minus className="w-3 h-3" />
                   </Button>
@@ -506,7 +506,7 @@ const MroUsersPanel: React.FC = () => {
                     variant="ghost"
                     className="h-6 w-6 p-0"
                     aria-label="Adicionar conta extra"
-                    onClick={() => runAction({ action: 'set_extras', id: u.id, delta: 1 }, 'Conta extra liberada')}
+                    onClick={() => void saveExtras(u.id, extras, extras + 1)}
                   >
                     <Plus className="w-3 h-3" />
                   </Button>
