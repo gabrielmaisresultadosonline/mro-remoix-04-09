@@ -610,9 +610,8 @@ export const syncIGsFromSquare = async (instagrams: string[], email: string): Pr
   }
 };
 
-// Reconcile local registeredIGs against the authoritative SquareCloud list.
-// Removes any local IG that is no longer present in SquareCloud and deletes
-// the corresponding row in the squarecloud_user_profiles database.
+// Reconcile the active-account list without deleting historical database rows.
+// Detailed profile history is preserved separately by storage.ts.
 export const reconcileRegisteredIGsWithSquare = async (
   squareInstagrams: string[]
 ): Promise<number> => {
@@ -629,22 +628,7 @@ export const reconcileRegisteredIGsWithSquare = async (
   session.user.registeredIGs = kept;
   saveUserSession(session);
 
-  // Best-effort delete from database so it doesn't reappear on next load
-  for (const ig of removed) {
-    try {
-      await supabase.functions.invoke('squarecloud-profile-storage', {
-        body: {
-          action: 'delete',
-          squarecloud_username: session.user.username,
-          instagram_username: ig.username,
-        },
-      });
-    } catch (e) {
-      console.error('[userStorage] Error deleting stale profile from DB:', ig.username, e);
-    }
-  }
-
-  console.log(`[userStorage] 🧹 Reconciled registeredIGs — removed ${removed.length} stale: ${removed.map(r => r.username).join(', ')}`);
+  console.log(`[userStorage] 📚 Active list reconciled; ${removed.length} profile(s) kept in history`);
   return removed.length;
 };
 

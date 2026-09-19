@@ -183,7 +183,7 @@ serve(async (req) => {
       // First check if user exists AND get existing profile_sessions to preserve creativesUnlocked
       const { data: existing } = await supabase
         .from('user_sessions')
-        .select('id, email, profile_sessions')
+        .select('id, email, profile_sessions, archived_profiles')
         .eq('squarecloud_username', normalizedUsername)
         .maybeSingle();
 
@@ -222,10 +222,29 @@ serve(async (req) => {
       }
 
       // If daysRemaining is provided, use it; otherwise don't overwrite existing value
+      // Historical profiles are append-only here. A client with stale or empty
+      // local storage must never erase history already preserved in PostgreSQL.
+      const archivedByUsername = new Map<string, any>();
+      const historicalCandidates = [
+        ...((existing?.archived_profiles as any[]) || []),
+        ...(archivedProfiles || []),
+        ...finalProfileSessions.filter((profile: any) => profile?.isHistorical),
+      ];
+      historicalCandidates.forEach((profile: any) => {
+        const key = profile?.profile?.username?.toLowerCase();
+        if (key) archivedByUsername.set(key, profile);
+      });
+
+      const activeProfileSessions = finalProfileSessions.filter((profile: any) => !profile?.isHistorical);
+      activeProfileSessions.forEach((profile: any) => {
+        const key = profile?.profile?.username?.toLowerCase();
+        if (key) archivedByUsername.delete(key);
+      });
+
       const saveData: any = {
         squarecloud_username: normalizedUsername,
-        profile_sessions: finalProfileSessions,
-        archived_profiles: archivedProfiles || [],
+        profile_sessions: activeProfileSessions,
+        archived_profiles: Array.from(archivedByUsername.values()),
       };
       
       // Save lifetime creative usage timestamp if provided

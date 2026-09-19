@@ -1,5 +1,5 @@
 import { ProfileSession } from '@/types/instagram';
-import { Plus, User, X, Check, Info, RefreshCw } from 'lucide-react';
+import { Plus, User, Check, Info, RefreshCw, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -73,9 +73,15 @@ export const ProfileSelector = ({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-xs sm:text-sm truncate">@{profile.profile.username}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {profile.profile.followers.toLocaleString()} seguidores
-                    </p>
+                    {profile.isHistorical ? (
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <History className="h-3 w-3" /> Histórico
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {profile.profile.followers.toLocaleString()} seguidores
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -128,7 +134,11 @@ export const ProfileSelector = ({
           </button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{profiles.length} perfil(is) • 6 criativos por perfil</p>
+            <p>
+              {profiles.filter(profile => !profile.isHistorical).length} ativa(s)
+              {' • '}
+              {profiles.filter(profile => profile.isHistorical).length} no histórico
+            </p>
         </TooltipContent>
       </Tooltip>
     </div>

@@ -23,7 +23,8 @@ import {
   getActiveProfile,
   cleanExpiredCreatives,
   cleanExpiredStrategies,
-  setCloudSyncCallback
+  setCloudSyncCallback,
+  reconcileProfilesWithRegisteredAccounts
 } from '@/lib/storage';
 import { 
   isAuthenticated, 
@@ -143,33 +144,18 @@ const Index = () => {
           const user = getCurrentUser();
           const squareResult = await verifyRegisteredIGs(user?.username || '');
           if (squareResult.success && squareResult.instagrams) {
-            // RECONCILE: remove local profiles that no longer exist in SquareCloud
-            const squareSet = new Set(squareResult.instagrams.map(ig => ig.toLowerCase()));
-            const currentSession = getSession();
-            const before = currentSession.profiles.length;
-            const filtered = currentSession.profiles.filter(p =>
-              squareSet.has(p.profile.username.toLowerCase())
-            );
-            if (filtered.length !== before) {
-              console.log(`🔄 [Index] Removendo ${before - filtered.length} perfil(is) não encontrado(s) no SquareCloud`);
-              currentSession.profiles = filtered;
-              if (currentSession.activeProfileId && !filtered.find(p => p.id === currentSession.activeProfileId)) {
-                currentSession.activeProfileId = filtered[0]?.id || null;
-              }
-              saveSession(currentSession);
-              setSession(currentSession);
-              try {
-                await syncSessionToPersistent(user?.username || '');
-              } catch (e) {
-                console.error('[Index] Error syncing reconciled session:', e);
-              }
+            // Perfis ausentes da API permanecem disponíveis como histórico.
+            const currentSession = reconcileProfilesWithRegisteredAccounts(squareResult.instagrams);
+            setSession(currentSession);
+            try {
+              await syncSessionToPersistent(user?.username || '');
+            } catch (e) {
+              console.error('[Index] Error syncing reconciled session:', e);
             }
 
-            // Also reconcile registeredIGs (the "Suas Contas" list) + database
+            // Also reconcile the active-account list without deleting history.
             const removedCount = await reconcileRegisteredIGsWithSquare(squareResult.instagrams);
-            if (removedCount > 0) {
-              setHasRegisteredProfiles(getRegisteredIGs().length > 0);
-            }
+            if (removedCount > 0) setHasRegisteredProfiles(currentSession.profiles.length > 0);
 
             if (squareResult.instagrams.length > 0) {
               handleSyncComplete(squareResult.instagrams);
@@ -197,11 +183,14 @@ const Index = () => {
       const squareIGsSet = new Set(squareIGs.map(ig => ig.toLowerCase()));
 
       const registeredIGs = getRegisteredIGs();
-      setHasRegisteredProfiles(squareIGs.length > 0 || registeredIGs.length > 0);
+      const existingSession = getSession();
+      setHasRegisteredProfiles(
+        squareIGs.length > 0
+        || registeredIGs.length > 0
+        || existingSession.profiles.length > 0
+      );
       
       // IMPORTANT: LoginPage already called initializeFromCloud + reconciliation
-      const existingSession = getSession();
-      
       console.log(`🔐 Login completo: ${existingSession.profiles.length} perfis na sessão, ${squareIGs.length} IGs no SquareCloud`);
       
       if (existingSession.profiles.length > 0 || squareIGs.length > 0) {
@@ -279,11 +268,17 @@ const Index = () => {
       const normalizedIg = ig.toLowerCase();
       
       // Check if already in session
-      const existingProfile = session.profiles.find(
+      const currentSession = getSession();
+      const existingProfile = currentSession.profiles.find(
         p => p.profile.username.toLowerCase() === normalizedIg
       );
       
       if (existingProfile) {
+        if (existingProfile.isHistorical) {
+          existingProfile.isHistorical = false;
+          existingProfile.historicalSince = undefined;
+          saveSession(currentSession);
+        }
         console.log(`⏭️ @${ig} já está na sessão`);
         continue;
       }
