@@ -153,11 +153,9 @@ const Index = () => {
               console.error('[Index] Error syncing reconciled session:', e);
             }
 
-            // Also reconcile registeredIGs (the "Suas Contas" list) + database
+            // Also reconcile the active-account list without deleting history.
             const removedCount = await reconcileRegisteredIGsWithSquare(squareResult.instagrams);
-            if (removedCount > 0) {
-              setHasRegisteredProfiles(getRegisteredIGs().length > 0);
-            }
+            if (removedCount > 0) setHasRegisteredProfiles(currentSession.profiles.length > 0);
 
             if (squareResult.instagrams.length > 0) {
               handleSyncComplete(squareResult.instagrams);
@@ -185,11 +183,14 @@ const Index = () => {
       const squareIGsSet = new Set(squareIGs.map(ig => ig.toLowerCase()));
 
       const registeredIGs = getRegisteredIGs();
-      setHasRegisteredProfiles(squareIGs.length > 0 || registeredIGs.length > 0);
+      const existingSession = getSession();
+      setHasRegisteredProfiles(
+        squareIGs.length > 0
+        || registeredIGs.length > 0
+        || existingSession.profiles.length > 0
+      );
       
       // IMPORTANT: LoginPage already called initializeFromCloud + reconciliation
-      const existingSession = getSession();
-      
       console.log(`🔐 Login completo: ${existingSession.profiles.length} perfis na sessão, ${squareIGs.length} IGs no SquareCloud`);
       
       if (existingSession.profiles.length > 0 || squareIGs.length > 0) {
