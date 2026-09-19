@@ -9,6 +9,10 @@
 ## Pendente
 - [ ] Remover senha administrativa hardcoded dos painéis secundários (IAVendeMais, Empresas, ZapMRO Vendas, Instagram Nova Email/Euro, TokensPanel, EstruturaTutoriais, UserHeader, DescontoAlunos, documentação Ads News)
 
+## Limites da Ferramenta MRO
+- [x] Manter o total de contas liberadas estável ao cadastrar ou remover perfis
+- [x] Registrar alterações administrativas no limite de extras
+
 ## Login de clientes /IG
 - [x] Aceitar hashes bcrypt importados e convertê-los para PBKDF2 no primeiro login válido
 - [x] Registrar diagnósticos de login sem expor e-mail completo ou senha
