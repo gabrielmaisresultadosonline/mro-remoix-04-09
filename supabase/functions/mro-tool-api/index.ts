@@ -589,19 +589,8 @@ serve(async (req) => {
         });
       }
 
-      // Se estiver usando vaga extra (acima de plan_accounts)
-      if (fixedCount >= user.plan_accounts) {
-        const extra = Math.max(0, Number(user.extra_accounts) || 0);
-        if (extra > 0) {
-          await supabase.from("mro_tool_users").update({ extra_accounts: extra - 1 }).eq("id", user.id);
-          await supabase.from("mro_tool_logs").insert({
-            user_id: user.id,
-            action_type: "extra_consumed",
-            details: { instagram, previous_extra: extra, new_extra: extra - 1 }
-          });
-        }
-      }
-
+      // extra_accounts representa capacidade permanente liberada pelo admin.
+      // Cadastrar uma conta ocupa uma vaga, mas nunca reduz o limite configurado.
       await supabase.from("mro_tool_accounts").insert({ user_id: user.id, instagram_username: instagram });
       await supabase.from("mro_tool_logs").insert({
         user_id: user.id,
@@ -929,6 +918,11 @@ serve(async (req) => {
 
       const { error } = await supabase.from("mro_tool_users").update({ extra_accounts: value }).eq("id", id);
       if (error) return json({ success: false, error: error.message }, 500);
+      await supabase.from("mro_tool_logs").insert({
+        user_id: id,
+        action_type: "extras_limit_set",
+        details: { previous_extra: current, new_extra: value },
+      });
       return json({ success: true, extra_accounts: value });
     }
 
@@ -966,9 +960,8 @@ serve(async (req) => {
 
 
     /**
-     * Remove uma conta do Instagram.
-     * REGRA: remover NÃO devolve a vaga. O slot é consumido definitivamente,
-     * ou seja 22/22 -> 21/21 (e não 21/22). Primeiro consome o extra, depois o plano.
+     * Remove uma conta do Instagram sem alterar o limite permanente do usuário.
+     * Exemplo: 57/59 passa para 56/59, nunca para 56/58.
      */
     if (action === "remove_account") {
       if (!body.id) return json({ success: false, error: "ID é obrigatório" }, 400);
@@ -982,22 +975,12 @@ serve(async (req) => {
       const { error } = await supabase.from("mro_tool_accounts").delete().eq("id", body.id);
       if (error) return json({ success: false, error: error.message }, 500);
 
-      // Contas de teste não ocupam slot fixo, então não reduzem o limite.
-      if (account && !account.is_trial && account.user_id) {
-        const { data: user } = await supabase
-          .from("mro_tool_users")
-          .select("id, plan_accounts, extra_accounts")
-          .eq("id", account.user_id)
-          .maybeSingle();
-
-        if (user) {
-          const extra = Math.max(0, Number(user.extra_accounts) || 0);
-          const plan = Math.max(0, Number(user.plan_accounts) || 0);
-          const patch = extra > 0
-            ? { extra_accounts: extra - 1 }
-            : { plan_accounts: Math.max(0, plan - 1) };
-          await supabase.from("mro_tool_users").update(patch).eq("id", user.id);
-        }
+      if (account?.user_id) {
+        await supabase.from("mro_tool_logs").insert({
+          user_id: account.user_id,
+          action_type: "account_removed",
+          details: { account_id: account.id, is_trial: !!account.is_trial },
+        });
       }
 
       return json({ success: true });

@@ -302,23 +302,25 @@ async function createInstagramUser(
     const normalizedUser = String(username || '').trim().toLowerCase();
     if (!normalizedUser) return false;
 
+    const { data: existing } = await supabase
+      .from('mro_tool_users')
+      .select('id, plan_accounts')
+      .eq('username', normalizedUser)
+      .maybeSingle();
+
+    const currentPlanAccounts = Math.max(0, Number(existing?.plan_accounts) || 0);
     const payload: Record<string, unknown> = {
       username: normalizedUser,
       email: email ? String(email).trim().toLowerCase() : null,
       password_hash: await sha256(password),
       password_plain: password,
-      plan_accounts: cfg.accounts,
+      // Renovações nunca reduzem um limite maior já concedido pelo admin.
+      plan_accounts: Math.max(cfg.accounts, currentPlanAccounts),
       expiration_days: expiration,
       is_active: true,
     };
 
     logStep("Creating Instagram user on internal API", { username: normalizedUser, plan, expiration });
-
-    const { data: existing } = await supabase
-      .from('mro_tool_users')
-      .select('id')
-      .eq('username', normalizedUser)
-      .maybeSingle();
 
     if (existing) {
       const { error } = await supabase.from('mro_tool_users').update(payload).eq('id', existing.id);
