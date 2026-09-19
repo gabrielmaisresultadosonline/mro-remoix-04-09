@@ -263,7 +263,15 @@ export const initializeFromCloud = (profileSessions: ProfileSession[], archivedP
   
   // CRITICAL: Deduplicate profiles by username (keep the one with most data)
   const profileMap = new Map<string, ProfileSession>();
-  profileSessions.forEach(cloudProfile => {
+  const cloudProfilesWithHistory = [
+    ...profileSessions,
+    ...archivedProfiles.map(profile => ({
+      ...profile,
+      isHistorical: true,
+      historicalSince: profile.historicalSince || profile.lastUpdated || new Date().toISOString(),
+    })),
+  ];
+  cloudProfilesWithHistory.forEach(cloudProfile => {
     const username = cloudProfile.profile.username.toLowerCase();
     const existing = profileMap.get(username);
     
@@ -284,7 +292,7 @@ export const initializeFromCloud = (profileSessions: ProfileSession[], archivedP
   });
   
   const deduplicatedProfiles = Array.from(profileMap.values());
-  console.log(`☁️ [${loggedUsername}] Deduplicated: ${profileSessions.length} -> ${deduplicatedProfiles.length} profiles`);
+  console.log(`☁️ [${loggedUsername}] Deduplicated: ${cloudProfilesWithHistory.length} -> ${deduplicatedProfiles.length} profiles`);
   
   // CRITICAL: Cloud data is the ONLY source of truth - NO MERGING with local data!
   const normalizedProfiles: ProfileSession[] = deduplicatedProfiles.map(cloudProfile => {
@@ -365,6 +373,8 @@ export const addProfile = (profile: InstagramProfile, analysis: ProfileAnalysis)
     // Update existing profile instead of creating duplicate
     existingProfile.profile = profile;
     existingProfile.analysis = analysis;
+    existingProfile.isHistorical = false;
+    existingProfile.historicalSince = undefined;
     existingProfile.lastUpdated = new Date().toISOString();
     
     // Add new growth snapshot if data changed
@@ -512,7 +522,11 @@ export const removeProfile = (profileId: string): void => {
   
   // Archive the profile before removing (keeps strategies, creatives, etc.)
   if (profileToRemove) {
-    archiveProfile(profileToRemove);
+    archiveProfile({
+      ...profileToRemove,
+      isHistorical: true,
+      historicalSince: profileToRemove.historicalSince || new Date().toISOString(),
+    });
   }
   
   session.profiles = session.profiles.filter(p => p.id !== profileId);
@@ -520,6 +534,63 @@ export const removeProfile = (profileId: string): void => {
     session.activeProfileId = session.profiles[0]?.id || null;
   }
   saveSession(session);
+};
+
+/**
+ * Mantém no painel todos os perfis já analisados, mas identifica quais não
+ * fazem mais parte da lista ativa da API. Perfis históricos não são apagados,
+ * não são reativados e não interferem nos limites de contas do servidor.
+ */
+export const reconcileProfilesWithRegisteredAccounts = (registeredUsernames: string[]): MROSession => {
+  const session = getSession();
+  const archived = getArchivedProfiles();
+  const activeUsernames = new Set(registeredUsernames.map(username => username.toLowerCase()));
+  const profilesByUsername = new Map<string, ProfileSession>();
+
+  [...archived, ...session.profiles].forEach(profileSession => {
+    const username = profileSession.profile.username.toLowerCase();
+    const existing = profilesByUsername.get(username);
+    const candidateScore = (profileSession.strategies?.length || 0)
+      + (profileSession.creatives?.length || 0)
+      + (profileSession.growthHistory?.length || 0)
+      + (profileSession.screenshotUrl ? 1 : 0);
+    const existingScore = existing
+      ? (existing.strategies?.length || 0)
+        + (existing.creatives?.length || 0)
+        + (existing.growthHistory?.length || 0)
+        + (existing.screenshotUrl ? 1 : 0)
+      : -1;
+
+    if (!existing || candidateScore > existingScore) {
+      profilesByUsername.set(username, profileSession);
+    }
+  });
+
+  const now = new Date().toISOString();
+  session.profiles = Array.from(profilesByUsername.values()).map(profileSession => {
+    const isHistorical = !activeUsernames.has(profileSession.profile.username.toLowerCase());
+    return {
+      ...profileSession,
+      isHistorical,
+      historicalSince: isHistorical
+        ? profileSession.historicalSince || now
+        : undefined,
+    };
+  });
+
+  const activeProfileStillExists = session.profiles.some(
+    profile => profile.id === session.activeProfileId,
+  );
+  if (!activeProfileStillExists) {
+    session.activeProfileId = session.profiles.find(profile => !profile.isHistorical)?.id
+      || session.profiles[0]?.id
+      || null;
+  }
+
+  const historicalProfiles = session.profiles.filter(profile => profile.isHistorical);
+  saveArchivedProfiles(historicalProfiles);
+  saveSession(session);
+  return session;
 };
 
 export const updateProfile = (profile: InstagramProfile): void => {

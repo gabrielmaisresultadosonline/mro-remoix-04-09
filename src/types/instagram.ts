@@ -172,6 +172,9 @@ export interface StrategyGenerationDates {
 export interface ProfileSession {
   id: string;
   profile: InstagramProfile;
+  /** Mantém os dados no painel quando a conta deixa de estar cadastrada/ativa. */
+  isHistorical?: boolean;
+  historicalSince?: string;
   analysis: ProfileAnalysis;
   strategies: Strategy[];
   creatives: Creative[];

@@ -13,6 +13,11 @@
 - [x] Manter o total de contas liberadas estável ao cadastrar ou remover perfis
 - [x] Registrar alterações administrativas no limite de extras
 
+## Histórico do painel Instagram
+- [x] Preservar perfis removidos como histórico após atualizar a página
+- [x] Identificar contas históricas no seletor sem consumir vagas ativas
+- [x] Reativar os dados anteriores sem duplicação quando a conta voltar
+
 ## Login de clientes /IG
 - [x] Aceitar hashes bcrypt importados e convertê-los para PBKDF2 no primeiro login válido
 - [x] Registrar diagnósticos de login sem expor e-mail completo ou senha
