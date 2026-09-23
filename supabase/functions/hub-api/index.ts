@@ -191,12 +191,19 @@ serve(async (req) => {
         const normalizedEmail = String(email).trim().toLowerCase();
         const normalizedUsername = username ? String(username).trim().toLowerCase() : "";
 
-        const { data: lotarUser } = await supabase
+        const { data: lotarUsers } = await supabase
           .from("lotargrupos_users")
-          .select("email,status,name")
-          .eq("email", normalizedEmail)
-          .limit(1)
-          .maybeSingle();
+          .select("id,email,status,name,user_id,created_at")
+          .ilike("email", normalizedEmail)
+          .order("created_at", { ascending: true });
+
+        // Registros antigos podem ter diferenças de maiúsculas ou duplicatas.
+        // Escolhemos deterministicamente o ativo/vinculado, sem excluir histórico.
+        const lotarUser = (lotarUsers || []).find(
+          (candidate: { status: string; user_id: string | null }) => candidate.status === "active" && candidate.user_id,
+        ) || (lotarUsers || []).find(
+          (candidate: { status: string }) => candidate.status === "active",
+        ) || lotarUsers?.[0] || null;
 
         let hasAccess = !!lotarUser && lotarUser.status === "active";
 
@@ -235,8 +242,13 @@ serve(async (req) => {
           } else if (lotarUser.status !== "active") {
             await supabase
               .from("lotargrupos_users")
-              .update({ status: "active" })
-              .eq("email", normalizedEmail);
+              .update({ email: normalizedEmail, status: "active" })
+              .eq("id", lotarUser.id);
+          } else if (lotarUser.email !== normalizedEmail) {
+            await supabase
+              .from("lotargrupos_users")
+              .update({ email: normalizedEmail })
+              .eq("id", lotarUser.id);
           }
 
           let { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
@@ -274,7 +286,7 @@ serve(async (req) => {
               await supabase
                 .from("lotargrupos_users")
                 .update({ user_id: authUserId })
-                .eq("email", normalizedEmail)
+                .eq("id", lotarUser?.id ?? "00000000-0000-0000-0000-000000000000")
                 .is("user_id", null);
             }
           }
