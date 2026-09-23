@@ -10,6 +10,7 @@
 
 import { Router } from "express";
 import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import { adminQuery } from "../db.js";
 import { env } from "../env.js";
