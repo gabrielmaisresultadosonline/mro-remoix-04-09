@@ -199,7 +199,7 @@ serve(async (req) => {
 
         // Registros antigos podem ter diferenças de maiúsculas ou duplicatas.
         // Escolhemos deterministicamente o ativo/vinculado, sem excluir histórico.
-        const lotarUser = (lotarUsers || []).find(
+        let lotarUser = (lotarUsers || []).find(
           (candidate: { status: string; user_id: string | null }) => candidate.status === "active" && candidate.user_id,
         ) || (lotarUsers || []).find(
           (candidate: { status: string }) => candidate.status === "active",
@@ -234,11 +234,16 @@ serve(async (req) => {
         if (hasAccess) {
           // A área de membros exige um registro ativo em lotargrupos_users.
           if (!lotarUser) {
-            await supabase.from("lotargrupos_users").insert({
-              email: normalizedEmail,
-              name: name || "Aluno",
-              status: "active",
-            });
+            const { data: createdUser } = await supabase
+              .from("lotargrupos_users")
+              .insert({
+                email: normalizedEmail,
+                name: name || "Aluno",
+                status: "active",
+              })
+              .select("id,email,status,name,user_id,created_at")
+              .single();
+            lotarUser = createdUser;
           } else if (lotarUser.status !== "active") {
             await supabase
               .from("lotargrupos_users")
@@ -282,11 +287,11 @@ serve(async (req) => {
             // A policy da área de membros lê o registro pelo auth.uid(), então o
             // vínculo precisa existir antes do primeiro acesso.
             const authUserId = (linkData as { user?: { id?: string } })?.user?.id;
-            if (authUserId) {
+            if (authUserId && lotarUser?.id) {
               await supabase
                 .from("lotargrupos_users")
                 .update({ user_id: authUserId })
-                .eq("id", lotarUser?.id ?? "00000000-0000-0000-0000-000000000000")
+                .eq("id", lotarUser.id)
                 .is("user_id", null);
             }
           }
