@@ -24,6 +24,11 @@
 - [x] Permitir redefinição auditada da senha de clientes pelo `/IG/admin`
 - [x] Implementar `/auth/v1/recover` com e-mail SMTP e link restrito de recuperação
 
+## Acesso Lotar Grupos pelo Dashboard
+- [x] Preservar a liberação manual exibida no `/admin`
+- [x] Implementar na VPS a criação administrativa de identidade, link temporário e verificação do acesso automático
+- [ ] Atualizar a VPS e confirmar o acesso real de um cliente liberado
+
 ## Login CORS incident
 - [x] Corrigir falha de typecheck que impedia `lovablack-api` de iniciar no Deno
 - [x] Validar no deploy que o POST do login retorna 401 e CORS pela URL pública

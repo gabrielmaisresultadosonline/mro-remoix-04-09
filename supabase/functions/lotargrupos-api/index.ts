@@ -80,10 +80,12 @@ serve(async (req) => {
 
     if (action === "admin_add_user_manual") {
       const { user } = body;
+      const normalizedEmail = String(user?.email ?? "").trim().toLowerCase();
+      if (!normalizedEmail || !user?.name) throw new Error("Nome e e-mail são obrigatórios");
       
       // Criar o usuário no Auth se não existir
       const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
-        email: user.email,
+        email: normalizedEmail,
         password: user.password || 'Mro@123456',
         email_confirm: true,
         user_metadata: { name: user.name }
@@ -93,14 +95,25 @@ serve(async (req) => {
 
       const user_id = authUser?.user?.id;
       
-      const { data, error } = await supabaseClient
+      const { data: existingUsers, error: lookupError } = await supabaseClient
         .from("lotargrupos_users")
-        .upsert({
-          user_id,
-          name: user.name,
-          email: user.email,
-          status: 'active'
-        })
+        .select("id,user_id,status,created_at")
+        .ilike("email", normalizedEmail)
+        .order("created_at", { ascending: true });
+      if (lookupError) throw lookupError;
+
+      const existingUser = (existingUsers || []).find((entry) => entry.status === "active")
+        || existingUsers?.[0];
+      const payload = {
+        user_id: user_id || existingUser?.user_id || null,
+        name: user.name,
+        email: normalizedEmail,
+        status: "active",
+      };
+      const query = existingUser
+        ? supabaseClient.from("lotargrupos_users").update(payload).eq("id", existingUser.id)
+        : supabaseClient.from("lotargrupos_users").insert(payload);
+      const { data, error } = await query
         .select()
         .single();
         
@@ -151,8 +164,9 @@ serve(async (req) => {
       // Invocar o webhook internamente para simular a aprovação (ou processar manualmente)
       // Como o webhook é externo, vamos replicar a lógica de ativação aqui por simplicidade
       
+      const normalizedEmail = String(order.email ?? "").trim().toLowerCase();
       const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
-        email: order.email,
+        email: normalizedEmail,
         password: order.metadata?.password_plain || 'Mro@123456',
         email_confirm: true,
         user_metadata: { name: order.username }
@@ -162,13 +176,24 @@ serve(async (req) => {
         // Se já existe, apenas buscar o ID
       }
 
-      await supabaseClient
+      const { data: existingUsers } = await supabaseClient
         .from("lotargrupos_users")
-        .upsert({
-          name: order.username,
-          email: order.email,
-          status: 'active'
-        });
+        .select("id,user_id,status,created_at")
+        .ilike("email", normalizedEmail)
+        .order("created_at", { ascending: true });
+      const existingUser = (existingUsers || []).find((entry) => entry.status === "active")
+        || existingUsers?.[0];
+      const payload = {
+        user_id: authUser?.user?.id || existingUser?.user_id || null,
+        name: order.username,
+        email: normalizedEmail,
+        status: "active",
+      };
+      if (existingUser) {
+        await supabaseClient.from("lotargrupos_users").update(payload).eq("id", existingUser.id);
+      } else {
+        await supabaseClient.from("lotargrupos_users").insert(payload);
+      }
 
       await supabaseClient
         .from("zapmro_orders")

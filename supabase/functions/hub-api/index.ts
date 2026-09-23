@@ -191,12 +191,19 @@ serve(async (req) => {
         const normalizedEmail = String(email).trim().toLowerCase();
         const normalizedUsername = username ? String(username).trim().toLowerCase() : "";
 
-        const { data: lotarUser } = await supabase
+        const { data: lotarUsers } = await supabase
           .from("lotargrupos_users")
-          .select("email,status,name")
-          .eq("email", normalizedEmail)
-          .limit(1)
-          .maybeSingle();
+          .select("id,email,status,name,user_id,created_at")
+          .ilike("email", normalizedEmail)
+          .order("created_at", { ascending: true });
+
+        // Registros antigos podem ter diferenças de maiúsculas ou duplicatas.
+        // Escolhemos deterministicamente o ativo/vinculado, sem excluir histórico.
+        let lotarUser = (lotarUsers || []).find(
+          (candidate: { status: string; user_id: string | null }) => candidate.status === "active" && candidate.user_id,
+        ) || (lotarUsers || []).find(
+          (candidate: { status: string }) => candidate.status === "active",
+        ) || lotarUsers?.[0] || null;
 
         let hasAccess = !!lotarUser && lotarUser.status === "active";
 
@@ -227,16 +234,26 @@ serve(async (req) => {
         if (hasAccess) {
           // A área de membros exige um registro ativo em lotargrupos_users.
           if (!lotarUser) {
-            await supabase.from("lotargrupos_users").insert({
-              email: normalizedEmail,
-              name: name || "Aluno",
-              status: "active",
-            });
+            const { data: createdUser } = await supabase
+              .from("lotargrupos_users")
+              .insert({
+                email: normalizedEmail,
+                name: name || "Aluno",
+                status: "active",
+              })
+              .select("id,email,status,name,user_id,created_at")
+              .single();
+            lotarUser = createdUser;
           } else if (lotarUser.status !== "active") {
             await supabase
               .from("lotargrupos_users")
-              .update({ status: "active" })
-              .eq("email", normalizedEmail);
+              .update({ email: normalizedEmail, status: "active" })
+              .eq("id", lotarUser.id);
+          } else if (lotarUser.email !== normalizedEmail) {
+            await supabase
+              .from("lotargrupos_users")
+              .update({ email: normalizedEmail })
+              .eq("id", lotarUser.id);
           }
 
           let { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
@@ -270,11 +287,11 @@ serve(async (req) => {
             // A policy da área de membros lê o registro pelo auth.uid(), então o
             // vínculo precisa existir antes do primeiro acesso.
             const authUserId = (linkData as { user?: { id?: string } })?.user?.id;
-            if (authUserId) {
+            if (authUserId && lotarUser?.id) {
               await supabase
                 .from("lotargrupos_users")
                 .update({ user_id: authUserId })
-                .eq("email", normalizedEmail)
+                .eq("id", lotarUser.id)
                 .is("user_id", null);
             }
           }
