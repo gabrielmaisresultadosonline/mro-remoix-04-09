@@ -27,6 +27,7 @@
 ## Acesso Lotar Grupos pelo Dashboard
 - [x] Preservar a liberação manual exibida no `/admin`
 - [x] Implementar na VPS a criação administrativa de identidade, link temporário e verificação do acesso automático
+- [x] Impedir que o atualizador compile o site apontando para uma instância antiga do backend
 - [ ] Atualizar a VPS e confirmar o acesso real de um cliente liberado
 
 ## Login CORS incident

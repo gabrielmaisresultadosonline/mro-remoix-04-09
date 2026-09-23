@@ -47,9 +47,18 @@ npm install
 echo "🔨 Fazendo build do frontend..."
 # Limpa o dist antigo para garantir que não fiquem arquivos velhos (cache buster)
 rm -rf dist
-VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-https://adljdeekwifwcdcgbpit.supabase.co}" \
-VITE_SUPABASE_PUBLISHABLE_KEY="${VITE_SUPABASE_PUBLISHABLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkbGpkZWVrd2lmd2NkY2dicGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMjk0MDMsImV4cCI6MjA4MDcwNTQwM30.odKBOAuEEW0WJEburLRTL9Qj1EbitETmhxqNoE_F_g4}" \
-VITE_SUPABASE_PROJECT_ID="${VITE_SUPABASE_PROJECT_ID:-adljdeekwifwcdcgbpit}" \
+if [ ! -f "$APP_DIR/.env" ]; then
+    echo "❌ ERRO: $APP_DIR/.env ausente — atualização interrompida para não gerar um site apontando ao backend errado."
+    exit 1
+fi
+
+# O Vite lê o .env preservado da própria VPS. Não usar fallback hard-coded:
+# ele pode compilar o site contra uma instância antiga e quebrar o SSO.
+EXPECTED_BACKEND_ID="$(sed -n 's/^VITE_SUPABASE_PROJECT_ID=["'"']*\([^"'"']*\)["'"']*$/\1/p' "$APP_DIR/.env" | tail -n 1)"
+if [ -z "$EXPECTED_BACKEND_ID" ]; then
+    echo "❌ ERRO: VITE_SUPABASE_PROJECT_ID ausente no .env preservado."
+    exit 1
+fi
 npm run build
 
 # Note: Assets are served via Lovable CDN or Preview URL fallback.
@@ -61,7 +70,7 @@ touch "dist/__l5e/assets-v1/cfe0642b-e9ee-44d1-a1b9-bca7488895f9/lotargrupos-her
 
 # Interrompe o deploy antes do Nginx se o bundle tiver sido gerado sem a
 # configuração pública necessária para inicializar o cliente do backend.
-if ! grep -Rqs "adljdeekwifwcdcgbpit" dist/assets/*.js; then
+if ! grep -Rqs "$EXPECTED_BACKEND_ID" dist/assets/*.js; then
     echo "❌ ERRO: build inválido — configuração pública do backend ausente no bundle."
     exit 1
 fi
