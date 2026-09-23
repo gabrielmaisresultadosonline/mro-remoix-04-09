@@ -124,6 +124,105 @@ function publicUser(user: AuthUserRow) {
   };
 }
 
+function hasServiceRoleCredential(req: Parameters<typeof resolveAuth>[0]): boolean {
+  const supplied = req.header("authorization")?.replace(/^Bearer\s+/i, "").trim()
+    || req.header("apikey")?.trim()
+    || "";
+  const expected = env.auth.serviceRoleKey;
+  if (!supplied || !expected) return false;
+  const suppliedBuffer = Buffer.from(supplied);
+  const expectedBuffer = Buffer.from(expected);
+  return suppliedBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(suppliedBuffer, expectedBuffer);
+}
+
+function requireServiceRole(req: Parameters<typeof resolveAuth>[0]): void {
+  if (!hasServiceRoleCredential(req)) throw new RestError(401, "Acesso administrativo inválido.");
+}
+
+/** Compatibilidade com auth.admin.createUser usada pelas funções legadas. */
+authRouter.post("/admin/users", async (req, res) => {
+  requireServiceRole(req);
+  const email = String(req.body?.email ?? "").toLowerCase().trim();
+  const password = String(req.body?.password ?? "");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || password.length < 8) {
+    throw new RestError(400, "Dados do usuário inválidos.");
+  }
+
+  const existing = await findUserByEmail(email);
+  if (existing) {
+    res.status(422).json({ message: "A user with this email address has already been registered" });
+    return;
+  }
+
+  const rows = await adminQuery<AuthUserRow>(
+    `INSERT INTO auth_users (email, password_hash, email_confirmed_at, user_metadata)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, email, password_hash, email_confirmed_at, user_metadata, banned_until`,
+    [
+      email,
+      hashPassword(password),
+      req.body?.email_confirm === false ? null : new Date(),
+      JSON.stringify(req.body?.user_metadata ?? {}),
+    ],
+  );
+  res.json({ user: publicUser(rows[0]) });
+});
+
+/** Compatibilidade com auth.admin.generateLink para o acesso direto ao Lotar Grupos. */
+authRouter.post("/admin/generate_link", async (req, res) => {
+  requireServiceRole(req);
+  const email = String(req.body?.email ?? "").toLowerCase().trim();
+  const type = String(req.body?.type ?? "magiclink");
+  if (type !== "magiclink" || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    throw new RestError(400, "Tipo de link ou e-mail inválido.");
+  }
+
+  const user = await findUserByEmail(email);
+  if (!user) throw new RestError(404, "Usuário não encontrado.");
+  const { token } = signToken({
+    sub: user.id,
+    email: user.email,
+    role: "authenticated",
+    ttlSeconds: 5 * 60,
+    extra: { typ: "magiclink", user_metadata: user.user_metadata ?? {} },
+  });
+
+  res.json({
+    properties: {
+      action_link: `${env.publicUrl}/auth/v1/verify?token=${encodeURIComponent(token)}&type=magiclink`,
+      hashed_token: token,
+      redirect_to: "",
+      email_otp: "",
+    },
+    user: publicUser(user),
+  });
+});
+
+/** Compatibilidade com auth.verifyOtp({ token_hash, type: "email" }). */
+authRouter.post("/verify", async (req, res) => {
+  const token = String(req.body?.token_hash ?? req.body?.token ?? "");
+  const type = String(req.body?.type ?? "");
+  if (!token || !["email", "magiclink"].includes(type)) {
+    throw new RestError(400, "Token de acesso inválido.");
+  }
+
+  let claims: Record<string, unknown>;
+  try {
+    claims = jwt.verify(token, env.auth.jwtSecret, { algorithms: ["HS256"] }) as Record<string, unknown>;
+  } catch {
+    throw new RestError(401, "Token de acesso inválido ou expirado.");
+  }
+  if (claims.typ !== "magiclink" || typeof claims.sub !== "string") {
+    throw new RestError(401, "Token de acesso inválido.");
+  }
+
+  const user = await findUserById(claims.sub);
+  if (!user || user.banned_until && new Date(user.banned_until) > new Date()) {
+    throw new RestError(403, "Usuário bloqueado ou inexistente.");
+  }
+  res.json(buildSession(user));
+});
+
 /** POST /auth/v1/token?grant_type=password | refresh_token */
 authRouter.post("/token", async (req, res) => {
   const grantType = String(req.query.grant_type ?? "password");
