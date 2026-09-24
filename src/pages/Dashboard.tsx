@@ -521,25 +521,27 @@ export default function Dashboard() {
           return;
         }
 
-        const { data: ssoData, error: ssoError } = await supabase.functions.invoke("hub-api", {
-          body: {
-            action: "login",
-            identifier,
-            password: session.password,
-            issue_lotargrupos_sso: true,
-            lotargrupos_product_id: product.id,
-          },
-          signal: AbortSignal.timeout(30_000),
+        const ssoData = await invokeWithTimeout("hub-api", {
+          action: "login",
+          identifier,
+          password: session.password,
+          issue_lotargrupos_sso: true,
+          lotargrupos_product_id: product.id,
         });
 
-        const tokenHash = typeof (ssoData as { lotargrupos_token_hash?: string })?.lotargrupos_token_hash === "string"
-          ? (ssoData as { lotargrupos_token_hash: string }).lotargrupos_token_hash
+        const tokenHash = typeof ssoData?.lotargrupos_token_hash === "string"
+          ? ssoData.lotargrupos_token_hash
           : "";
 
-        if (ssoError || !(ssoData as { success?: boolean })?.success || !tokenHash) {
+        if (!ssoData?.success || !tokenHash) {
           toast({
             title: "Não foi possível abrir o Lotar Grupos",
-            description: "Atualize a página e tente novamente.",
+            description:
+              typeof ssoData?.lotargrupos_sso_error === "string"
+                ? ssoData.lotargrupos_sso_error
+                : typeof ssoData?.error === "string"
+                  ? ssoData.error
+                  : "Atualize a página e tente novamente.",
             variant: "destructive",
           });
           return;
