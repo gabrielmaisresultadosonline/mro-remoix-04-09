@@ -213,23 +213,23 @@ serve(async (req) => {
 
         if (!normalizedEmail || !normalizedEmail.includes("@")) {
           lotarGruposSsoError = "O cadastro precisa de um e-mail válido para abrir o Lotar Grupos.";
+          console.warn("[HUB-API][LOTARGRUPOS-SSO] e-mail ausente para usuário autenticado");
         } else {
+          const { data: lotarUsers } = await supabase
+            .from("lotargrupos_users")
+            .select("id,email,status,name,user_id,created_at")
+            .ilike("email", normalizedEmail)
+            .order("created_at", { ascending: true });
 
-        const { data: lotarUsers } = await supabase
-          .from("lotargrupos_users")
-          .select("id,email,status,name,user_id,created_at")
-          .ilike("email", normalizedEmail)
-          .order("created_at", { ascending: true });
+          // Registros antigos podem ter diferenças de maiúsculas ou duplicatas.
+          // Escolhemos deterministicamente o ativo/vinculado, sem excluir histórico.
+          let lotarUser = (lotarUsers || []).find(
+            (candidate: { status: string; user_id: string | null }) => candidate.status === "active" && candidate.user_id,
+          ) || (lotarUsers || []).find(
+            (candidate: { status: string }) => candidate.status === "active",
+          ) || lotarUsers?.[0] || null;
 
-        // Registros antigos podem ter diferenças de maiúsculas ou duplicatas.
-        // Escolhemos deterministicamente o ativo/vinculado, sem excluir histórico.
-        let lotarUser = (lotarUsers || []).find(
-          (candidate: { status: string; user_id: string | null }) => candidate.status === "active" && candidate.user_id,
-        ) || (lotarUsers || []).find(
-          (candidate: { status: string }) => candidate.status === "active",
-        ) || lotarUsers?.[0] || null;
-
-        let hasAccess = !!lotarUser && lotarUser.status === "active";
+          let hasAccess = !!lotarUser && lotarUser.status === "active";
 
         // Liberações feitas pela dashboard de produtos (hub_access) também valem.
         if (!hasAccess) {
@@ -279,7 +279,7 @@ serve(async (req) => {
           }
         }
 
-        if (hasAccess) {
+          if (hasAccess) {
           // A área de membros exige um registro ativo em lotargrupos_users.
           if (!lotarUser) {
             const { data: createdUser } = await supabase
@@ -342,13 +342,21 @@ serve(async (req) => {
                 .eq("id", lotarUser.id)
                 .is("user_id", null);
             }
-          } else {
-            lotarGruposSsoError = "Não foi possível criar a sessão do Lotar Grupos.";
-          }
+            } else {
+              lotarGruposSsoError = "Não foi possível criar a sessão do Lotar Grupos.";
+              console.error("[HUB-API][LOTARGRUPOS-SSO] falha ao gerar token", {
+                hasLinkError: !!linkError,
+                hasToken: !!linkData?.properties?.hashed_token,
+              });
+            }
 
-        } else {
-          lotarGruposSsoError = "A liberação do Lotar Grupos não foi encontrada para este usuário.";
-        }
+          } else {
+            lotarGruposSsoError = "A liberação do Lotar Grupos não foi encontrada para este usuário.";
+            console.warn("[HUB-API][LOTARGRUPOS-SSO] liberação ativa não localizada", {
+              requestedProduct: !!requestedProductId,
+              hasUsername: !!normalizedUsername,
+            });
+          }
         }
       }
 

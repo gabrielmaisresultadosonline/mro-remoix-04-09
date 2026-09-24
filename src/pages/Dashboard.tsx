@@ -549,7 +549,7 @@ export default function Dashboard() {
 
         const { error: verifyError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: "email",
+          type: "magiclink",
         });
 
         if (verifyError) {
