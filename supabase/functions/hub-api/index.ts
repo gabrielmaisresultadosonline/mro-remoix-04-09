@@ -119,16 +119,19 @@ serve(async (req) => {
           .from("mro_tool_users")
           .select("*")
           .ilike(lookupColumn, identifier)
-          .limit(1),
+          .limit(100),
         supabase
           .from("zapmro_users")
           .select("*")
           .ilike(lookupColumn, identifier)
-          .limit(1),
+          .limit(100),
       ]);
 
       const mroRows = mroResult.data;
-      const mro = mroRows?.[0] || null;
+      // Cadastros históricos podem repetir usuário/e-mail. O login original já
+      // aceitou uma dessas linhas; escolher apenas a primeira fazia o SSO falhar
+      // quando ela guardava uma senha antiga.
+      const mro = mroRows?.find((candidate) => passwordMatches(candidate)) || null;
       if (passwordMatches(mro)) {
         matched = true;
         username = mro.username;
@@ -139,7 +142,7 @@ serve(async (req) => {
       // 2) ZAPMRO
       if (!matched) {
         const zapRows = zapResult.data;
-        const zap = zapRows?.[0] || null;
+        const zap = zapRows?.find((candidate) => passwordMatches(candidate)) || null;
         if (passwordMatches(zap)) {
           matched = true;
           username = zap.username;
@@ -183,30 +186,50 @@ serve(async (req) => {
       }
 
       let lotarGruposTokenHash: string | null = null;
+      let lotarGruposSsoError: string | null = null;
 
       // SSO opcional para a área de membros Lotar Grupos. O token só é emitido
       // depois que as credenciais do Hub foram validadas acima e o cliente possui
       // acesso ao produto (licença própria OU liberação manual/compra no Hub).
-      if (body.issue_lotargrupos_sso === true && email) {
-        const normalizedEmail = String(email).trim().toLowerCase();
+      if (body.issue_lotargrupos_sso === true) {
+        let normalizedEmail = String(email || "").trim().toLowerCase();
         const normalizedUsername = username ? String(username).trim().toLowerCase() : "";
         const requestedProductId = String(body.lotargrupos_product_id || "").trim();
 
-        const { data: lotarUsers } = await supabase
-          .from("lotargrupos_users")
-          .select("id,email,status,name,user_id,created_at")
-          .ilike("email", normalizedEmail)
-          .order("created_at", { ascending: true });
+        // Algumas liberações antigas foram salvas pelo usuário, embora o e-mail
+        // estivesse somente no próprio hub_access. Recuperamos esse e-mail antes
+        // de criar a sessão, mantendo o card liberado como fonte da verdade.
+        if (!normalizedEmail && normalizedUsername && requestedProductId) {
+          const { data: grantRows } = await supabase
+            .from("hub_access")
+            .select("email")
+            .eq("product_id", requestedProductId)
+            .ilike("username", normalizedUsername)
+            .not("email", "is", null)
+            .limit(1);
+          normalizedEmail = String(grantRows?.[0]?.email || "").trim().toLowerCase();
+          if (normalizedEmail) email = normalizedEmail;
+        }
 
-        // Registros antigos podem ter diferenças de maiúsculas ou duplicatas.
-        // Escolhemos deterministicamente o ativo/vinculado, sem excluir histórico.
-        let lotarUser = (lotarUsers || []).find(
-          (candidate: { status: string; user_id: string | null }) => candidate.status === "active" && candidate.user_id,
-        ) || (lotarUsers || []).find(
-          (candidate: { status: string }) => candidate.status === "active",
-        ) || lotarUsers?.[0] || null;
+        if (!normalizedEmail || !normalizedEmail.includes("@")) {
+          lotarGruposSsoError = "O cadastro precisa de um e-mail válido para abrir o Lotar Grupos.";
+          console.warn("[HUB-API][LOTARGRUPOS-SSO] e-mail ausente para usuário autenticado");
+        } else {
+          const { data: lotarUsers } = await supabase
+            .from("lotargrupos_users")
+            .select("id,email,status,name,user_id,created_at")
+            .ilike("email", normalizedEmail)
+            .order("created_at", { ascending: true });
 
-        let hasAccess = !!lotarUser && lotarUser.status === "active";
+          // Registros antigos podem ter diferenças de maiúsculas ou duplicatas.
+          // Escolhemos deterministicamente o ativo/vinculado, sem excluir histórico.
+          let lotarUser = (lotarUsers || []).find(
+            (candidate: { status: string; user_id: string | null }) => candidate.status === "active" && candidate.user_id,
+          ) || (lotarUsers || []).find(
+            (candidate: { status: string }) => candidate.status === "active",
+          ) || lotarUsers?.[0] || null;
+
+          let hasAccess = !!lotarUser && lotarUser.status === "active";
 
         // Liberações feitas pela dashboard de produtos (hub_access) também valem.
         if (!hasAccess) {
@@ -256,7 +279,7 @@ serve(async (req) => {
           }
         }
 
-        if (hasAccess) {
+          if (hasAccess) {
           // A área de membros exige um registro ativo em lotargrupos_users.
           if (!lotarUser) {
             const { data: createdUser } = await supabase
@@ -319,8 +342,21 @@ serve(async (req) => {
                 .eq("id", lotarUser.id)
                 .is("user_id", null);
             }
-          }
+            } else {
+              lotarGruposSsoError = "Não foi possível criar a sessão do Lotar Grupos.";
+              console.error("[HUB-API][LOTARGRUPOS-SSO] falha ao gerar token", {
+                hasLinkError: !!linkError,
+                hasToken: !!linkData?.properties?.hashed_token,
+              });
+            }
 
+          } else {
+            lotarGruposSsoError = "A liberação do Lotar Grupos não foi encontrada para este usuário.";
+            console.warn("[HUB-API][LOTARGRUPOS-SSO] liberação ativa não localizada", {
+              requestedProduct: !!requestedProductId,
+              hasUsername: !!normalizedUsername,
+            });
+          }
         }
       }
 
@@ -329,6 +365,7 @@ serve(async (req) => {
         success: true,
         user: { username, email, name },
         lotargrupos_token_hash: lotarGruposTokenHash,
+        lotargrupos_sso_error: lotarGruposSsoError,
       });
 
     }
