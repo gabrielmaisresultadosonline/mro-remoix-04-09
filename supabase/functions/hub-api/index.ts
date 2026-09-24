@@ -190,6 +190,7 @@ serve(async (req) => {
       if (body.issue_lotargrupos_sso === true && email) {
         const normalizedEmail = String(email).trim().toLowerCase();
         const normalizedUsername = username ? String(username).trim().toLowerCase() : "";
+        const requestedProductId = String(body.lotargrupos_product_id || "").trim();
 
         const { data: lotarUsers } = await supabase
           .from("lotargrupos_users")
@@ -209,12 +210,36 @@ serve(async (req) => {
 
         // Liberações feitas pela dashboard de produtos (hub_access) também valem.
         if (!hasAccess) {
-          const { data: product } = await supabase
-            .from("hub_products")
-            .select("id")
-            .eq("slug", "lotargrupos")
-            .limit(1)
-            .maybeSingle();
+          // O card liberado no painel é a fonte de verdade. Cadastros antigos usam
+          // tanto `lotargrupos` quanto `lotar-grupos`, por isso o fallback aceita
+          // ambos e também o access_source histórico.
+          let product: { id: string; slug: string; access_source: string } | null = null;
+          if (requestedProductId) {
+            const { data } = await supabase
+              .from("hub_products")
+              .select("id,slug,access_source")
+              .eq("id", requestedProductId)
+              .limit(1)
+              .maybeSingle();
+            if (
+              data &&
+              (data.slug === "lotargrupos" ||
+                data.slug === "lotar-grupos" ||
+                data.access_source === "lotargrupos")
+            ) {
+              product = data;
+            }
+          }
+
+          if (!product) {
+            const { data: products } = await supabase
+              .from("hub_products")
+              .select("id,slug,access_source")
+              .or("slug.eq.lotargrupos,slug.eq.lotar-grupos,access_source.eq.lotargrupos")
+              .order("order_index", { ascending: true })
+              .limit(1);
+            product = products?.[0] || null;
+          }
 
           if (product?.id) {
             const filters = [`email.eq.${normalizedEmail}`];
