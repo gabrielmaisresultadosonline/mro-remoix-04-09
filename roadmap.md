@@ -28,6 +28,7 @@
 - [x] Preservar a liberação manual exibida no `/admin`
 - [x] Implementar na VPS a criação administrativa de identidade, link temporário e verificação do acesso automático
 - [x] Impedir que o atualizador compile o site apontando para uma instância antiga do backend
+- [x] Usar no acesso automático o mesmo ID liberado no card e aceitar os slugs `lotargrupos` e `lotar-grupos`
 - [ ] Atualizar a VPS e confirmar o acesso real de um cliente liberado
 
 ## Login CORS incident

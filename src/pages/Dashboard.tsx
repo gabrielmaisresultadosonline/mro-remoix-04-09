@@ -527,6 +527,7 @@ export default function Dashboard() {
             identifier,
             password: session.password,
             issue_lotargrupos_sso: true,
+            lotargrupos_product_id: product.id,
           },
           signal: AbortSignal.timeout(30_000),
         });
