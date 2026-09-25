@@ -521,13 +521,24 @@ export default function Dashboard() {
           return;
         }
 
-        const ssoData = await invokeWithTimeout("hub-api", {
-          action: "login",
-          identifier,
-          password: session.password,
-          issue_lotargrupos_sso: true,
-          lotargrupos_product_id: product.id,
-        });
+        let ssoData: Record<string, any>;
+        try {
+          ssoData = await invokeWithTimeout("hub-api", {
+            action: "login",
+            identifier,
+            password: session.password,
+            issue_lotargrupos_sso: true,
+            lotargrupos_product_id: product.id,
+          });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "O servidor não respondeu.";
+          toast({
+            title: "Não foi possível abrir o Lotar Grupos",
+            description: message,
+            variant: "destructive",
+          });
+          return;
+        }
 
         const tokenHash = typeof ssoData?.lotargrupos_token_hash === "string"
           ? ssoData.lotargrupos_token_hash
@@ -541,7 +552,7 @@ export default function Dashboard() {
                 ? ssoData.lotargrupos_sso_error
                 : typeof ssoData?.error === "string"
                   ? ssoData.error
-                  : "Atualize a página e tente novamente.",
+                  : "A atualização do acesso ainda não chegou ao servidor.",
             variant: "destructive",
           });
           return;
