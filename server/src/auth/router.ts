@@ -188,14 +188,16 @@ authRouter.post("/admin/generate_link", async (req, res) => {
     extra: { typ: "magiclink", user_metadata: user.user_metadata ?? {} },
   });
 
+  // O GoTrue envia estes campos no nível raiz. O supabase-js transforma essa
+  // resposta em `{ properties, user }`; devolvê-la já aninhada fazia o SDK
+  // perder `hashed_token`, impedindo o SSO do Lotar Grupos na VPS.
   res.json({
-    properties: {
-      action_link: `${env.publicUrl}/auth/v1/verify?token=${encodeURIComponent(token)}&type=magiclink`,
-      hashed_token: token,
-      redirect_to: "",
-      email_otp: "",
-    },
-    user: publicUser(user),
+    action_link: `${env.publicUrl}/auth/v1/verify?token=${encodeURIComponent(token)}&type=magiclink`,
+    hashed_token: token,
+    redirect_to: "",
+    email_otp: "",
+    verification_type: "magiclink",
+    ...publicUser(user),
   });
 });
 

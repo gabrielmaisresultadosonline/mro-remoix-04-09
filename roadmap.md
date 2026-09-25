@@ -31,6 +31,7 @@
 - [x] Usar no acesso automático o mesmo ID liberado no card e aceitar os slugs `lotargrupos` e `lotar-grupos`
 - [x] Unificar a identidade liberada com a sessão automática e aceitar cadastros históricos duplicados
 - [x] Bloquear atualizações que publiquem o painel ou a função antiga do Lotar Grupos
+- [x] Corrigir o formato GoTrue de `generate_link` para o SDK receber o token da sessão
 - [ ] Atualizar a VPS e confirmar o acesso real de um cliente liberado
 
 ## Login CORS incident
