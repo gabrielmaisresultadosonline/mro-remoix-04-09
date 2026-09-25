@@ -30,6 +30,7 @@
 - [x] Impedir que o atualizador compile o site apontando para uma instância antiga do backend
 - [x] Usar no acesso automático o mesmo ID liberado no card e aceitar os slugs `lotargrupos` e `lotar-grupos`
 - [x] Unificar a identidade liberada com a sessão automática e aceitar cadastros históricos duplicados
+- [x] Bloquear atualizações que publiquem o painel ou a função antiga do Lotar Grupos
 - [ ] Atualizar a VPS e confirmar o acesso real de um cliente liberado
 
 ## Login CORS incident

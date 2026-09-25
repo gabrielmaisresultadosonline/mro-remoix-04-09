@@ -157,6 +157,12 @@ fi
 step "5/7 Compilando o site"
 npm run build
 [ -d dist ] || fail "Build não gerou a pasta dist/."
+# Impede uma atualização aparentemente bem-sucedida com o fluxo antigo que
+# exibia apenas "Atualize a página" e não criava a sessão de clientes legados.
+grep -Rqs "A atualização do acesso ainda não chegou ao servidor" dist/assets/*.js \
+  || fail "Build não contém a correção atual do acesso ao Lotar Grupos."
+grep -qs "lotargrupos_sso_error" supabase/functions/hub-api/index.ts \
+  || fail "hub-api não contém a correção atual do acesso ao Lotar Grupos."
 ok "Site compilado ($(du -sh dist | cut -f1))."
 if [ -n "${WEB_ROOT:-}" ] && [ "$WEB_ROOT" != "$(pwd)/dist" ]; then
   rsync -a --delete dist/ "$WEB_ROOT/"
