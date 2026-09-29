@@ -109,7 +109,8 @@ SQL
     ok "Extensões, roles, auth.uid(), storage e realtime aplicados."
 
     for m in $(ls server/migrations/0[1-9]*.sql 2>/dev/null || true); do
-      psql -v ON_ERROR_STOP=0 -d "$DATABASE_URL" -f "$m" >/dev/null 2>&1 || true
+      MIGRATION_OUTPUT="$(psql -v ON_ERROR_STOP=1 -d "$DATABASE_URL" -f "$m" 2>&1)" \
+        || fail "Falha ao aplicar $(basename "$m"): $MIGRATION_OUTPUT"
       ok "Migração aplicada: $(basename "$m")"
     done
 

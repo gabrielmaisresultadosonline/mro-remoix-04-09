@@ -14,7 +14,7 @@
 import dns from "node:dns/promises";
 import { pool } from "../src/db.js";
 import { requireLegacy } from "../src/env.js";
-import { migrateSchema } from "./migrate-schema.js";
+import { applyVersionedMigrations, migrateSchema } from "./migrate-schema.js";
 import { migrateData } from "./migrate-data.js";
 import { migrateUsers } from "./migrate-users.js";
 import { migrateStorage } from "./migrate-storage.js";
@@ -82,7 +82,7 @@ async function main(): Promise<void> {
   }
 
   const steps: Step[] = [
-    { name: "schema", run: () => migrateSchema(), skip: onlyStorage || noSource },
+    { name: "schema", run: () => noSource ? applyVersionedMigrations() : migrateSchema(), skip: onlyStorage },
     { name: "users", run: () => migrateUsers(), skip: onlyStorage || noSource || args.includes("--skip-data") },
     { name: "data", run: () => migrateData(), skip: onlyStorage || noSource || args.includes("--skip-data") },
     { name: "storage", run: () => migrateStorage(), skip: noSource || args.includes("--skip-storage") },

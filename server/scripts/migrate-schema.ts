@@ -19,6 +19,7 @@ import { log } from "./lib/log.js";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.resolve(here, "../migrations");
 const dumpPath = path.join(migrationsDir, "001_schema_legacy.sql");
+const versionedMigrationPattern = /^\d{3}_.+\.sql$/;
 
 
 /**
@@ -136,6 +137,21 @@ async function applySql(sqlPath: string, label: string, tolerant: boolean): Prom
   log.ok(`${label} aplicado.`);
 }
 
+/**
+ * Aplica migrations aditivas mantidas no repositório. Elas corrigem instalações
+ * já existentes, onde o dump inicial não recebe colunas criadas posteriormente.
+ */
+export async function applyVersionedMigrations(): Promise<void> {
+  const migrations = fs
+    .readdirSync(migrationsDir)
+    .filter((file) => versionedMigrationPattern.test(file) && file !== "000_bootstrap.sql" && file !== "001_schema_legacy.sql")
+    .sort();
+
+  for (const migration of migrations) {
+    await applySql(path.join(migrationsDir, migration), migration, true);
+  }
+}
+
 /** Lista as tabelas base do schema `public` de uma conexão. */
 async function listTables(connection: string): Promise<Set<string>> {
   const output = await runOrThrow("psql", [
@@ -208,6 +224,7 @@ export async function migrateSchema(options: { dumpOnly?: boolean } = {}): Promi
   const legacy = requireLegacy();
   if (!legacy.databaseUrl) {
     log.warn("LEGACY_DATABASE_URL ausente: pulando a cópia do schema antigo.");
+    await applyVersionedMigrations();
     return;
   }
 
@@ -235,6 +252,9 @@ export async function migrateSchema(options: { dumpOnly?: boolean } = {}): Promi
   // 3b) Rede de segurança: um erro em cascata no dump grande pode deixar
   // tabelas de fora. Recriamos individualmente as que faltarem.
   await createMissingTables(legacy.databaseUrl);
+
+  // 3c) Evoluções locais posteriores ao snapshot do schema legado.
+  await applyVersionedMigrations();
 
   // 4) Restaura os GRANTs, que o dump não trouxe (--no-privileges).
   log.info("Reaplicando GRANTs para anon/authenticated/service_role...");
