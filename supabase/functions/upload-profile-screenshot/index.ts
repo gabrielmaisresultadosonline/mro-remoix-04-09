@@ -26,26 +26,48 @@ serve(async (req) => {
 
     console.log(`📸 Uploading profile screenshot for @${normalizedUsername} (user: ${normalizedSquarecloudUsername})`);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Configuração de armazenamento indisponível');
+    }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const persistScreenshotUrl = async (url: string | null): Promise<void> => {
+      const now = new Date().toISOString();
+      const { data: updatedRows, error: updateError } = await supabase
+        .from('squarecloud_user_profiles')
+        .update({ profile_screenshot_url: url, updated_at: now })
+        .eq('squarecloud_username', normalizedSquarecloudUsername)
+        .eq('instagram_username', normalizedUsername)
+        .select('id');
+
+      if (updateError) throw updateError;
+      if (updatedRows && updatedRows.length > 0) return;
+
+      const { error: insertError } = await supabase
+        .from('squarecloud_user_profiles')
+        .upsert({
+          squarecloud_username: normalizedSquarecloudUsername,
+          instagram_username: normalizedUsername,
+          profile_data: {},
+          profile_screenshot_url: url,
+          synced_at: now,
+          updated_at: now,
+        }, { onConflict: 'squarecloud_username,instagram_username' });
+
+      if (insertError) throw insertError;
+    };
 
     if (action === 'set' || action === 'clear') {
       const nextUrl = action === 'set' ? String(screenshot_url || '') || null : null;
 
-      const { error: updateError } = await supabase
-        .from('squarecloud_user_profiles')
-        .update({ 
-          profile_screenshot_url: nextUrl,
-          updated_at: new Date().toISOString()
-        })
-        .eq('squarecloud_username', normalizedSquarecloudUsername)
-        .eq('instagram_username', normalizedUsername);
-
-      if (updateError) {
+      try {
+        await persistScreenshotUrl(nextUrl);
+      } catch (updateError) {
         console.error('❌ Screenshot restore/clear error:', updateError);
         return Response.json(
-          { success: false, error: updateError.message },
+          { success: false, error: updateError instanceof Error ? updateError.message : 'Erro ao persistir print' },
           { status: 500, headers: corsHeaders }
         );
       }
@@ -100,19 +122,7 @@ serve(async (req) => {
     console.log(`✅ Screenshot uploaded: ${screenshotUrl}`);
 
     // Update the profile record with screenshot URL
-    const { error: updateError } = await supabase
-      .from('squarecloud_user_profiles')
-      .update({ 
-        profile_screenshot_url: screenshotUrl,
-        updated_at: new Date().toISOString()
-      })
-      .eq('squarecloud_username', normalizedSquarecloudUsername)
-      .eq('instagram_username', normalizedUsername);
-
-    if (updateError) {
-      console.warn('⚠️ Could not update profile record:', updateError);
-      // Don't fail - screenshot was uploaded successfully
-    }
+    await persistScreenshotUrl(screenshotUrl);
 
     return Response.json({
       success: true,

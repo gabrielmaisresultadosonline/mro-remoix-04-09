@@ -13,6 +13,46 @@ import {
 const STORAGE_KEY = 'mro_session';
 const ARCHIVE_KEY = 'mro_archived_profiles';
 
+export const createProfileSessionId = (username?: string): string => {
+  const normalizedUsername = (username || 'unknown')
+    .toLowerCase()
+    .replace('@', '')
+    .trim()
+    .replace(/[^a-z0-9._-]+/g, '_');
+  const uniquePart = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  return `profile_${normalizedUsername}_${uniquePart}`;
+};
+
+const normalizeProfileSessionIds = (session: MROSession): MROSession => {
+  const usedIds = new Set<string>();
+  let changed = false;
+
+  const profiles = session.profiles.map(profileSession => {
+    const currentId = typeof profileSession.id === 'string' ? profileSession.id.trim() : '';
+    if (currentId && !usedIds.has(currentId)) {
+      usedIds.add(currentId);
+      return profileSession;
+    }
+
+    changed = true;
+    let nextId = createProfileSessionId(profileSession.profile?.username);
+    while (usedIds.has(nextId)) nextId = createProfileSessionId(profileSession.profile?.username);
+    usedIds.add(nextId);
+    return { ...profileSession, id: nextId };
+  });
+
+  if (!changed) return session;
+
+  const activeProfileExists = profiles.some(profile => profile.id === session.activeProfileId);
+  return {
+    ...session,
+    profiles,
+    activeProfileId: activeProfileExists ? session.activeProfileId : profiles[0]?.id || null,
+  };
+};
+
 export const getSession = (): MROSession => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -32,7 +72,11 @@ export const getSession = (): MROSession => {
         console.warn('[storage] Missing profiles array, returning empty');
         return createEmptySession();
       }
-      return parsed;
+      const normalized = normalizeProfileSessionIds(parsed as MROSession);
+      if (normalized !== parsed) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      }
+      return normalized;
     }
   } catch (e) {
     console.error('[storage] Error parsing session, clearing:', e);
@@ -46,7 +90,7 @@ const migrateOldSession = (oldSession: any): MROSession => {
     return createEmptySession();
   }
   
-  const profileId = `profile_${Date.now()}`;
+  const profileId = createProfileSessionId(oldSession.profile.username);
   const now = new Date().toISOString();
   
   const profileSession: ProfileSession = {
@@ -226,6 +270,10 @@ export const saveSession = (session: MROSession): void => {
 // CRITICAL: This REPLACES local data entirely - NO MERGING to prevent data contamination!
 export const initializeFromCloud = (profileSessions: ProfileSession[], archivedProfiles: ProfileSession[]): void => {
   const loggedUsername = getLoggedUsername();
+  const previousSession = getSession();
+  const previousActiveUsername = previousSession.profiles
+    .find(profile => profile.id === previousSession.activeProfileId)
+    ?.profile.username.toLowerCase();
   
   console.log(`☁️ [${loggedUsername}] ===========================================`);
   console.log(`☁️ [${loggedUsername}] INITIALIZING FROM CLOUD (COMPLETE REPLACEMENT)`);
@@ -308,6 +356,7 @@ export const initializeFromCloud = (profileSessions: ProfileSession[], archivedP
   console.log(`☁️ [${loggedUsername}] Deduplicated: ${cloudProfilesWithHistory.length} -> ${deduplicatedProfiles.length} profiles`);
   
   // CRITICAL: Cloud data is the ONLY source of truth - NO MERGING with local data!
+  const usedProfileIds = new Set<string>();
   const normalizedProfiles: ProfileSession[] = deduplicatedProfiles.map(cloudProfile => {
     // Ensure initialSnapshot exists - use first growth history entry or create from profile
     let initialSnapshot = cloudProfile.initialSnapshot;
@@ -318,8 +367,15 @@ export const initializeFromCloud = (profileSessions: ProfileSession[], archivedP
       initialSnapshot = createSnapshot(cloudProfile.profile);
     }
     
+    let stableId = typeof cloudProfile.id === 'string' ? cloudProfile.id.trim() : '';
+    if (!stableId || usedProfileIds.has(stableId)) {
+      stableId = createProfileSessionId(cloudProfile.profile.username);
+    }
+    usedProfileIds.add(stableId);
+
     return {
       ...cloudProfile,
+      id: stableId,
       isHistorical: !activeCloudUsernames.has(cloudProfile.profile.username.toLowerCase()),
       historicalSince: activeCloudUsernames.has(cloudProfile.profile.username.toLowerCase())
         ? undefined
@@ -339,9 +395,12 @@ export const initializeFromCloud = (profileSessions: ProfileSession[], archivedP
   });
   
   // Create fresh session with ONLY cloud profiles for THIS user
+  const preservedActiveProfile = previousActiveUsername
+    ? normalizedProfiles.find(profile => profile.profile.username.toLowerCase() === previousActiveUsername)
+    : undefined;
   const session: MROSession = {
     profiles: normalizedProfiles,
-    activeProfileId: normalizedProfiles.length > 0 ? normalizedProfiles[0].id : null,
+    activeProfileId: preservedActiveProfile?.id || normalizedProfiles[0]?.id || null,
     lastUpdated: new Date().toISOString(),
   };
   
@@ -413,7 +472,7 @@ export const addProfile = (profile: InstagramProfile, analysis: ProfileAnalysis)
     // Restore from archive - keeps strategies, creatives, credits used, etc.
     const restoredProfile: ProfileSession = {
       ...archivedProfile,
-      id: `profile_${Date.now()}`, // New ID
+      id: createProfileSessionId(profile.username),
       profile, // Update with fresh profile data
       analysis, // Update with fresh analysis
       isHistorical: false,
@@ -435,7 +494,7 @@ export const addProfile = (profile: InstagramProfile, analysis: ProfileAnalysis)
   }
   
   // New profile - create fresh session
-  const profileId = `profile_${Date.now()}`;
+  const profileId = createProfileSessionId(profile.username);
   const now = new Date().toISOString();
   
   const newProfileSession: ProfileSession = {
@@ -522,7 +581,7 @@ export const restoreProfileFromArchive = (username: string): ProfileSession | nu
   // Restore from archive
   const restoredProfile: ProfileSession = {
     ...archivedProfile,
-    id: `profile_${Date.now()}`,
+    id: createProfileSessionId(username),
     isHistorical: false,
     historicalSince: undefined,
     lastUpdated: new Date().toISOString(),
