@@ -18,6 +18,7 @@ export interface RegisteredIG {
   email: string;
   printSent: boolean;
   syncedFromSquare: boolean;
+  screenshotUrl?: string; // Print persistido na nuvem administrativa
 }
 
 export interface SquareLoginResponse {
