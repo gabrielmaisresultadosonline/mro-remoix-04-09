@@ -20,6 +20,7 @@
 - [x] Persistir prints na nuvem mesmo antes da linha auxiliar do perfil existir
 - [x] Impedir colisões de identificadores e preservar o perfil selecionado na sincronização
 - [x] Restaurar no painel os prints já exibidos no administrativo
+- [x] Aplicar automaticamente as migrations aditivas na VPS, inclusive em atualização rápida
 
 ## Login de clientes /IG
 - [x] Aceitar hashes bcrypt importados e convertê-los para PBKDF2 no primeiro login válido
