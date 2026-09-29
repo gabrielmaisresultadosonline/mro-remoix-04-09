@@ -61,7 +61,7 @@ export const ProfileSelector = ({
           <div className="max-h-[50vh] overflow-y-auto">
             {profiles.map((profile) => (
               <DropdownMenuItem
-                key={profile.id}
+                key={`${profile.profile.username.toLowerCase()}-${profile.id}`}
                 className="flex items-center justify-between cursor-pointer py-2"
                 onClick={() => onSelectProfile(profile.id)}
               >

@@ -4,7 +4,7 @@
 // IMPORTANTE: Histórico de crescimento SEMPRE sincronizado via nuvem
 
 import { MROSession, ProfileSession, InstagramProfile, ProfileAnalysis, GrowthSnapshot, GrowthInsight } from '@/types/instagram';
-import { getSession, saveSession as baseSaveSession, createSnapshot, setServerSyncCallback } from '@/lib/storage';
+import { createProfileSessionId, getSession, saveSession as baseSaveSession, createSnapshot, setServerSyncCallback } from '@/lib/storage';
 import { supabase } from '@/integrations/supabase/client';
 
 // 30 days in milliseconds
@@ -559,7 +559,7 @@ export const syncPersistentToSession = (): void => {
     if (!existingInSession) {
       // Add to session from persistent storage
       const profileSession: ProfileSession = {
-        id: `profile_${Date.now()}_${persistedData.username}`,
+        id: createProfileSessionId(persistedData.username),
         profile: persistedData.profile,
         analysis: persistedData.analysis,
         strategies: persistedData.strategies,
@@ -741,7 +741,7 @@ export const loadPersistedDataOnLogin = async (loggedInUsername: string, registe
       if (existingIndex === -1) {
         // Create new profile session from cloud data
         const profileSession: ProfileSession = {
-          id: `profile_${Date.now()}_${normalizedUsername}`,
+          id: createProfileSessionId(normalizedUsername),
           profile: persistedData.profile,
           analysis: persistedData.analysis,
           strategies: persistedData.strategies,
