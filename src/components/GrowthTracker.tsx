@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ProfileSession, GrowthSnapshot, GrowthInsight } from '@/types/instagram';
-import { addGrowthSnapshot, addGrowthInsight, getSession, setCloudSyncCallback } from '@/lib/storage';
+import { addGrowthSnapshot, addGrowthInsight, getSession, saveSession, setCloudSyncCallback } from '@/lib/storage';
 import { syncSessionToPersistent, markProfileFetched } from '@/lib/persistentStorage';
 import { getCurrentUser, saveUserToCloud } from '@/lib/userStorage';
 import { TrendingUp, TrendingDown, Users, Heart, MessageCircle, Calendar, RefreshCw, Award, Cloud, CheckCircle2, Upload, Camera, Loader2, Clipboard } from 'lucide-react';
@@ -207,6 +207,24 @@ export const GrowthTracker = ({ profileSession, onUpdate }: GrowthTrackerProps) 
           };
 
           addGrowthInsight(profileSession.id, newInsight);
+
+          // Keep the same screenshot URL in both cloud sources. The admin reads
+          // the auxiliary profile row while the client panel renders the session.
+          const sessionWithScreenshot = getSession();
+          const profileWithScreenshot = sessionWithScreenshot.profiles.find(
+            profile => profile.id === profileSession.id,
+          );
+          if (profileWithScreenshot) {
+            const uploadedAt = new Date().toISOString();
+            profileWithScreenshot.screenshotUrl = uploadData.url;
+            if (!profileWithScreenshot.screenshotHistory?.some(item => item.url === uploadData.url)) {
+              profileWithScreenshot.screenshotHistory = [
+                ...(profileWithScreenshot.screenshotHistory || []),
+                { url: uploadData.url, uploadedAt },
+              ];
+            }
+            saveSession(sessionWithScreenshot);
+          }
 
           // Sync to cloud
           const loggedInUsername = getCurrentUser()?.username || 'anonymous';

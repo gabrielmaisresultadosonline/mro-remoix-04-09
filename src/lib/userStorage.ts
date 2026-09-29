@@ -105,6 +105,43 @@ const getOrCreateAuthToken = (username: string): string => {
   return token;
 };
 
+const hydrateCloudScreenshots = (
+  profileSessions: ProfileSession[],
+  archivedProfiles: ProfileSession[],
+  registeredProfiles: RegisteredIG[],
+): { profileSessions: ProfileSession[]; archivedProfiles: ProfileSession[] } => {
+  const screenshotsByUsername = new Map(
+    registeredProfiles
+      .filter(profile => Boolean(profile.screenshotUrl))
+      .map(profile => [normalizeInstagramUsername(profile.username), profile.screenshotUrl as string]),
+  );
+
+  const hydrate = (profiles: ProfileSession[]): ProfileSession[] => profiles.map(profileSession => {
+    const normalizedUsername = normalizeInstagramUsername(profileSession.profile.username);
+    const cloudScreenshotUrl = screenshotsByUsername.get(normalizedUsername);
+
+    if (!cloudScreenshotUrl || profileSession.screenshotUrl === cloudScreenshotUrl) {
+      return profileSession;
+    }
+
+    return {
+      ...profileSession,
+      screenshotUrl: cloudScreenshotUrl,
+      screenshotHistory: profileSession.screenshotHistory?.some(item => item.url === cloudScreenshotUrl)
+        ? profileSession.screenshotHistory
+        : [
+            ...(profileSession.screenshotHistory || []),
+            { url: cloudScreenshotUrl, uploadedAt: profileSession.lastUpdated || new Date().toISOString() },
+          ],
+    };
+  });
+
+  return {
+    profileSessions: hydrate(profileSessions),
+    archivedProfiles: hydrate(archivedProfiles),
+  };
+};
+
 // Cloud storage functions
 export const loadUserFromCloud = async (username: string): Promise<{
   email: string | null;
@@ -275,7 +312,10 @@ export const loadProfilesFromDatabase = async (squarecloudUsername: string): Pro
         registeredAt: p.created_at,
         email: p.profile_data?.email || '',
         printSent: p.profile_data?.printSent || true,
-        syncedFromSquare: p.profile_data?.syncedFromSquare || false
+        syncedFromSquare: p.profile_data?.syncedFromSquare || false,
+        screenshotUrl: typeof p.profile_screenshot_url === 'string' && p.profile_screenshot_url.trim()
+          ? p.profile_screenshot_url
+          : undefined,
       }));
     }
 
@@ -356,10 +396,20 @@ export const loginUser = async (
   
   // Load profiles from legacy database as fallback
   const dbProfiles = await loadProfilesFromDatabase(originalUsername);
+  const hydratedProfiles = cloudData
+    ? hydrateCloudScreenshots(cloudData.profileSessions, cloudData.archivedProfiles, dbProfiles)
+    : null;
+  const hydratedCloudData = cloudData && hydratedProfiles
+    ? {
+        ...cloudData,
+        profileSessions: hydratedProfiles.profileSessions,
+        archivedProfiles: hydratedProfiles.archivedProfiles,
+      }
+    : cloudData;
   
   // Use cloud email if available (locked), otherwise use provided email
-  const finalEmail = cloudData?.email || email;
-  const isEmailLocked = cloudData?.isEmailLocked || false;
+  const finalEmail = hydratedCloudData?.email || email;
+  const isEmailLocked = hydratedCloudData?.isEmailLocked || false;
   
   // CRITICAL: Always use days from SquareCloud API (passed as parameter)
   // This ensures we always have the most up-to-date subscription status
@@ -369,7 +419,7 @@ export const loginUser = async (
   console.log(`[userStorage] 📅 Status: ${finalDaysRemaining > 365 ? 'Vitalício' : `${finalDaysRemaining} dias`}`);
   
   // Check if admin has activated PRO creatives for this user from cloud OR existing session
-  const cloudUnlockedPro = cloudData?.creativesUnlocked || false;
+  const cloudUnlockedPro = hydratedCloudData?.creativesUnlocked || false;
   
   // Use cloud unlock (primary), existing session unlock, or passed parameter
   const finalCreativesUnlocked = cloudUnlockedPro || creativesUnlocked || false;
@@ -399,13 +449,13 @@ export const loginUser = async (
       registeredIGs: mergedIGs,
       creativesUnlocked: finalCreativesUnlocked, // Check both admin and cloud unlock
       isEmailLocked,
-      lifetimeCreativeUsedAt: cloudData?.lifetimeCreativeUsedAt || undefined // Load from cloud!
+      lifetimeCreativeUsedAt: hydratedCloudData?.lifetimeCreativeUsedAt || undefined // Load from cloud!
     },
     isAuthenticated: true,
     lastSync: new Date().toISOString(),
-    cloudData: cloudData ? {
-      profileSessions: cloudData.profileSessions,
-      archivedProfiles: cloudData.archivedProfiles,
+    cloudData: hydratedCloudData ? {
+      profileSessions: hydratedCloudData.profileSessions,
+      archivedProfiles: hydratedCloudData.archivedProfiles,
       daysRemaining: finalDaysRemaining // Include days for LoginPage to use
     } : undefined
   };
@@ -413,20 +463,24 @@ export const loginUser = async (
   saveUserSession(session);
   
   // ALWAYS update cloud storage with days from SquareCloud API on each login
-  if (cloudData) {
+  if (hydratedCloudData) {
     console.log(`[userStorage] ☁️ Syncing cloud with SquareCloud days: ${finalDaysRemaining}`);
     await saveUserToCloud(
       originalUsername, // Use original case
       finalEmail,
       finalDaysRemaining,
-      cloudData.profileSessions,
-      cloudData.archivedProfiles,
-      cloudData.lifetimeCreativeUsedAt // Preserve the cloud value
+      hydratedCloudData.profileSessions,
+      hydratedCloudData.archivedProfiles,
+      hydratedCloudData.lifetimeCreativeUsedAt // Preserve the cloud value
     );
   }
   
-  const cloudProfileCount = cloudData?.profileSessions?.length || 0;
-  console.log(`[userStorage] ✅ Logged in ${originalUsername}: ${cloudProfileCount} cloud profiles, ${mergedIGs.length} registered IGs, ${finalDaysRemaining} days, lifetimeCreativeUsedAt: ${cloudData?.lifetimeCreativeUsedAt || 'none'}`);
+  const cloudProfileCount = hydratedCloudData?.profileSessions?.length || 0;
+  const restoredScreenshotCount = hydratedCloudData
+    ? [...hydratedCloudData.profileSessions, ...hydratedCloudData.archivedProfiles]
+        .filter(profile => Boolean(profile.screenshotUrl)).length
+    : 0;
+  console.log(`[userStorage] ✅ Logged in ${originalUsername}: ${cloudProfileCount} cloud profiles, ${mergedIGs.length} registered IGs, ${restoredScreenshotCount} prints restored, ${finalDaysRemaining} days, lifetimeCreativeUsedAt: ${hydratedCloudData?.lifetimeCreativeUsedAt || 'none'}`);
   
   return session;
 };
