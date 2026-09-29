@@ -9,6 +9,7 @@ import {
   GrowthInsight,
   StrategyType
 } from '@/types/instagram';
+import type { RegisteredIG } from '@/types/user';
 
 const STORAGE_KEY = 'mro_session';
 const ARCHIVE_KEY = 'mro_archived_profiles';
@@ -672,6 +673,39 @@ export const reconcileProfilesWithRegisteredAccounts = (registeredUsernames: str
       || session.profiles[0]?.id
       || null;
   }
+
+  const historicalProfiles = session.profiles.filter(profile => profile.isHistorical);
+  saveArchivedProfiles(historicalProfiles);
+  saveSession(session);
+  return session;
+};
+
+/**
+ * Reaplica aos perfis já existentes os prints persistidos no cadastro auxiliar.
+ * Isso também cobre usuários antigos cuja linha em user_sessions ainda não existe.
+ */
+export const hydrateSessionScreenshots = (registeredProfiles: RegisteredIG[]): MROSession => {
+  const session = getSession();
+  const screenshotsByUsername = new Map(
+    registeredProfiles
+      .filter(profile => Boolean(profile.screenshotUrl))
+      .map(profile => [profile.username.toLowerCase().replace(/^@/, '').trim(), profile.screenshotUrl as string]),
+  );
+
+  session.profiles = session.profiles.map(profileSession => {
+    const username = profileSession.profile.username.toLowerCase().replace(/^@/, '').trim();
+    const screenshotUrl = screenshotsByUsername.get(username);
+    if (!screenshotUrl || profileSession.screenshotUrl === screenshotUrl) return profileSession;
+
+    const screenshotHistory = profileSession.screenshotHistory || [];
+    return {
+      ...profileSession,
+      screenshotUrl,
+      screenshotHistory: screenshotHistory.some(item => item.url === screenshotUrl)
+        ? screenshotHistory
+        : [...screenshotHistory, { url: screenshotUrl, uploadedAt: new Date().toISOString() }],
+    };
+  });
 
   const historicalProfiles = session.profiles.filter(profile => profile.isHistorical);
   saveArchivedProfiles(historicalProfiles);

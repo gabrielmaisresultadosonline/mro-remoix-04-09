@@ -9,7 +9,7 @@ import { loginUser, getUserSession, saveUserToCloud } from '@/lib/userStorage';
 import { formatDaysRemaining, isLifetimeAccess } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/Logo';
-import { setCloudSyncCallback, initializeFromCloud, cleanExpiredCreatives, cleanExpiredStrategies, reconcileProfilesWithRegisteredAccounts } from '@/lib/storage';
+import { setCloudSyncCallback, initializeFromCloud, cleanExpiredCreatives, cleanExpiredStrategies, reconcileProfilesWithRegisteredAccounts, hydrateSessionScreenshots } from '@/lib/storage';
 import AnnouncementPopup from '@/components/AnnouncementPopup';
 
 interface LoginPageProps {
@@ -74,7 +74,8 @@ export const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
           const squareResult = await verifyRegisteredIGs(username.trim());
           if (squareResult.success && squareResult.instagrams) {
             const squareIGs = new Set(squareResult.instagrams.map(ig => ig.toLowerCase()));
-            const reconciledSession = reconcileProfilesWithRegisteredAccounts(Array.from(squareIGs));
+            reconcileProfilesWithRegisteredAccounts(Array.from(squareIGs));
+            const reconciledSession = hydrateSessionScreenshots(session?.user?.registeredIGs || []);
             const historicalCount = reconciledSession.profiles.filter(profile => profile.isHistorical).length;
             console.log(`🔄 [LoginPage] Histórico preservado: ${historicalCount} perfil(is)`);
 
