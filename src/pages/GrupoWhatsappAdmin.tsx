@@ -18,7 +18,14 @@ const GrupoWhatsappAdmin = () => {
 
   const call = async (body: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke("grupowhatsapp", { body });
-    if (error || !data?.success) throw new Error(data?.error || "Erro na requisição");
+    if (error) {
+      // Lê a mensagem real do servidor (ex.: 401 Unauthorized, tabela ausente).
+      let msg = "Erro na requisição";
+      const ctx = (error as { context?: Response }).context;
+      try { if (ctx && typeof ctx.json === "function") msg = (await ctx.json())?.error || msg; } catch { /* ignora */ }
+      throw new Error(msg);
+    }
+    if (!data?.success) throw new Error(data?.error || "Erro na requisição");
     return data;
   };
 
@@ -28,9 +35,12 @@ const GrupoWhatsappAdmin = () => {
     setLoading(true);
     try {
       const d = await call({ action: "list", token: t });
-      setLeads(d.leads); setLink(d.grupo_link);
+      setLeads(d.leads ?? []); setLink(d.grupo_link ?? "");
     } catch (e) {
-      toast.error("Sessão expirada, entre novamente"); sair();
+      const msg = e instanceof Error ? e.message : "";
+      // Só desloga quando o token for realmente rejeitado; outros erros mantêm a sessão.
+      if (/unauthorized/i.test(msg)) { toast.error("Sessão expirada, entre novamente"); sair(); }
+      else toast.error(`Erro ao carregar cadastros: ${msg || "tente novamente"}`);
     } finally { setLoading(false); }
   };
 
@@ -39,7 +49,7 @@ const GrupoWhatsappAdmin = () => {
   const login = async () => {
     setLoading(true);
     try { const d = await call({ action: "login", ...creds }); localStorage.setItem(KEY, d.token); setToken(d.token); }
-    catch { toast.error("Credenciais inválidas"); }
+    catch (e) { toast.error(e instanceof Error && e.message !== "Erro na requisição" ? e.message : "Credenciais inválidas"); }
     finally { setLoading(false); }
   };
 
