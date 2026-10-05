@@ -210,6 +210,8 @@ import CreatorDevProject from "./pages/CreatorDevProject";
 import CreatorDevAdmin from "./pages/CreatorDevAdmin";
 import ZapZap from "./pages/ZapZap";
 import ZapZapAdmin from "./pages/ZapZapAdmin";
+import GrupoWhatsapp from "./pages/GrupoWhatsapp";
+import GrupoWhatsappAdmin from "./pages/GrupoWhatsappAdmin";
 import ComercialAAF from "./pages/ComercialAAF";
 import ComercialAAFAdmin from "./pages/ComercialAAFAdmin";
 import MktCompleto from "./pages/MktCompleto";
@@ -479,6 +481,8 @@ const App = () => (
           
           <Route path="/zapzap" element={<ZapZap />} />
           <Route path="/zapzap/admin" element={<ZapZapAdmin />} />
+          <Route path="/grupowhatsapp" element={<GrupoWhatsapp />} />
+          <Route path="/grupowhatsapp/admin" element={<GrupoWhatsappAdmin />} />
           <Route path="/comercialaaf" element={<ComercialAAF />} />
           <Route path="/comercialaaf/admin" element={<ComercialAAFAdmin />} />
           <Route path="/mktcompleto" element={<MktCompleto />} />
