@@ -28,9 +28,12 @@ const GrupoWhatsappAdmin = () => {
     setLoading(true);
     try {
       const d = await call({ action: "list", token: t });
-      setLeads(d.leads); setLink(d.grupo_link);
+      setLeads(d.leads ?? []); setLink(d.grupo_link ?? "");
     } catch (e) {
-      toast.error("Sessão expirada, entre novamente"); sair();
+      const msg = e instanceof Error ? e.message : "";
+      // Só desloga quando o token for realmente rejeitado; outros erros mantêm a sessão.
+      if (/unauthorized/i.test(msg)) { toast.error("Sessão expirada, entre novamente"); sair(); }
+      else toast.error(`Erro ao carregar cadastros: ${msg || "tente novamente"}`);
     } finally { setLoading(false); }
   };
 
@@ -39,7 +42,7 @@ const GrupoWhatsappAdmin = () => {
   const login = async () => {
     setLoading(true);
     try { const d = await call({ action: "login", ...creds }); localStorage.setItem(KEY, d.token); setToken(d.token); }
-    catch { toast.error("Credenciais inválidas"); }
+    catch (e) { toast.error(e instanceof Error && e.message !== "Erro na requisição" ? e.message : "Credenciais inválidas"); }
     finally { setLoading(false); }
   };
 
