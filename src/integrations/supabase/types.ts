@@ -2418,6 +2418,54 @@ export type Database = {
         }
         Relationships: []
       }
+      grupowhatsapp_leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          tem_computador: boolean | null
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          nome: string
+          tem_computador?: boolean | null
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          tem_computador?: boolean | null
+          whatsapp?: string
+        }
+        Relationships: []
+      }
+      grupowhatsapp_settings: {
+        Row: {
+          created_at: string
+          grupo_link: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grupo_link?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grupo_link?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hub_access: {
         Row: {
           created_at: string
