@@ -184,6 +184,8 @@ export default function Dashboard() {
         const sorted = [...list].sort((a, b) => {
           if (a.is_pinned && !b.is_pinned) return -1;
           if (!a.is_pinned && b.is_pinned) return 1;
+          // Produtos liberados (disponíveis) sempre primeiro na lista.
+          if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
           const orderA = a.order_index ?? 0;
           const orderB = b.order_index ?? 0;
           if (orderA !== orderB) return orderA - orderB;
@@ -811,7 +813,7 @@ export default function Dashboard() {
         ) : products.length === 0 ? (
           <p className="text-center text-muted-foreground py-20">Nenhum produto disponível no momento.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-3">
             {products.map((product) => (
               <Card
                 key={product.id}
