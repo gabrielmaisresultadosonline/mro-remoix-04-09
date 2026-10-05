@@ -18,7 +18,14 @@ const GrupoWhatsappAdmin = () => {
 
   const call = async (body: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke("grupowhatsapp", { body });
-    if (error || !data?.success) throw new Error(data?.error || "Erro na requisição");
+    if (error) {
+      // Lê a mensagem real do servidor (ex.: 401 Unauthorized, tabela ausente).
+      let msg = "Erro na requisição";
+      const ctx = (error as { context?: Response }).context;
+      try { if (ctx && typeof ctx.json === "function") msg = (await ctx.json())?.error || msg; } catch { /* ignora */ }
+      throw new Error(msg);
+    }
+    if (!data?.success) throw new Error(data?.error || "Erro na requisição");
     return data;
   };
 
