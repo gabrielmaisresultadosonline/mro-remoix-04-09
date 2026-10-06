@@ -8667,6 +8667,317 @@ export type Database = {
         }
         Relationships: []
       }
+      whitelabel_clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          extras_added: number
+          id: string
+          mro_user_id: string | null
+          origin: string
+          plan: string
+          reseller_id: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          extras_added?: number
+          id?: string
+          mro_user_id?: string | null
+          origin?: string
+          plan: string
+          reseller_id: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          extras_added?: number
+          id?: string
+          mro_user_id?: string | null
+          origin?: string
+          plan?: string
+          reseller_id?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whitelabel_clients_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "whitelabel_resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whitelabel_fee_payments: {
+        Row: {
+          amount: number
+          checkout_url: string | null
+          created_at: string
+          fee_ids: string[]
+          id: string
+          nsu: string
+          paid_at: string | null
+          reseller_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          checkout_url?: string | null
+          created_at?: string
+          fee_ids?: string[]
+          id?: string
+          nsu: string
+          paid_at?: string | null
+          reseller_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          checkout_url?: string | null
+          created_at?: string
+          fee_ids?: string[]
+          id?: string
+          nsu?: string
+          paid_at?: string | null
+          reseller_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whitelabel_fee_payments_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "whitelabel_resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whitelabel_fees: {
+        Row: {
+          amount: number
+          client_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          paid_at: string | null
+          paid_via: string | null
+          payment_id: string | null
+          quantity: number
+          reseller_id: string
+          sale_id: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind: string
+          paid_at?: string | null
+          paid_via?: string | null
+          payment_id?: string | null
+          quantity?: number
+          reseller_id: string
+          sale_id?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          paid_at?: string | null
+          paid_via?: string | null
+          payment_id?: string | null
+          quantity?: number
+          reseller_id?: string
+          sale_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whitelabel_fees_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "whitelabel_resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whitelabel_resellers: {
+        Row: {
+          active_until: string | null
+          brand_file_name: string | null
+          brand_file_path: string | null
+          created_at: string
+          email: string | null
+          id: string
+          link_code: string
+          name: string
+          notes: string | null
+          password_hash: string
+          password_plain: string | null
+          pix_key: string | null
+          pix_type: string | null
+          status: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          active_until?: string | null
+          brand_file_name?: string | null
+          brand_file_path?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          link_code: string
+          name: string
+          notes?: string | null
+          password_hash: string
+          password_plain?: string | null
+          pix_key?: string | null
+          pix_type?: string | null
+          status?: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          active_until?: string | null
+          brand_file_name?: string | null
+          brand_file_path?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          link_code?: string
+          name?: string
+          notes?: string | null
+          password_hash?: string
+          password_plain?: string | null
+          pix_key?: string | null
+          pix_type?: string | null
+          status?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      whitelabel_sales: {
+        Row: {
+          amount: number
+          buyer_email: string
+          buyer_name: string | null
+          buyer_username: string
+          checkout_url: string | null
+          client_id: string | null
+          created_at: string
+          fee_amount: number
+          id: string
+          link_type: string
+          net_amount: number
+          nsu: string
+          paid_at: string | null
+          payout_at: string | null
+          payout_status: string
+          plan: string
+          reseller_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          buyer_email: string
+          buyer_name?: string | null
+          buyer_username: string
+          checkout_url?: string | null
+          client_id?: string | null
+          created_at?: string
+          fee_amount?: number
+          id?: string
+          link_type: string
+          net_amount?: number
+          nsu: string
+          paid_at?: string | null
+          payout_at?: string | null
+          payout_status?: string
+          plan: string
+          reseller_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          buyer_email?: string
+          buyer_name?: string | null
+          buyer_username?: string
+          checkout_url?: string | null
+          client_id?: string | null
+          created_at?: string
+          fee_amount?: number
+          id?: string
+          link_type?: string
+          net_amount?: number
+          nsu?: string
+          paid_at?: string | null
+          payout_at?: string | null
+          payout_status?: string
+          plan?: string
+          reseller_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whitelabel_sales_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "whitelabel_resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whitelabel_tutorials: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          order_index: number
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          title: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       wpp_bot_messages: {
         Row: {
           created_at: string
