@@ -58,3 +58,4 @@
 - [x] Eliminar headers CORS/PNA duplicados no POST direto sem service worker e validar o modo Chromium
 - [x] Impedir backups `.pre-mro-cors` nos includes ativos e recuperar o Nginx antes do reload
 - [ ] Executar a atualização na VPS e confirmar um login real da extensão (bloqueado até o código chegar ao servidor)
+- [x] Whitelabel MRO (revendedores, /whitelabel, /wl/:code, menu no /admin)
