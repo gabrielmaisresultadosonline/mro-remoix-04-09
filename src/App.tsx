@@ -482,6 +482,8 @@ const App = () => (
           <Route path="/zapzap" element={<ZapZap />} />
           <Route path="/zapzap/admin" element={<ZapZapAdmin />} />
           <Route path="/grupowhatsapp" element={<GrupoWhatsapp />} />
+          <Route path="/whitelabel" element={<Whitelabel />} />
+          <Route path="/wl/:code" element={<WhitelabelCheckout />} />
           <Route path="/grupowhatsapp/admin" element={<GrupoWhatsappAdmin />} />
           <Route path="/comercialaaf" element={<ComercialAAF />} />
           <Route path="/comercialaaf/admin" element={<ComercialAAFAdmin />} />

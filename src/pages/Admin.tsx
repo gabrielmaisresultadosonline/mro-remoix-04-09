@@ -38,6 +38,7 @@ import LotarGruposPanel from '@/components/admin/LotarGruposPanel';
 import DumpPanel from '@/components/admin/DumpPanel';
 import MigrationEnvPanel from '@/components/admin/MigrationEnvPanel';
 import TokensPanel from '@/components/admin/TokensPanel';
+import WhitelabelPanel from '@/components/admin/WhitelabelPanel';
 
 import {
   Users, Settings, Video, LogOut, Search, 
@@ -73,7 +74,7 @@ import { storageAssetUrl } from '@/lib/assetUrl';
 
 const PostsComIAAdmin = lazy(() => import('@/pages/PostsComIAAdmin'));
 
-type Tab = 'users' | 'calls' | 'tutorials' | 'zapmro' | 'zapmro_taxas' | 'estrutura' | 'tickets' | 'announcements' | 'pixel' | 'settings' | 'userlist' | 'whatsapp' | 'partners' | 'hub' | 'postscomia' | 'merges' | 'lovablack' | 'renddx_leads' | 'lotargrupos' | 'dump' | 'migracao' | 'tokens';
+type Tab = 'users' | 'calls' | 'tutorials' | 'zapmro' | 'zapmro_taxas' | 'estrutura' | 'tickets' | 'announcements' | 'pixel' | 'settings' | 'userlist' | 'whatsapp' | 'partners' | 'hub' | 'postscomia' | 'merges' | 'lovablack' | 'renddx_leads' | 'lotargrupos' | 'dump' | 'migracao' | 'tokens' | 'whitelabel';
 type UserFilter = 'all' | 'instagram' | 'connected';
 
 const Admin = () => {
@@ -248,6 +249,7 @@ const Admin = () => {
     { id: 'dump', label: 'Dump', icon: <Database className="w-4 h-4" /> },
     { id: 'migracao', label: 'Migração', icon: <ServerCog className="w-4 h-4" /> },
     { id: 'tokens', label: 'Tokens', icon: <KeyRound className="w-4 h-4" /> },
+    { id: 'whitelabel', label: 'Whitelabel', icon: <Package className="w-4 h-4" /> },
   ];
 
 
@@ -1173,6 +1175,9 @@ const Admin = () => {
         )}
         {activeTab === 'tokens' && (
           <TokensPanel />
+        )}
+        {activeTab === 'whitelabel' && (
+          <WhitelabelPanel />
         )}
 
           </main>
