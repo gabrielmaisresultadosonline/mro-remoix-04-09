@@ -1,0 +1,1 @@
+GRANT ALL ON public.whitelabel_resellers, public.whitelabel_clients, public.whitelabel_sales, public.whitelabel_fees, public.whitelabel_fee_payments, public.whitelabel_tutorials TO service_role;
