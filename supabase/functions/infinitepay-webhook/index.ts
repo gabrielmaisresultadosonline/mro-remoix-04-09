@@ -8,6 +8,7 @@ import { sendDeliveryEmail } from "../_shared/delivery-email.ts";
 import { sendLocalVppEmail } from "../_shared/localvpp-email.ts";
 import { sendRenddxWelcomeEmail } from "../_shared/renddx-email.ts";
 import { sendLotarGruposEmail } from "../_shared/lotargrupos-email.ts";
+import { processWhitelabelPayment } from "../_shared/whitelabel-core.ts";
 
 
 
@@ -195,6 +196,19 @@ serve(async (req) => {
     const capture_method = body.capture_method as string | undefined;
     const receipt_url = body.receipt_url as string | undefined;
     const items = (body.items || body.itens || nestedBody.items || nestedBody.itens) as Array<{ description?: string; name?: string }> | undefined;
+
+    // Whitelabel MRO: taxas (WLFEE) e vendas por link de revendedor (WLSALE).
+    {
+      const wlItem = (items || []).map((i) => i.description || i.name || "").find((n) => /^WL(FEE|SALE)/.test(n));
+      const wlNsu = (typeof order_nsu === "string" && /^WL(FEE|SALE)/.test(order_nsu)) ? order_nsu : wlItem;
+      if (wlNsu) {
+        const result = await processWhitelabelPayment(supabase, wlNsu);
+        log("Whitelabel payment", { wlNsu, result });
+        if (result.handled) {
+          return new Response(JSON.stringify({ success: true, message: result.message }), { status: 200, headers: corsHeaders });
+        }
+      }
+    }
 
     let email: string | null = null;
     let emailWithAffiliate: string | null = null;

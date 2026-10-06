@@ -212,6 +212,8 @@ import ZapZap from "./pages/ZapZap";
 import ZapZapAdmin from "./pages/ZapZapAdmin";
 import GrupoWhatsapp from "./pages/GrupoWhatsapp";
 import GrupoWhatsappAdmin from "./pages/GrupoWhatsappAdmin";
+import Whitelabel from "./pages/WhitelabelPainel";
+import WhitelabelCheckout from "./pages/WhitelabelCheckout";
 import ComercialAAF from "./pages/ComercialAAF";
 import ComercialAAFAdmin from "./pages/ComercialAAFAdmin";
 import MktCompleto from "./pages/MktCompleto";
@@ -439,7 +441,6 @@ const App = () => (
           <Route path="/seja-parceiro" element={<WhiteLabel />} />
           <Route path="/parceiro-oficial" element={<WhiteLabel />} />
           <Route path="/parceirooficial" element={<WhiteLabel />} />
-          <Route path="/whitelabel" element={<WhiteLabel />} />
           <Route path="/creatordev" element={<CreatorDev />} />
           <Route path="/creatordev/projeto" element={<CreatorDevProject />} />
 
@@ -482,6 +483,8 @@ const App = () => (
           <Route path="/zapzap" element={<ZapZap />} />
           <Route path="/zapzap/admin" element={<ZapZapAdmin />} />
           <Route path="/grupowhatsapp" element={<GrupoWhatsapp />} />
+          <Route path="/whitelabel" element={<Whitelabel />} />
+          <Route path="/wl/:code" element={<WhitelabelCheckout />} />
           <Route path="/grupowhatsapp/admin" element={<GrupoWhatsappAdmin />} />
           <Route path="/comercialaaf" element={<ComercialAAF />} />
           <Route path="/comercialaaf/admin" element={<ComercialAAFAdmin />} />
