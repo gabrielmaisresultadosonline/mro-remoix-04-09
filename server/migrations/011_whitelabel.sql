@@ -95,3 +95,10 @@ ALTER TABLE public.whitelabel_sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.whitelabel_fees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.whitelabel_fee_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.whitelabel_tutorials ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    GRANT ALL ON public.whitelabel_resellers, public.whitelabel_clients, public.whitelabel_sales,
+      public.whitelabel_fees, public.whitelabel_fee_payments, public.whitelabel_tutorials TO service_role;
+  END IF;
+END $$;
