@@ -168,25 +168,36 @@ serve(async (req) => {
       if (rowErr) throw rowErr;
       if (!row) throw new Error("Aluno não encontrado");
 
-      // Localiza o login do aluno: pelo vínculo salvo ou pelo e-mail atual.
-      let authId: string | null = row.user_id || null;
-      if (!authId) {
-        for (let page = 1; page <= 20 && !authId; page++) {
-          const { data: list } = await supabaseClient.auth.admin.listUsers({ page, perPage: 1000 });
-          const found = list?.users?.find((u) => (u.email || "").toLowerCase() === String(row.email).toLowerCase());
-          if (found) authId = found.id;
+      // Localiza o login do aluno: vínculo salvo, e-mail atual ou novo e-mail.
+      const findByEmail = async (target: string): Promise<string | null> => {
+        if (!target) return null;
+        for (let page = 1; page <= 20; page++) {
+          const { data: list, error: lErr } = await supabaseClient.auth.admin.listUsers({ page, perPage: 1000 });
+          if (lErr) throw lErr;
+          const found = list?.users?.find((u) => (u.email || "").toLowerCase() === target.toLowerCase());
+          if (found) return found.id;
           if (!list?.users?.length || list.users.length < 1000) break;
         }
+        return null;
+      };
+      let authId: string | null = row.user_id || null;
+      if (authId) {
+        const { data: chk } = await supabaseClient.auth.admin.getUserById(authId);
+        if (!chk?.user) authId = null; // vínculo antigo apontando para login removido
       }
+      if (!authId) authId = await findByEmail(String(row.email || ""));
+      // Se o novo e-mail já pertence a outro login, usa esse login (evita conflito "already registered").
+      const owner = email !== String(row.email || "").toLowerCase() ? await findByEmail(email) : null;
+      if (owner && owner !== authId) authId = owner;
       if (authId) {
         const attrs: Record<string, unknown> = { email, email_confirm: true, user_metadata: { name } };
         if (password) attrs.password = password;
         const { error } = await supabaseClient.auth.admin.updateUserById(authId, attrs);
-        if (error) throw error;
+        if (error) throw new Error(`Não foi possível atualizar o login: ${error.message}`);
       } else {
         if (!password) throw new Error("Defina uma senha para criar o login deste aluno");
         const { data: created, error } = await supabaseClient.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { name } });
-        if (error) throw error;
+        if (error) throw new Error(`Não foi possível criar o login: ${error.message}`);
         authId = created.user?.id || null;
       }
 
@@ -274,8 +285,11 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: 500,
+    // Status 200 com success:false para que o painel mostre a mensagem real (não "non-2xx").
+    const message = error instanceof Error ? error.message : (error as { message?: string })?.message || String(error);
+    console.error("[lotargrupos-api] error", message);
+    return new Response(JSON.stringify({ success: false, error: message }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
