@@ -1534,6 +1534,10 @@ Participe também do nosso GRUPO DE AVISOS
   };
 
   const deleteOrder = async (order: MROOrder) => {
+    if (order.source === "whitelabel") {
+      toast.info("Vendas Whitelabel são gerenciadas em /admin → Whitelabel.");
+      return;
+    }
     if (!confirm(`Tem certeza que deseja excluir o pedido de ${order.username}?`)) {
       return;
     }
