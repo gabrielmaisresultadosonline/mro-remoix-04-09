@@ -303,6 +303,19 @@ serve(async (req) => {
           }
         }
 
+        // Compra paga do Lotar Grupos também libera (mesmo sem registro criado).
+        if (!hasAccess && normalizedEmail) {
+          const { data: paidLg } = await supabase
+            .from("zapmro_orders")
+            .select("id")
+            .like("nsu_order", "LOTARGRUPOS%")
+            .eq("status", "paid")
+            .ilike("email", normalizedEmail)
+            .limit(1);
+          hasAccess = !!paidLg?.length;
+        }
+
+
           if (hasAccess) {
           // A área de membros exige um registro ativo em lotargrupos_users.
           if (!lotarUser) {
