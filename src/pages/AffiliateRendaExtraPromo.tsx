@@ -56,7 +56,7 @@ import logoMro from "@/assets/logo-mro.png";
 import bonus5mil from "@/assets/bonus-5mil.png";
 import ActiveClientsSection from "@/components/ActiveClientsSection";
 
-import { MRO_ANNUAL_OFFER } from '../../shared/mro-sales';
+import { MRO_ANNUAL_OFFER } from '../../supabase/functions/_shared/mro-sales';
 import { wlCall, type WlSalesContext } from '@/lib/whitelabel';
 import { WlBrandOrbit } from '@/components/whitelabel/WlBrandOrbit';
 

@@ -3,7 +3,7 @@
  * webhook InfiniPay unificado. Centraliza preços, taxas, provisionamento
  * de clientes da Ferramenta MRO e confirmação de pagamentos.
  */
-import { MRO_ANNUAL_OFFER } from "../../../shared/mro-sales.ts";
+import { MRO_ANNUAL_OFFER } from "./mro-sales.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Db = any;

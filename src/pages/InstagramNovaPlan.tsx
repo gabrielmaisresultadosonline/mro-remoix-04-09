@@ -52,7 +52,7 @@ import zeroAnunciosBanner from "@/assets/zero-anuncios-banner.png";
 import FloatingWhatsAppHelp from "@/components/FloatingWhatsAppHelp";
 import { MessageCircle as WhatsAppIcon } from "lucide-react";
 
-import { MRO_ANNUAL_OFFER } from '../../shared/mro-sales';
+import { MRO_ANNUAL_OFFER } from '../../supabase/functions/_shared/mro-sales';
 import { wlCall, type WlSalesContext } from '@/lib/whitelabel';
 import { WlBrandOrbit } from '@/components/whitelabel/WlBrandOrbit';
 
