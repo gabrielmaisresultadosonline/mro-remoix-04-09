@@ -8819,6 +8819,7 @@ export type Database = {
           active_until: string | null
           brand_file_name: string | null
           brand_file_path: string | null
+          brand_logo_path: string | null
           created_at: string
           email: string | null
           id: string
@@ -8837,6 +8838,7 @@ export type Database = {
           active_until?: string | null
           brand_file_name?: string | null
           brand_file_path?: string | null
+          brand_logo_path?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -8855,6 +8857,7 @@ export type Database = {
           active_until?: string | null
           brand_file_name?: string | null
           brand_file_path?: string | null
+          brand_logo_path?: string | null
           created_at?: string
           email?: string | null
           id?: string
