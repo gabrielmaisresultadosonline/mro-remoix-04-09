@@ -91,6 +91,12 @@ interface MROOrder {
   expired_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Presente quando a venda veio do link de um revendedor Whitelabel. */
+  source?: "whitelabel";
+  whitelabel_name?: string | null;
+  whitelabel_username?: string | null;
+  whitelabel_code?: string | null;
+  whitelabel_link_type?: string | null;
 }
 
 interface Affiliate {
@@ -2736,6 +2742,12 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
               {order.whatsapp_sent && (
                 <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px] px-2 py-0.5">
                   <Smartphone className="w-3 h-3 mr-1" /> WhatsApp ✓
+                </Badge>
+              )}
+              {order.source === "whitelabel" && (
+                <Badge className="bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40 text-[10px] px-2 py-0.5 font-bold uppercase">
+                  WHITELABEL · {order.whitelabel_name}{order.whitelabel_username ? ` (@${order.whitelabel_username})` : ""}
+                  {order.whitelabel_link_type ? ` · ${order.whitelabel_link_type === "renda_extra" ? "Renda Extra" : "Cliente Final"}` : ""}
                 </Badge>
               )}
               {order.nsu_order?.startsWith("LOTARGRUPOS") && (
