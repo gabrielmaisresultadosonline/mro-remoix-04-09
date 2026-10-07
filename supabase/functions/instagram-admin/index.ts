@@ -200,7 +200,52 @@ serve(async (req) => {
         return respond({ success: false, error: "Erro ao carregar pedidos" });
       }
 
-      return respond({ success: true, orders: data ?? [] });
+      // Vendas feitas pelos links dos revendedores Whitelabel (somente leitura, marcadas com a tarja).
+      // Falhas aqui nunca derrubam a lista principal.
+      let wlOrders: Record<string, unknown>[] = [];
+      try {
+        const [{ data: sales }, { data: resellers }] = await Promise.all([
+          supabase.from("whitelabel_sales").select("*").order("created_at", { ascending: false }).limit(2000),
+          supabase.from("whitelabel_resellers").select("id, name, username, link_code"),
+        ]);
+        const byId = new Map((resellers ?? []).map((r: { id: string }) => [r.id, r]));
+        wlOrders = (sales ?? []).map((s: Record<string, any>) => {
+          const r = byId.get(s.reseller_id) as { name?: string; username?: string; link_code?: string } | undefined;
+          const paid = s.status === "paid";
+          const created = new Date(s.created_at).getTime();
+          return {
+            id: `wl_${s.id}`,
+            email: s.buyer_email,
+            username: s.buyer_username,
+            phone: null,
+            plan_type: s.plan === "lifetime" ? "lifetime" : "annual",
+            amount: Number(s.amount) || 0,
+            status: paid ? (s.client_id ? "completed" : "paid") : s.status === "pending" ? "pending" : s.status,
+            nsu_order: s.nsu,
+            infinitepay_link: s.checkout_url,
+            api_created: !!s.client_id,
+            email_sent: !!s.client_id,
+            whatsapp_sent: null,
+            paid_at: s.paid_at,
+            completed_at: s.client_id ? s.paid_at : null,
+            expired_at: new Date(created + 30 * 60 * 1000).toISOString(),
+            created_at: s.created_at,
+            updated_at: s.updated_at,
+            source: "whitelabel",
+            whitelabel_name: r?.name ?? "Whitelabel",
+            whitelabel_username: r?.username ?? null,
+            whitelabel_code: r?.link_code ?? null,
+            whitelabel_link_type: s.link_type,
+          };
+        });
+      } catch (e) {
+        console.error("[instagram-admin] whitelabel sales error", e);
+      }
+
+      const merged = [...(data ?? []), ...wlOrders].sort(
+        (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      return respond({ success: true, orders: merged });
     }
 
     if (action === "listLogs") {
