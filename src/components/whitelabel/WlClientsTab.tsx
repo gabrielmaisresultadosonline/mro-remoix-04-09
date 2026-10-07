@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Copy, KeyRound } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,13 @@ export function WlClientsTab({ data, onChanged }: { data: WlDashboard; onChanged
     try { await wlCall(action, body); toast.success(ok); onChanged(); } catch (e) { toast.error((e as Error).message); }
   };
 
+  const [accessOpen, setAccessOpen] = useState<string | null>(null);
+  const copy = (text: string, label: string) => { navigator.clipboard.writeText(text); toast.success(`${label} copiado`); };
+  const copyMessage = (username: string, password: string) => {
+    const msg = `Seu acesso à Ferramenta MRO está pronto!\n\nLink: ${window.location.origin}/dashboard\nUsuário: ${username}\nSenha: ${password}\n\nQualquer dúvida, estou à disposição.`;
+    copy(msg, 'Mensagem de acesso');
+  };
+
   return (
     <div className="space-y-4 mt-4">
       <Card className="p-4">
@@ -49,19 +57,38 @@ export function WlClientsTab({ data, onChanged }: { data: WlDashboard; onChanged
         {data.clients.map((c) => {
           const u = data.users.find((x) => x.id === c.mro_user_id);
           return (
-            <Card key={c.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-              <div>
-                <b>{c.username}</b> <span className="text-muted-foreground">· {c.email}</span> <Badge variant="secondary">{planLabel(c.plan)}</Badge>
-                {u && !u.is_active && <Badge variant="destructive" className="ml-1">Bloqueado</Badge>}
-                <p className="text-xs text-muted-foreground">Criado {fmtDate(c.created_at)} · Contas {u?.plan_accounts ?? '—'} + {u?.extra_accounts ?? 0} adicionais · Testes usados {u?.trials_used ?? 0}/5{u?.expires_at && ` · Vence ${fmtDate(u.expires_at)}`}</p>
+            <Card key={c.id} className="p-3 space-y-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <b>{c.username}</b> <span className="text-muted-foreground">· {c.email}</span> <Badge variant="secondary">{planLabel(c.plan)}</Badge>
+                  {u && !u.is_active && <Badge variant="destructive" className="ml-1">Bloqueado</Badge>}
+                  <p className="text-xs text-muted-foreground">Criado {fmtDate(c.created_at)} · Contas {u?.plan_accounts ?? '—'} + {u?.extra_accounts ?? 0} adicionais · Testes usados {u?.trials_used ?? 0}/5{u?.expires_at && ` · Vence ${fmtDate(u.expires_at)}`}</p>
+                </div>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" onClick={() => setAccessOpen(accessOpen === c.id ? null : c.id)}><KeyRound className="w-4 h-4 mr-1" />Acesso</Button>
+                  <Button size="sm" variant="outline" disabled={!canSell} onClick={() => {
+                    const q = prompt(`Quantas contas adicionais? (taxa ${brl(40)} cada)`, '1');
+                    if (q) act('add_extras', { client_id: c.id, quantity: Number(q) }, 'Adicionais liberados');
+                  }}>+ Adicionais</Button>
+                  <Button size="sm" variant="outline" onClick={() => act('reset_trials', { client_id: c.id }, 'Testes zerados')}>Zerar testes</Button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <Button size="sm" variant="outline" disabled={!canSell} onClick={() => {
-                  const q = prompt(`Quantas contas adicionais? (taxa ${brl(40)} cada)`, '1');
-                  if (q) act('add_extras', { client_id: c.id, quantity: Number(q) }, 'Adicionais liberados');
-                }}>+ Adicionais</Button>
-                <Button size="sm" variant="outline" onClick={() => act('reset_trials', { client_id: c.id }, 'Testes zerados')}>Zerar testes</Button>
-              </div>
+              {accessOpen === c.id && (() => {
+                const password = u?.password_plain ?? c.username;
+                return (
+                  <div className="rounded-md border border-border bg-muted/40 p-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span>Usuário: <b>{c.username}</b></span>
+                      <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => copy(c.username, 'Usuário')}><Copy className="w-3 h-3" /></Button>
+                      <span>Senha: <b>{password}</b></span>
+                      <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => copy(password, 'Senha')}><Copy className="w-3 h-3" /></Button>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={() => copyMessage(c.username, password)}>
+                      <Copy className="w-4 h-4 mr-1" />Copiar mensagem com link do /dashboard
+                    </Button>
+                  </div>
+                );
+              })()}
             </Card>
           );
         })}
