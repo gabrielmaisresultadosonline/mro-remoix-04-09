@@ -191,7 +191,8 @@ const handleObjectUpload = async (req: Request, res: import("express").Response)
   const name = objectPathFromRequest(req);
   const auth = resolveAuth(req);
 
-  if (auth.role === "anon" && !canManageStorage(req) && !(await isPublicBucket(bucket))) {
+  const signedOk = (req as Request & { signedUploadOk?: boolean }).signedUploadOk === true;
+  if (!signedOk && auth.role === "anon" && !canManageStorage(req) && !(await isPublicBucket(bucket))) {
     throw new RestError(403, "Upload exige uma sessão administrativa válida.");
   }
 
@@ -447,6 +448,40 @@ storageRouter.get("/object/signed/:bucket/*", async (req, res) => {
     throw new RestError(403, "Assinatura inválida.");
   }
   await streamFile(bucket, name, req, res);
+});
+
+/**
+ * Upload assinado — equivalente a createSignedUploadUrl/uploadToSignedUrl.
+ * Somente service_role/admin gera o token; quem tem o token envia apenas
+ * aquele caminho exato até expirar (2h).
+ */
+function uploadSignature(bucket: string, name: string, exp: number): string {
+  return crypto.createHmac("sha256", env.auth.jwtSecret).update(`upload:${bucket}/${name}:${exp}`).digest("hex");
+}
+
+storageRouter.post("/object/upload/sign/:bucket/*", jsonBody, async (req, res) => {
+  if (!canManageStorage(req)) throw new RestError(403, "Apenas o servidor pode gerar upload assinado.");
+  const bucket = req.params.bucket;
+  const name = objectPathFromRequest(req);
+  safeJoin(bucket, name);
+  const exp = Math.floor(Date.now() / 1000) + 7200;
+  const token = `${exp}.${uploadSignature(bucket, name, exp)}`;
+  console.log(`[storage] upload assinado gerado ${bucket}/${name}`);
+  res.json({ url: `/object/upload/sign/${bucket}/${name}?token=${encodeURIComponent(token)}`, token });
+});
+
+storageRouter.put("/object/upload/sign/:bucket/*", parseObjectUpload, async (req, res) => {
+  const bucket = req.params.bucket;
+  const name = objectPathFromRequest(req);
+  const [expRaw, sig = ""] = String(req.query.token ?? "").split(".");
+  const exp = Number(expRaw);
+  if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) throw new RestError(400, "Upload assinado expirado.");
+  const expected = uploadSignature(bucket, name, exp);
+  const ok = sig.length === expected.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  if (!ok) throw new RestError(403, "Assinatura de upload inválida.");
+  (req as Request & { signedUploadOk?: boolean }).signedUploadOk = true;
+  req.headers["x-upsert"] = "true";
+  await handleObjectUpload(req, res);
 });
 
 // Precisa vir depois de `/public`, `/authenticated` e `/signed`, pois é
