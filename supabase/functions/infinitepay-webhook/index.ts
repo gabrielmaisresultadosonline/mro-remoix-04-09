@@ -219,6 +219,7 @@ serve(async (req) => {
     let isRendaExtOrder = false;
     let isVenderOrder = false;
     let isZapMROOrder = false;
+    let isLotarGruposOrder = false;
     
     let isPostsComIAOrder = false;
     let isRendaSaoVivoOrder = false;
@@ -322,7 +323,8 @@ serve(async (req) => {
 
         
         if (itemName.startsWith("ZAPMRO_") || itemName.startsWith("LOTARGRUPOS_")) {
-          isZapMROOrder = true;
+          // Lotar Grupos usa o mesmo formato de item, mas NÃO pode virar acesso ZAPMRO.
+          if (itemName.startsWith("LOTARGRUPOS_")) isLotarGruposOrder = true; else isZapMROOrder = true;
 
           // ZAPMRO_{PLAN}_{USERNAME}_{EMAIL} ou ZAPMRO_{PLAN}_{USERNAME}_{EMAIL}_BUMPS:{BUMPS}
           const parts = itemName.split("_");
@@ -877,7 +879,7 @@ serve(async (req) => {
     }
 
     // ZAPMRO orders
-    if (isZapMROOrder || (order_nsu && typeof order_nsu === 'string' && order_nsu.startsWith("ZAPMRO"))) {
+    if (!isLotarGruposOrder && !(typeof order_nsu === 'string' && order_nsu.startsWith("LOTARGRUPOS")) && (isZapMROOrder || (order_nsu && typeof order_nsu === 'string' && order_nsu.startsWith("ZAPMRO")))) {
       log("Processing as ZAPMRO order", { order_nsu, email, username });
       
       let zapOrder: any = null;
@@ -1009,7 +1011,7 @@ serve(async (req) => {
     }
 
     // LOTARGRUPOS orders
-    if (order_nsu && typeof order_nsu === 'string' && order_nsu.startsWith("LOTARGRUPOS")) {
+    if (isLotarGruposOrder || (order_nsu && typeof order_nsu === 'string' && order_nsu.startsWith("LOTARGRUPOS"))) {
       log("Processing as LOTARGRUPOS order", { order_nsu, email, username });
       
       let lgOrder: any = null;
@@ -1030,18 +1032,16 @@ serve(async (req) => {
 
         // 1. Logic for lotargrupos_users
         // First check if user exists in auth for the membership area
-        const { data: authUser } = await supabase.auth.admin.getUserByEmail(uEmail);
-        
-        if (!authUser?.user) {
-          log("Creating auth user for Lotar Grupos membership", { uEmail });
-          const { data: newAuth, error: authErr } = await supabase.auth.admin.createUser({
+        // createUser falha sem efeito se o e-mail já existir (não interrompe o fluxo).
+        try {
+          const { error: authErr } = await supabase.auth.admin.createUser({
             email: uEmail,
             password: passwordPlain,
             email_confirm: true,
             user_metadata: { full_name: uName }
           });
-          if (authErr) log("Error creating auth user", authErr);
-        }
+          if (authErr) log("Auth user not created (may already exist)", authErr.message);
+        } catch (e) { log("Error creating auth user", e); }
 
         const { data: newUser, error: userErr } = await supabase.from("lotargrupos_users").upsert({
           name: uName,
