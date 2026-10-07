@@ -56,6 +56,10 @@ import logoMro from "@/assets/logo-mro.png";
 import bonus5mil from "@/assets/bonus-5mil.png";
 import ActiveClientsSection from "@/components/ActiveClientsSection";
 
+import { MRO_ANNUAL_OFFER } from '../../supabase/functions/_shared/mro-sales';
+import { wlCall, type WlSalesContext } from '@/lib/whitelabel';
+import { WlBrandOrbit } from '@/components/whitelabel/WlBrandOrbit';
+
 interface AffiliateData {
   id: string;
   name: string;
@@ -65,7 +69,7 @@ interface AffiliateData {
   showPromoBanner?: boolean;
 }
 
-const DescontoAlunosRendaExtra = () => {
+const DescontoAlunosRendaExtra = ({ whitelabel }: { whitelabel?: WlSalesContext } = {}) => {
   const { affiliateId } = useParams<{ affiliateId: string }>();
   const [affiliate, setAffiliate] = useState<AffiliateData | null>(null);
   const [loadingAffiliate, setLoadingAffiliate] = useState(true);
@@ -74,6 +78,10 @@ const DescontoAlunosRendaExtra = () => {
   // Carregar dados do afiliado
   useEffect(() => {
     const loadAffiliate = async () => {
+      if (whitelabel) {
+        setAffiliate({ id: whitelabel.code, name: whitelabel.name, email: '', photoUrl: '', active: true, showPromoBanner: false });
+        setNotFound(false); setLoadingAffiliate(false); return;
+      }
       let id = affiliateId;
       if (!id && window.location.hash) {
         id = window.location.hash.replace('#', '');
@@ -130,7 +138,7 @@ const DescontoAlunosRendaExtra = () => {
       }
     };
     loadAffiliate();
-  }, [affiliateId]);
+  }, [affiliateId, whitelabel]);
 
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
@@ -196,14 +204,23 @@ const DescontoAlunosRendaExtra = () => {
     setLoading(true);
 
     try {
-      // Preço promocional afiliado: R$397
+      if (whitelabel) {
+        const { checkout_url } = await wlCall<{ checkout_url: string }>('public_checkout', {
+          code: whitelabel.code, link_type: whitelabel.linkType, plan: 'annual', email, username, name: username,
+          phone: phone.replace(/\D/g, ''),
+        });
+        trackInitiateCheckout('MRO Renda Extra Whitelabel', MRO_ANNUAL_OFFER.price);
+        window.location.href = checkout_url;
+        return;
+      }
+      // Shared official annual price.
       const { data: checkData, error: checkError } = await supabase.functions.invoke("create-mro-checkout", {
         body: { 
           email: `${affiliateId || affiliate?.id}:${email.toLowerCase().trim()}`,
           username: username.toLowerCase().trim(),
           phone: phone.replace(/\D/g, "").trim(),
           planType: "annual",
-          amount: 397,
+          amount: MRO_ANNUAL_OFFER.price,
 
           checkUserExists: true
         }
@@ -227,7 +244,7 @@ const DescontoAlunosRendaExtra = () => {
       }
 
       // Track InitiateCheckout when redirecting to payment
-      trackInitiateCheckout(`MRO Renda Extra Affiliate ${affiliate?.name || ''}`, 397);
+      trackInitiateCheckout(`MRO Renda Extra Affiliate ${affiliate?.name || ''}`, MRO_ANNUAL_OFFER.price);
       
       // Redirecionar diretamente para o checkout (funciona melhor no mobile)
       window.location.href = checkData.payment_link;
@@ -239,7 +256,7 @@ const DescontoAlunosRendaExtra = () => {
 
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Erro ao processar. Tente novamente.");
+      toast.error(whitelabel && error instanceof Error ? error.message : "Erro ao processar. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -468,7 +485,7 @@ const DescontoAlunosRendaExtra = () => {
           )}
 
           
-          <img src={logoMro} alt="MRO" className="h-16 sm:h-20 md:h-28 mx-auto mb-6 sm:mb-8 object-contain" />
+          {whitelabel ? <WlBrandOrbit logoUrl={whitelabel.logoUrl} name={whitelabel.name} /> : <img src={logoMro} alt="MRO" className="h-16 sm:h-20 md:h-28 mx-auto mb-6 sm:mb-8 object-contain" />}
           
           {/* Animated Title */}
           <div className="relative">
@@ -768,11 +785,11 @@ const DescontoAlunosRendaExtra = () => {
               
               <div className="text-green-400 mb-1">
                 <span className="text-lg sm:text-xl md:text-2xl font-medium">12x de</span>
-                <span className="text-5xl sm:text-6xl md:text-7xl font-black ml-2">R$41</span>
+                <span className="text-5xl sm:text-6xl md:text-7xl font-black ml-2">R${MRO_ANNUAL_OFFER.installment}</span>
               </div>
               
               <p className="text-gray-300 text-lg sm:text-xl mb-3">
-                ou <span className="text-white font-bold">R$397 à vista</span>
+                ou <span className="text-white font-bold">R${MRO_ANNUAL_OFFER.price} à vista</span>
               </p>
               
               {/* Animated discount highlight */}
@@ -891,7 +908,7 @@ const DescontoAlunosRendaExtra = () => {
             disabled={promoTimeLeft.expired}
             className="btn-pulse-color text-black font-bold text-sm sm:text-xl px-6 sm:px-12 py-5 sm:py-7 rounded-full shadow-lg shadow-yellow-500/30 disabled:opacity-50"
           >
-            {promoTimeLeft.expired ? "PROMOÇÃO EXPIRADA" : "GARANTIR MEU DESCONTO DE R$397"}
+            {promoTimeLeft.expired ? "PROMOÇÃO EXPIRADA" : `GARANTIR MEU DESCONTO DE R$${MRO_ANNUAL_OFFER.price}`}
           </Button>
           <div className="flex items-center justify-center gap-2 sm:gap-4 mt-3">
             <span className="arrow-bounce-right text-white text-xl sm:text-2xl">▶</span>
@@ -938,9 +955,9 @@ const DescontoAlunosRendaExtra = () => {
             <div className="text-center mb-4 sm:mb-6">
               <h3 className="text-xl sm:text-2xl font-bold mb-2">Finalize seu Cadastro</h3>
               <div className="text-2xl sm:text-3xl font-bold text-green-400">
-                12x de R$41
+                12x de R${MRO_ANNUAL_OFFER.installment}
               </div>
-              <p className="text-gray-400 text-xs sm:text-sm">ou R$397 à vista no PIX</p>
+              <p className="text-gray-400 text-xs sm:text-sm">ou R${MRO_ANNUAL_OFFER.price} à vista no PIX</p>
             </div>
             
             <form onSubmit={handleCheckout} className="space-y-3 sm:space-y-4">

@@ -8,7 +8,7 @@ export interface WlReseller {
   id: string; name: string; username: string; email: string | null; password_plain?: string | null;
   status: 'active' | 'blocked'; active_until: string | null; pix_type: string | null; pix_key: string | null;
   brand_file_path: string | null; brand_file_name: string | null; link_code: string; notes: string | null;
-  created_at: string; can_sell?: boolean;
+  created_at: string; can_sell?: boolean; brand_logo_path?: string | null; brand_logo_url?: string | null;
 }
 export interface WlClient { id: string; reseller_id: string; mro_user_id: string | null; username: string; email: string | null; plan: WlPlan; extras_added: number; origin: 'manual' | 'link'; created_at: string }
 export interface WlUser { id: string; is_active: boolean; extra_accounts: number | null; plan_accounts: number; trials_used: number; expires_at: string | null; password_plain?: string | null }
@@ -47,3 +47,5 @@ export const wlCall = <T = Record<string, unknown>>(action: string, body: Record
 
 export const wlAdmin = <T = Record<string, unknown>>(action: string, body: Record<string, unknown> = {}) =>
   unwrap<T>(adminSupabase.functions.invoke('whitelabel-api', { body: { action, ...body } }));
+
+export interface WlSalesContext { code: string; name: string; logoUrl?: string | null; prices: Record<string, number>; linkType: "renda_extra" | "cliente_final" }

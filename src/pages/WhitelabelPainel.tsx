@@ -75,7 +75,7 @@ export default function WhitelabelPainel() {
             <TabsTrigger value="links">Links de venda</TabsTrigger>
             <TabsTrigger value="finance">Taxas e recebimento</TabsTrigger>
           </TabsList>
-          <TabsContent value="home"><WlHomeTab data={data} /></TabsContent>
+          <TabsContent value="home"><WlHomeTab data={data} onChanged={load} /></TabsContent>
           <TabsContent value="clients"><WlClientsTab data={data} onChanged={load} /></TabsContent>
           <TabsContent value="links"><WlLinksTab data={data} /></TabsContent>
           <TabsContent value="finance"><WlFinanceTab data={data} onChanged={load} /></TabsContent>

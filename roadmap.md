@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Páginas de venda Whitelabel
-- [ ] Reutilizar as páginas completas MRO e Renda Extra sem alterar links originais
-- [ ] Permitir enviar a logo no admin e no painel do revendedor, com dupla marca animada
-- [ ] Preservar vendas, taxas e atribuição Whitelabel e validar os dois links
+- [ ] Aplicar a atualização na VPS e conferir o envio real da logo (depende da atualização no servidor)
+- [x] Reutilizar as páginas completas MRO e Renda Extra sem alterar links originais
+- [x] Permitir enviar a logo no admin e no painel do revendedor, com dupla marca animada
+- [x] Preservar vendas, taxas e atribuição Whitelabel e validar os dois links (checkout simulado, sem compra real)
 
 ## Concluído
 - [x] Login administrativo unificado em `/admin`, `/adminusuario` e `/instagram-nova-admin` validado no backend

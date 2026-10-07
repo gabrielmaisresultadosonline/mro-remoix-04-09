@@ -3,6 +3,7 @@
  * webhook InfiniPay unificado. Centraliza preços, taxas, provisionamento
  * de clientes da Ferramenta MRO e confirmação de pagamentos.
  */
+import { MRO_ANNUAL_OFFER } from "./mro-sales.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 // deno-lint-ignore no-explicit-any
 type Db = any;
@@ -10,7 +11,7 @@ type Db = any;
 export type WlPlan = "annual" | "lifetime";
 
 /** Preços mínimos de venda (site oficial) e taxas devidas à MRO. */
-export const WL_PRICES = { annual: 397, lifetime: 1200, extra_annual: 100, extra_lifetime: 150 } as const;
+export const WL_PRICES = { annual: MRO_ANNUAL_OFFER.price, lifetime: 1200, extra_annual: 100, extra_lifetime: 150 } as const;
 export const WL_FEES = { annual: 100, lifetime: 197, extra_annual: 40, extra_lifetime: 40 } as const;
 export const WL_PLAN_ACCOUNTS: Record<WlPlan, number> = { annual: 4, lifetime: 12 };
 const LIFETIME_DAYS = 999999;
