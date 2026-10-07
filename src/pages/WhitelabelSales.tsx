@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { ArrowUpRight, BadgeCheck, Bot, Check, Fingerprint, Heart, KanbanSquare, Layers3, Lightbulb, MessageCircle, Monitor, Send, ShieldCheck, Users, Wallet } from 'lucide-react';
 import { WlSalesContact } from '@/components/whitelabel/WlSalesContact';
-import { assetUrl } from '@/lib/assetUrl';
 import logo from '@/assets/logo-mro-white.png';
 import heroAsset from '@/assets/whitelabel-sales-hero-upload.png.asset.json';
+
+// This project's asset host also serves the uploaded image on the self-hosted VPS.
+const heroUrl = `https://id-preview--9fa0bd1c-c32d-4b36-a598-fe30173cebce.lovable.app${heroAsset.url}`;
 
 const benefits = [
   { icon: Fingerprint, title: 'A sua marca. A nossa tecnologia.', text: 'Sua logo na ferramenta, uma versão de download exclusiva e páginas de venda com a identidade do seu negócio.' },
@@ -55,7 +57,7 @@ export default function WhitelabelSales() {
     </header>
 
     <section className="wl-sales-hero relative isolate overflow-hidden">
-      <img src={assetUrl(heroAsset.url)} alt="Ferramenta MRO para Instagram em um notebook, com iluminação verde e dez chaves de acesso" width={1440} height={768} fetchPriority="high" className="wl-sales-hero-image absolute inset-0 -z-20 h-full w-full object-cover" />
+      <img src={heroUrl} alt="Ferramenta MRO para Instagram em um notebook, com iluminação verde e dez chaves de acesso" width={1440} height={768} fetchPriority="high" className="wl-sales-hero-image absolute inset-0 -z-20 h-full w-full object-cover" />
       <div className="wl-sales-hero-shade absolute inset-0 -z-10" />
       <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-24">
         <div className="max-w-xl">
