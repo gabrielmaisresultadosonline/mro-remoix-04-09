@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Página de ativação Whitelabel
+- [x] Substituir a imagem enviada e incluir recursos Instagram, proposta comercial e suporte MRO em /whitelabel/vendas
 - [x] Criar /whitelabel/vendas com oferta R$2.997 e dez acessos iniciais sem taxas por usuário
 - [x] Direcionar todos os botões ao WhatsApp e validar página em telas grandes e pequenas
 
