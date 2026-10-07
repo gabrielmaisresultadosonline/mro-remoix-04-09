@@ -8879,6 +8879,7 @@ export type Database = {
           amount: number
           buyer_email: string
           buyer_name: string | null
+          buyer_phone: string | null
           buyer_username: string
           checkout_url: string | null
           client_id: string | null
@@ -8900,6 +8901,7 @@ export type Database = {
           amount: number
           buyer_email: string
           buyer_name?: string | null
+          buyer_phone?: string | null
           buyer_username: string
           checkout_url?: string | null
           client_id?: string | null
@@ -8921,6 +8923,7 @@ export type Database = {
           amount?: number
           buyer_email?: string
           buyer_name?: string | null
+          buyer_phone?: string | null
           buyer_username?: string
           checkout_url?: string | null
           client_id?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.whitelabel_sales ADD COLUMN IF NOT EXISTS buyer_phone text;
