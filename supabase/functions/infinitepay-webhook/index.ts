@@ -219,6 +219,7 @@ serve(async (req) => {
     let isRendaExtOrder = false;
     let isVenderOrder = false;
     let isZapMROOrder = false;
+    let isLotarGruposOrder = false;
     
     let isPostsComIAOrder = false;
     let isRendaSaoVivoOrder = false;
@@ -322,7 +323,8 @@ serve(async (req) => {
 
         
         if (itemName.startsWith("ZAPMRO_") || itemName.startsWith("LOTARGRUPOS_")) {
-          isZapMROOrder = true;
+          // Lotar Grupos usa o mesmo formato de item, mas NÃO pode virar acesso ZAPMRO.
+          if (itemName.startsWith("LOTARGRUPOS_")) isLotarGruposOrder = true; else isZapMROOrder = true;
 
           // ZAPMRO_{PLAN}_{USERNAME}_{EMAIL} ou ZAPMRO_{PLAN}_{USERNAME}_{EMAIL}_BUMPS:{BUMPS}
           const parts = itemName.split("_");
@@ -877,7 +879,7 @@ serve(async (req) => {
     }
 
     // ZAPMRO orders
-    if (isZapMROOrder || (order_nsu && typeof order_nsu === 'string' && order_nsu.startsWith("ZAPMRO"))) {
+    if (!isLotarGruposOrder && !(typeof order_nsu === 'string' && order_nsu.startsWith("LOTARGRUPOS")) && (isZapMROOrder || (order_nsu && typeof order_nsu === 'string' && order_nsu.startsWith("ZAPMRO")))) {
       log("Processing as ZAPMRO order", { order_nsu, email, username });
       
       let zapOrder: any = null;
@@ -1009,7 +1011,7 @@ serve(async (req) => {
     }
 
     // LOTARGRUPOS orders
-    if (order_nsu && typeof order_nsu === 'string' && order_nsu.startsWith("LOTARGRUPOS")) {
+    if (isLotarGruposOrder || (order_nsu && typeof order_nsu === 'string' && order_nsu.startsWith("LOTARGRUPOS"))) {
       log("Processing as LOTARGRUPOS order", { order_nsu, email, username });
       
       let lgOrder: any = null;
