@@ -88,6 +88,18 @@ serve(async (req) => {
       );
     }
 
+    // Vendas Whitelabel (links de revendedor): confirmadas pelo webhook unificado.
+    if (typeof nsu_order === "string" && nsu_order.startsWith("WLSALE")) {
+      const { processWhitelabelPayment } = await import("../_shared/whitelabel-core.ts");
+      if (force_webhook) await processWhitelabelPayment(supabase as any, nsu_order);
+      const { data: sale } = await supabase.from("whitelabel_sales").select("status, client_id").eq("nsu", nsu_order).maybeSingle();
+      if (!sale) {
+        return new Response(JSON.stringify({ error: "Order not found", nsu_order }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 });
+      }
+      const status = sale.status === "paid" ? (sale.client_id ? "completed" : "paid") : "pending";
+      return new Response(JSON.stringify({ success: true, status, whitelabel: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+    }
+
     // Buscar pedido no banco
     const { data: order, error: orderError } = await supabase
       .from("mro_orders")
