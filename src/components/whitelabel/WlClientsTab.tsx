@@ -27,6 +27,13 @@ export function WlClientsTab({ data, onChanged }: { data: WlDashboard; onChanged
     try { await wlCall(action, body); toast.success(ok); onChanged(); } catch (e) { toast.error((e as Error).message); }
   };
 
+  const [accessOpen, setAccessOpen] = useState<string | null>(null);
+  const copy = (text: string, label: string) => { navigator.clipboard.writeText(text); toast.success(`${label} copiado`); };
+  const copyMessage = (username: string, password: string) => {
+    const msg = `Seu acesso à Ferramenta MRO está pronto!\n\nLink: ${window.location.origin}/dashboard\nUsuário: ${username}\nSenha: ${password}\n\nQualquer dúvida, estou à disposição.`;
+    copy(msg, 'Mensagem de acesso');
+  };
+
   return (
     <div className="space-y-4 mt-4">
       <Card className="p-4">
