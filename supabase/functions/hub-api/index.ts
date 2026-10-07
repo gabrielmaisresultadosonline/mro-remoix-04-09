@@ -487,6 +487,16 @@ serve(async (req) => {
           .limit(1)
           .maybeSingle();
         access.lotargrupos = !!lgUser;
+        if (!access.lotargrupos) {
+          const { data: paidLg } = await supabase
+            .from("zapmro_orders")
+            .select("id")
+            .like("nsu_order", "LOTARGRUPOS%")
+            .eq("status", "paid")
+            .ilike("email", effEmail)
+            .limit(1);
+          access.lotargrupos = !!paidLg?.length;
+        }
       }
 
       // Liberações manuais / compras feitas pela dashboard
