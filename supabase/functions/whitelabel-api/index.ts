@@ -147,7 +147,7 @@ serve(async (req) => {
       ]);
       const ids = (clients.data ?? []).map((c: { mro_user_id: string }) => c.mro_user_id).filter(Boolean);
       const { data: users } = ids.length
-        ? await db.from("mro_tool_users").select("id, is_active, extra_accounts, plan_accounts, trials_used, expires_at, expiration_days").in("id", ids)
+        ? await db.from("mro_tool_users").select("id, is_active, extra_accounts, plan_accounts, trials_used, expires_at, expiration_days, password_plain").in("id", ids)
         : { data: [] };
       const { password_hash: _h, password_plain: _p, ...safe } = me;
       return json({
