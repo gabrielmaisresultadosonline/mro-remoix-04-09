@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { ArrowUpRight, BadgeCheck, Check, Fingerprint, Layers3, Monitor, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { ArrowUpRight, BadgeCheck, Bot, Check, Fingerprint, Heart, KanbanSquare, Layers3, Lightbulb, MessageCircle, Monitor, Send, ShieldCheck, Users, Wallet } from 'lucide-react';
 import { WlSalesContact } from '@/components/whitelabel/WlSalesContact';
+import { assetUrl } from '@/lib/assetUrl';
 import logo from '@/assets/logo-mro-white.png';
-import hero from '@/assets/whitelabel-sales-hero.jpg';
+import heroAsset from '@/assets/whitelabel-sales-hero-upload.png.asset.json';
 
 const benefits = [
   { icon: Fingerprint, title: 'A sua marca. A nossa tecnologia.', text: 'Sua logo na ferramenta, uma versão de download exclusiva e páginas de venda com a identidade do seu negócio.' },
@@ -13,6 +14,14 @@ const benefits = [
 const plans = [
   { name: 'Plano anual', price: 'R$ 397', fee: 'R$ 100', description: 'Valor mínimo de venda por acesso anual.' },
   { name: 'Plano vitalício', price: 'R$ 1.200', fee: 'R$ 197', description: 'Valor mínimo de venda. Inclui 12 contas.' },
+];
+const instagramFeatures = [
+  { icon: Send, title: 'Disparo em massa de mensagens', text: 'Leve suas mensagens ao público e mantenha sua comunicação comercial em movimento.' },
+  { icon: KanbanSquare, title: 'CRM Kanban', text: 'Organize contatos e acompanhe cada oportunidade pelas etapas do seu atendimento.' },
+  { icon: Bot, title: 'Agente I.A.', text: 'Inteligência artificial para apoiar o atendimento e as conversas com seus potenciais clientes.' },
+  { icon: Heart, title: 'Seguir e curtir', text: 'Recursos para trabalhar interações no Instagram e aproximar sua marca do público.' },
+  { icon: MessageCircle, title: 'Mensagem de boas-vindas', text: 'Receba novos seguidores com uma mensagem e transforme a chegada deles em uma oportunidade de conversa.' },
+  { icon: Lightbulb, title: 'Inteligência MRO', text: 'Crie estratégias para orientar suas ações no Instagram, com foco em vendas, clientes e engajamento.' },
 ];
 
 /** This public presentation page does not change reseller billing or existing sales links. */
@@ -46,17 +55,29 @@ export default function WhitelabelSales() {
     </header>
 
     <section className="wl-sales-hero relative isolate overflow-hidden">
-      <img src={hero} alt="Representação ilustrativa da tecnologia MRO em um notebook com dez licenças iniciais" width={1920} height={1024} fetchPriority="high" className="wl-sales-hero-image absolute inset-0 -z-20 h-full w-full object-cover" />
+      <img src={assetUrl(heroAsset.url)} alt="Ferramenta MRO para Instagram em um notebook, com iluminação verde e dez chaves de acesso" width={1440} height={768} fetchPriority="high" className="wl-sales-hero-image absolute inset-0 -z-20 h-full w-full object-cover" />
       <div className="wl-sales-hero-shade absolute inset-0 -z-10" />
       <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-24">
         <div className="max-w-xl">
           <p className="mb-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary"><span className="h-2 w-2 bg-primary" />Tecnologia MRO. Identidade sua.</p>
           <h1 className="text-4xl font-bold leading-tight md:text-6xl">MRO Whitelabel</h1>
           <p className="mt-4 text-3xl font-semibold leading-tight md:text-4xl">Sua marca.<br />Sua ferramenta.<br /><span className="text-primary">Seu próximo negócio.</span></p>
-          <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground md:text-lg">Venda a ferramenta MRO com a sua marca e gerencie seus clientes em um painel próprio. Você cuida das vendas. A tecnologia e as atualizações ficam com a MRO.</p>
+          <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground md:text-lg">Venda a ferramenta MRO para Instagram com a sua marca e gerencie seus clientes em um painel próprio. Você cuida das vendas. O suporte, a tecnologia e as atualizações ficam com a MRO.</p>
           <div className="mt-8"><WlSalesContact /></div>
           <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" />10 acessos iniciais sem taxas por usuário</p>
         </div>
+      </div>
+    </section>
+
+    <section className="border-b border-border bg-secondary">
+      <div className="mx-auto max-w-7xl px-5 py-16 md:px-8 md:py-20">
+        <p className="text-xs font-bold uppercase tracking-widest text-primary">Ferramenta MRO para Instagram</p>
+        <h2 className="mt-3 max-w-3xl text-3xl font-bold md:text-4xl">Uma virada de chave para quem empreende online.</h2>
+        <p className="mt-5 max-w-3xl leading-relaxed text-muted-foreground">Vender mais, conquistar clientes e aumentar o engajamento: essa é a dor de quem empreende online. A proposta da MRO é reunir comunicação, organização e inteligência em uma ferramenta para trabalhar esses objetivos no Instagram.</p>
+        <div className="mt-10 grid grid-cols-1 gap-x-10 gap-y-8 md:grid-cols-2 lg:grid-cols-3">
+          {instagramFeatures.map(({ icon: Icon, title, text }) => <article key={title} className="border-t border-border pt-6"><Icon className="mb-4 h-7 w-7 text-primary" /><h3 className="text-xl font-semibold">{title}</h3><p className="mt-3 leading-relaxed text-muted-foreground">{text}</p></article>)}
+        </div>
+        <p className="mt-8 text-xs leading-relaxed text-muted-foreground">Os resultados dependem da estratégia, do público e da execução de cada negócio.</p>
       </div>
     </section>
 
@@ -81,8 +102,9 @@ export default function WhitelabelSales() {
         <div className="mt-10 grid gap-8 md:grid-cols-3">{[
           ['01', 'Ative seu Whitelabel', 'Converse com a equipe MRO para iniciar sua operação e configurar a sua marca.'],
           ['02', 'Receba sua estrutura', 'Acesse seu painel, a ferramenta com sua marca, os tutoriais e os links de venda.'],
-          ['03', 'Venda e acompanhe', 'Crie seus clientes ou use os links MRO. Acompanhe planos, vendas e taxas pelo painel.'],
+          ['03', 'Venda e acompanhe', 'Crie os acessos manualmente ou divulgue seu link de venda automático. Acompanhe planos, vendas e taxas pelo painel.'],
         ].map(([number, title, text]) => <article key={number}><span className="text-3xl font-bold text-primary">{number}</span><h3 className="mt-4 text-xl font-semibold">{title}</h3><p className="mt-3 leading-relaxed text-muted-foreground">{text}</p></article>)}</div>
+        <div className="mt-12 border-t border-border pt-8"><ShieldCheck className="h-7 w-7 text-primary" /><h3 className="mt-4 text-2xl font-semibold">O suporte é nosso. Você só vende.</h3><p className="mt-3 max-w-3xl leading-relaxed text-muted-foreground">A equipe MRO cuida do suporte da ferramenta para seus clientes. Você escolhe como vender: cria o acesso manual no seu painel ou compartilha o link automático, que libera o acesso após a confirmação do pagamento.</p></div>
       </div>
     </section>
 
