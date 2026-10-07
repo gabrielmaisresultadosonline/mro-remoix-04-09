@@ -145,7 +145,7 @@ authRouter.post("/admin/users", async (req, res) => {
   requireServiceRole(req);
   const email = String(req.body?.email ?? "").toLowerCase().trim();
   const password = String(req.body?.password ?? "");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || password.length < 8) {
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || password.length < 6) {
     throw new RestError(400, "Dados do usuário inválidos.");
   }
 
@@ -167,6 +167,75 @@ authRouter.post("/admin/users", async (req, res) => {
     ],
   );
   res.json({ user: publicUser(rows[0]) });
+});
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const USER_COLS = "id, email, password_hash, email_confirmed_at, user_metadata, banned_until";
+
+/** Compatibilidade com auth.admin.listUsers({ page, perPage }). */
+authRouter.get("/admin/users", async (req, res) => {
+  requireServiceRole(req);
+  const perPage = Math.min(Math.max(Number(req.query.per_page) || 50, 1), 1000);
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const rows = await adminQuery<AuthUserRow>(
+    `SELECT ${USER_COLS} FROM auth_users ORDER BY email LIMIT $1 OFFSET $2`,
+    [perPage, (page - 1) * perPage],
+  );
+  const total = await adminQuery<{ c: string }>("SELECT count(*)::text AS c FROM auth_users");
+  res.json({ users: rows.map(publicUser), aud: "authenticated", total: Number(total[0]?.c ?? 0) });
+});
+
+/** Compatibilidade com auth.admin.getUserById. */
+authRouter.get("/admin/users/:id", async (req, res) => {
+  requireServiceRole(req);
+  const id = String(req.params.id);
+  const user = UUID_RE.test(id) ? await findUserById(id) : null;
+  if (!user) { res.status(404).json({ message: "User not found" }); return; }
+  res.json(publicUser(user));
+});
+
+/** Compatibilidade com auth.admin.updateUserById (senha, e-mail, metadados). */
+authRouter.put("/admin/users/:id", async (req, res) => {
+  requireServiceRole(req);
+  const id = String(req.params.id);
+  if (!UUID_RE.test(id) || !(await findUserById(id))) { res.status(404).json({ message: "User not found" }); return; }
+
+  const updates: string[] = [];
+  const params: unknown[] = [id];
+  if (typeof req.body?.email === "string") {
+    const email = req.body.email.toLowerCase().trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new RestError(400, "E-mail inválido.");
+    const other = await findUserByEmail(email);
+    if (other && other.id !== id) {
+      res.status(422).json({ message: "A user with this email address has already been registered" });
+      return;
+    }
+    params.push(email); updates.push(`email = $${params.length}`);
+  }
+  if (typeof req.body?.password === "string") {
+    if (req.body.password.length < 6) throw new RestError(400, "A senha precisa ter no mínimo 6 caracteres.");
+    params.push(hashPassword(req.body.password)); updates.push(`password_hash = $${params.length}`);
+  }
+  if (req.body?.user_metadata && typeof req.body.user_metadata === "object") {
+    params.push(JSON.stringify(req.body.user_metadata)); updates.push(`user_metadata = $${params.length}`);
+  }
+  if (req.body?.email_confirm === true) updates.push("email_confirmed_at = COALESCE(email_confirmed_at, now())");
+
+  const rows = updates.length
+    ? await adminQuery<AuthUserRow>(
+        `UPDATE auth_users SET ${updates.join(", ")}, updated_at = now() WHERE id = $1 RETURNING ${USER_COLS}`,
+        params,
+      )
+    : await adminQuery<AuthUserRow>(`SELECT ${USER_COLS} FROM auth_users WHERE id = $1`, [id]);
+  res.json(publicUser(rows[0]));
+});
+
+/** Compatibilidade com auth.admin.deleteUser. */
+authRouter.delete("/admin/users/:id", async (req, res) => {
+  requireServiceRole(req);
+  const id = String(req.params.id);
+  if (UUID_RE.test(id)) await adminQuery("DELETE FROM auth_users WHERE id = $1", [id]);
+  res.json({});
 });
 
 /** Compatibilidade com auth.admin.generateLink para o acesso direto ao Lotar Grupos. */
