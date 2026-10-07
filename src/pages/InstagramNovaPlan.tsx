@@ -185,7 +185,7 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
       // Track initiate checkout intent (Lead) - this is correct as it happens before payment
       trackInitiateCheckout(`Plano ${plan.name}`, plan.price);
       window.location.href = checkData.payment_link;
-    } catch (error) { console.error("Error:", error); toast.error("Erro ao processar. Tente novamente."); } finally { setLoading(false); }
+    } catch (error) { console.error("Error:", error); toast.error(whitelabel && error instanceof Error ? error.message : "Erro ao processar. Tente novamente."); } finally { setLoading(false); }
   };
 
   useEffect(() => { trackPageView('Sales Page - Instagram MRO - Nova'); }, []);
