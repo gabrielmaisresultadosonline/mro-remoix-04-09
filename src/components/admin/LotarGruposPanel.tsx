@@ -39,7 +39,12 @@ export default function LotarGruposPanel() {
     const { data, error } = await supabase.functions.invoke('lotargrupos-api', {
       body: { action, admin_token: token, ...payload },
     });
-    if (error) throw error;
+    if (error) {
+      // Extrai a mensagem real do servidor em vez de "non-2xx status code".
+      let msg = error.message;
+      try { const j = await (error as { context?: Response }).context?.json(); if (j?.error) msg = j.error; } catch { /* corpo não-JSON */ }
+      throw new Error(msg);
+    }
     if (!data?.success) throw new Error(data?.error || "Erro na operação");
     return data;
   };
