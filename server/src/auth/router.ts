@@ -145,7 +145,7 @@ authRouter.post("/admin/users", async (req, res) => {
   requireServiceRole(req);
   const email = String(req.body?.email ?? "").toLowerCase().trim();
   const password = String(req.body?.password ?? "");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || password.length < 8) {
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || password.length < 6) {
     throw new RestError(400, "Dados do usuário inválidos.");
   }
 
