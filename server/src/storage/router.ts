@@ -420,11 +420,11 @@ storageRouter.post("/object/sign/:bucket/*", jsonBody, async (req, res) => {
     .digest("hex");
 
   res.json({
-    signedURL: `/storage/v1/object/signed/${bucket}/${name}?token=${signature}&exp=${expiresAt}`,
+    signedURL: `/object/signed/${bucket}/${name}?token=${signature}&exp=${expiresAt}`,
   });
 });
 
-storageRouter.get("/object/signed/:bucket/*", async (req, res) => {
+storageRouter.get(["/object/signed/:bucket/*", "/storage/v1/object/signed/:bucket/*"], async (req, res) => {
   const bucket = req.params.bucket;
   const name = objectPathFromRequest(req);
   const token = String(req.query.token ?? "");

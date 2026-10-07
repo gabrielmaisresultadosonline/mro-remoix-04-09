@@ -30,8 +30,13 @@ const genNsu = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toS
 type WlDb = ReturnType<typeof createClient>;
 async function logoUrl(db: WlDb, path: string | null): Promise<string | null> {
   if (!path) return null;
-  const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 86400);
-  return data?.signedUrl ?? null;
+  try {
+    const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 86400);
+    return data?.signedUrl ?? null;
+  } catch (error) {
+    console.error('[whitelabel-api] logoUrl', error);
+    return null;
+  }
 }
 
 async function handleLogo(db: WlDb, id: string, action: string, body: Record<string, unknown>): Promise<Response> {
