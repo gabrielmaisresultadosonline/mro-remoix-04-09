@@ -108,6 +108,7 @@ serve(async (req) => {
       const plan = asPlan(body.plan);
       const linkType = body.link_type === "renda_extra" ? "renda_extra" : "cliente_final";
       const email = normEmail(body.email), username = normUser(body.username), name = clean(body.name, 120);
+      const phone = clean(body.phone, 20);
       if (!plan || !isEmail(email) || username.length < 3) return json({ success: false, error: "Preencha nome, e-mail e usuário (mín. 3 letras)" }, 400);
       const { data: taken } = await db.from("mro_tool_users").select("id").eq("username", username).maybeSingle();
       if (taken) return json({ success: false, error: "Esse nome de usuário já existe, escolha outro" }, 400);
@@ -115,7 +116,7 @@ serve(async (req) => {
       const nsu = genNsu("WLSALE");
       const url = await createInfinitePayLink(nsu, Math.round(amount * 100), email, `${SITE}/wl/${body.code}?pago=1`);
       const { error: saleError } = await db.from("whitelabel_sales").insert({
-        reseller_id: r.id, link_type: linkType, plan, buyer_name: name, buyer_email: email, buyer_username: username,
+        reseller_id: r.id, link_type: linkType, plan, buyer_name: name, buyer_email: email, buyer_username: username, buyer_phone: phone,
         amount, fee_amount: fee, net_amount: amount - fee, nsu, checkout_url: url,
       });
       if (saleError) return json({ success: false, error: 'Não foi possível registrar a venda. Tente novamente.' }, 500);
@@ -141,7 +142,7 @@ serve(async (req) => {
       const [clients, fees, sales, tutorials] = await Promise.all([
         db.from("whitelabel_clients").select("*").eq("reseller_id", me.id).order("created_at", { ascending: false }),
         db.from("whitelabel_fees").select("*").eq("reseller_id", me.id).order("created_at", { ascending: false }),
-        db.from("whitelabel_sales").select("id, link_type, plan, buyer_name, buyer_email, buyer_username, amount, fee_amount, net_amount, status, payout_status, created_at, paid_at").eq("reseller_id", me.id).order("created_at", { ascending: false }).limit(500),
+        db.from("whitelabel_sales").select("id, link_type, plan, buyer_name, buyer_email, buyer_phone, buyer_username, amount, fee_amount, net_amount, status, payout_status, created_at, paid_at").eq("reseller_id", me.id).order("created_at", { ascending: false }).limit(500),
         db.from("whitelabel_tutorials").select("*").eq("is_active", true).order("order_index"),
       ]);
       const ids = (clients.data ?? []).map((c: { mro_user_id: string }) => c.mro_user_id).filter(Boolean);
