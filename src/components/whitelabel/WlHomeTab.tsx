@@ -28,6 +28,33 @@ export function WlHomeTab({ data, onChanged }: { data: WlDashboard; onChanged: (
         <Card className="p-4"><p className="text-xs text-muted-foreground">Clientes criados</p><p className="text-lg font-bold">{data.clients.length}</p></Card>
       </div>
 
+      {(() => {
+        // Faturamento: clientes manuais pelo preço oficial do plano + adicionais; vendas por link pelo valor pago.
+        const manual = data.clients.filter((c) => c.origin === 'manual');
+        const manualTotal = manual.reduce((a, c) => a + (c.plan === 'lifetime' ? 1200 + c.extras_added * 150 : 397 + c.extras_added * 100), 0);
+        const linkTotal = data.sales.filter((s) => s.status === 'paid').reduce((a, s) => a + Number(s.amount), 0);
+        const annual = data.clients.filter((c) => c.plan === 'annual').length;
+        const lifetime = data.clients.length - annual;
+        return (
+          <Card className="p-4 space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div><p className="text-xs text-muted-foreground">Faturamento total com vendas</p><p className="text-2xl font-bold text-primary">{brl(manualTotal + linkTotal)}</p></div>
+              <p className="text-sm text-muted-foreground">Anual: {annual} · Vitalício: {lifetime} · Pelos links: {brl(linkTotal)}</p>
+            </div>
+            {data.clients.length > 0 && (
+              <div className="max-h-64 overflow-auto text-sm divide-y divide-border">
+                {data.clients.map((c) => (
+                  <div key={c.id} className="flex flex-wrap justify-between gap-2 py-1">
+                    <span>{fmtDate(c.created_at)} · {c.username}{c.email ? ` · ${c.email}` : ''}</span>
+                    <span>{c.plan === 'lifetime' ? 'Vitalício' : 'Anual'}{c.extras_added ? ` +${c.extras_added} extras` : ''} · {c.origin === 'link' ? 'Link' : 'Manual'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        );
+      })()}
+
       <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="font-bold">Sua ferramenta com sua marca</h2><p className="text-sm text-muted-foreground">{r.brand_file_name ?? 'O arquivo será disponibilizado pela MRO em breve.'}</p></div>
         <Button onClick={download} disabled={!r.brand_file_path}><Download className="w-4 h-4 mr-1" />Baixar</Button>
