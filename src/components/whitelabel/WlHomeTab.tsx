@@ -1,3 +1,4 @@
+import { WlLogoUpload } from './WlLogoUpload';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
@@ -10,7 +11,7 @@ const ytEmbed = (url: string) => {
   return m ? `https://www.youtube.com/embed/${m[1]}` : null;
 };
 
-export function WlHomeTab({ data }: { data: WlDashboard }) {
+export function WlHomeTab({ data, onChanged }: { data: WlDashboard; onChanged: () => void }) {
   const r = data.reseller;
   const days = r.active_until ? Math.max(0, Math.ceil((new Date(r.active_until).getTime() - Date.now()) / 864e5)) : null;
 
@@ -31,6 +32,8 @@ export function WlHomeTab({ data }: { data: WlDashboard }) {
         <div><h2 className="font-bold">Sua ferramenta com sua marca</h2><p className="text-sm text-muted-foreground">{r.brand_file_name ?? 'O arquivo será disponibilizado pela MRO em breve.'}</p></div>
         <Button onClick={download} disabled={!r.brand_file_path}><Download className="w-4 h-4 mr-1" />Baixar</Button>
       </Card>
+
+      <section className="space-y-3 py-3"><h2 className="font-bold">Logo da sua marca</h2><WlLogoUpload logoUrl={r.brand_logo_url} onChanged={onChanged} /></section>
 
       <Card className="p-4 space-y-2">
         <h2 className="font-bold">Como funcionam as comissões e vendas</h2>

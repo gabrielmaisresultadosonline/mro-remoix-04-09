@@ -52,27 +52,33 @@ import zeroAnunciosBanner from "@/assets/zero-anuncios-banner.png";
 import FloatingWhatsAppHelp from "@/components/FloatingWhatsAppHelp";
 import { MessageCircle as WhatsAppIcon } from "lucide-react";
 
+import { MRO_ANNUAL_OFFER } from '../../shared/mro-sales';
+import { wlCall, type WlSalesContext } from '@/lib/whitelabel';
+import { WlBrandOrbit } from '@/components/whitelabel/WlBrandOrbit';
+
 interface SalesSettings {
   whatsappNumber: string;
   whatsappMessage: string;
   ctaButtonText: string;
 }
 
-const PLANS = {
-  pro: { name: "Pro", price: 397.00, days: 365, installment: "41", accounts: 4 },
+const DEFAULT_PLANS = {
+  pro: { name: "Pro", price: MRO_ANNUAL_OFFER.price, days: MRO_ANNUAL_OFFER.days, installment: MRO_ANNUAL_OFFER.installment, accounts: MRO_ANNUAL_OFFER.accounts },
   agencia: { name: "Agência", price: 997.00, days: 365, installment: "81", accounts: 10 },
 };
 
 interface InstagramNovaPlanProps {
+  whitelabel?: WlSalesContext;
   videoSlot?: React.ReactNode;
   prefillEmail?: string;
   prefillPhone?: string;
   hideContactFields?: boolean;
 }
-const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactFields }: InstagramNovaPlanProps = {}) => {
+const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactFields, whitelabel }: InstagramNovaPlanProps = {}) => {
+  const PLANS = whitelabel ? { ...DEFAULT_PLANS, agencia: { name: 'Vitalício', price: whitelabel.prices.lifetime, days: 999999, installment: '', accounts: 12 } } : DEFAULT_PLANS;
   const [searchParams] = useSearchParams();
   const { affiliateId } = useParams<{ affiliateId?: string }>();
-  const partnerSlug = (affiliateId || searchParams.get('p') || '').toLowerCase() || null;
+  const partnerSlug = !whitelabel && (affiliateId || searchParams.get('p') || '').toLowerCase() || null;
   const [partner, setPartner] = useState<{id: string, name: string} | null>(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
@@ -96,7 +102,7 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
   const [usernameError, setUsernameError] = useState("");
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
-  const usernameCheckTimeoutRef = useRef<any | null>(null);
+  const usernameCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -147,6 +153,15 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
     setLoading(true);
     try {
       const plan = PLANS[selectedPlan];
+      if (whitelabel) {
+        const { checkout_url } = await wlCall<{ checkout_url: string }>('public_checkout', {
+          code: whitelabel.code, link_type: whitelabel.linkType, plan: selectedPlan === 'pro' ? 'annual' : 'lifetime',
+          email, username, name: username, phone: phone.replace(/\D/g, ''),
+        });
+        trackInitiateCheckout(`Whitelabel ${plan.name}`, plan.price);
+        window.location.href = checkout_url;
+        return;
+      }
       
       // Email attribution logic for tracking
       const attributedEmail = partnerSlug 
@@ -291,6 +306,7 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-40 bg-gradient-to-t from-purple-500/5 to-transparent" />
         </div>
         <div className="max-w-5xl mx-auto text-center relative">
+          {whitelabel && <WlBrandOrbit logoUrl={whitelabel.logoUrl} name={whitelabel.name} />}
           <div className="relative">
             <div className="absolute -inset-4 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 blur-3xl rounded-full" />
             <h1 className="relative text-4xl md:text-6xl lg:text-8xl font-[1000] mb-2 leading-tight tracking-tighter filter drop-shadow-[0_0_1px_rgba(255,255,255,0.8)]">
@@ -598,9 +614,9 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
               <div className="text-center mb-6">
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-lg sm:text-xl text-gray-400">12x de</span>
-                  <span className="text-6xl sm:text-7xl font-[1000] text-amber-400">R$41</span>
+                  <span className="text-6xl sm:text-7xl font-[1000] text-amber-400">R${MRO_ANNUAL_OFFER.installment}</span>
                 </div>
-                <p className="text-gray-400 mt-2 font-bold">R$397 à vista</p>
+                <p className="text-gray-400 mt-2 font-bold">R${MRO_ANNUAL_OFFER.price} à vista</p>
               </div>
               <div className="space-y-2 mb-6">
                 <div className="flex items-center gap-2 text-sm">
@@ -634,7 +650,7 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
                     trackLead('Instagram MRO - Plano Pro'); 
                     setSelectedPlan("pro"); 
                     setShowCheckoutModal(true); 
-                    trackInitiateCheckout('Plano Pro', 397.00);
+                    trackInitiateCheckout('Plano Pro', MRO_ANNUAL_OFFER.price);
                   }}>
                   <ShoppingCart className="w-6 h-6" />
                   ESCOLHER PRO
@@ -644,6 +660,11 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
             </div>
           </div>
           
+          {whitelabel && <div className="max-w-xl mx-auto mt-6 text-center space-y-2">
+            <h3 className="text-xl font-bold">Plano Vitalício — 12 contas</h3>
+            <p>R$ {whitelabel.prices.lifetime.toFixed(2).replace('.', ',')}</p>
+            <Button variant="outline" onClick={() => { setSelectedPlan('agencia'); setShowCheckoutModal(true); }}>Escolher Vitalício</Button>
+          </div>}
           <div className="mt-16 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
             <h3 className="text-2xl md:text-3xl font-black text-white mb-4">Ficou com dúvidas?</h3>
             <p className="text-gray-400 mb-6 text-lg">Fale no WhatsApp agora mesmo para falar com um especialista.</p>

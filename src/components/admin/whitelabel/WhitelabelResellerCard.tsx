@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ChevronDown, ChevronUp, Pencil, Trash2, Upload } from 'lucide-react';
 import { adminSupabase } from '@/lib/adminSupabase';
 import { brl, fmtDate, planLabel, summarize, wlAdmin, type WlClient, type WlFee, type WlReseller, type WlSale, type WlUser } from '@/lib/whitelabel';
+import { WlLogoUpload } from '@/components/whitelabel/WlLogoUpload';
 import { WhitelabelClientRow } from './WhitelabelClientRow';
 
 interface Props {
@@ -62,6 +63,7 @@ export function WhitelabelResellerCard({ reseller: r, clients, users, fees, sale
         </div>
       </div>
 
+      <WlLogoUpload resellerId={r.id} logoUrl={r.brand_logo_url} onChanged={onChanged} />
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
         {[
           ['Clientes', String(clients.length)], ['Vendido pelos links', brl(s.soldTotal)], ['Taxas totais', brl(s.feesTotal)],
