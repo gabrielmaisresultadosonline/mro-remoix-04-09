@@ -37,7 +37,6 @@ async function logoUrl(db: WlDb, path: string | null): Promise<string | null> {
     console.error('[whitelabel-api] logoUrl', error);
     return null;
   }
-  return data?.signedUrl ?? null;
 }
 
 async function handleLogo(db: WlDb, id: string, action: string, body: Record<string, unknown>): Promise<Response> {
