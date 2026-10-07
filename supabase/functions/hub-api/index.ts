@@ -192,6 +192,32 @@ serve(async (req) => {
         }
       }
 
+      // 5) Alunos do Lotar Grupos: a senha vive no login da área de membros.
+      // Validamos com um cliente público separado (nunca no cliente de serviço).
+      if (!matched) {
+        const candidateEmail = identifier.includes("@")
+          ? identifier
+          : String(body.email || "").trim().toLowerCase();
+        if (candidateEmail.includes("@")) {
+          try {
+            const { createClient: mk } = await import("npm:@supabase/supabase-js@2");
+            const pub = mk(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+              auth: { persistSession: false, autoRefreshToken: false },
+            });
+            const { data: signed } = await pub.auth.signInWithPassword({ email: candidateEmail, password });
+            if (signed?.user) {
+              const { data: lgRow } = await supabase
+                .from("lotargrupos_users").select("name,email").ilike("email", candidateEmail).limit(1).maybeSingle();
+              matched = true;
+              email = candidateEmail;
+              name = (lgRow?.name as string) || null;
+              username = username || null;
+              await pub.auth.signOut().catch(() => {});
+            }
+          } catch (e) { console.error("[hub-api] lotargrupos auth check failed", e); }
+        }
+      }
+
       if (!matched) return json({ success: false, error: "Usuário ou senha incorretos" }, 200);
 
       // Bloqueio manual feito pelo admin na dashboard de produtos.

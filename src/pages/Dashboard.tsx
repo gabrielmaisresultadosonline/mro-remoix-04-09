@@ -528,6 +528,7 @@ export default function Dashboard() {
           ssoData = await invokeWithTimeout("hub-api", {
             action: "login",
             identifier,
+            email: session.email || "",
             password: session.password,
             issue_lotargrupos_sso: true,
             lotargrupos_product_id: product.id,
