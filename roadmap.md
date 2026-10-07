@@ -1,5 +1,9 @@
 # Roadmap
 
+## Página de ativação Whitelabel
+- [x] Criar /whitelabel/vendas com oferta R$2.997 e dez acessos iniciais sem taxas por usuário
+- [x] Direcionar todos os botões ao WhatsApp e validar página em telas grandes e pequenas
+
 ## Páginas de venda Whitelabel
 - [ ] Aplicar a atualização na VPS e conferir o envio real da logo (depende da atualização no servidor)
 - [x] Reutilizar as páginas completas MRO e Renda Extra sem alterar links originais
