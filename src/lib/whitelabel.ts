@@ -13,7 +13,7 @@ export interface WlReseller {
 export interface WlClient { id: string; reseller_id: string; mro_user_id: string | null; username: string; email: string | null; plan: WlPlan; extras_added: number; origin: 'manual' | 'link'; created_at: string }
 export interface WlUser { id: string; is_active: boolean; extra_accounts: number | null; plan_accounts: number; trials_used: number; expires_at: string | null; password_plain?: string | null }
 export interface WlFee { id: string; reseller_id: string; client_id: string | null; sale_id: string | null; kind: string; quantity: number; amount: number; description: string | null; status: 'pending' | 'paid'; paid_via: string | null; created_at: string; paid_at: string | null }
-export interface WlSale { id: string; reseller_id?: string; link_type: 'renda_extra' | 'cliente_final'; plan: WlPlan; buyer_name: string | null; buyer_email: string; buyer_username: string; amount: number; fee_amount: number; net_amount: number; status: 'pending' | 'paid' | 'expired'; payout_status: 'pending' | 'paid'; created_at: string; paid_at: string | null }
+export interface WlSale { id: string; reseller_id?: string; link_type: 'renda_extra' | 'cliente_final'; plan: WlPlan; buyer_name: string | null; buyer_email: string; buyer_phone: string | null; buyer_username: string; amount: number; fee_amount: number; net_amount: number; status: 'pending' | 'paid' | 'expired'; payout_status: 'pending' | 'paid'; created_at: string; paid_at: string | null }
 export interface WlTutorial { id: string; title: string; content: string | null; video_url: string | null; order_index: number; is_active: boolean }
 
 export const brl = (v: number) => `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;

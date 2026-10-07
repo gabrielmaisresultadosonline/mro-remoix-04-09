@@ -34,7 +34,7 @@ export function WlLinksTab({ data }: { data: WlDashboard }) {
           {data.sales.length === 0 && <p className="text-muted-foreground">Nenhuma tentativa ainda.</p>}
           {data.sales.map((s) => (
             <div key={s.id} className="flex flex-wrap justify-between gap-2 border-b border-border py-2">
-              <span>{new Date(s.created_at).toLocaleString('pt-BR')} · {s.buyer_name || s.buyer_email} · {planLabel(s.plan)} · {s.link_type === 'renda_extra' ? 'Renda Extra' : 'Cliente Final'}</span>
+              <span>{new Date(s.created_at).toLocaleString('pt-BR')} · {s.buyer_name || s.buyer_email} · {s.buyer_email}{s.buyer_phone ? ` · ${s.buyer_phone}` : ''} · {planLabel(s.plan)} · {s.link_type === 'renda_extra' ? 'Renda Extra' : 'Cliente Final'}</span>
               <span className="flex items-center gap-2">{brl(s.amount)}
                 <Badge variant={s.status === 'paid' ? 'default' : 'secondary'}>{s.status === 'paid' ? (s.payout_status === 'paid' ? 'Pago e repassado' : 'Aprovada') : s.status === 'pending' ? 'Tentativa' : 'Expirada'}</Badge>
               </span>

@@ -217,7 +217,7 @@ serve(async (req) => {
             id: `wl_${s.id}`,
             email: s.buyer_email,
             username: s.buyer_username,
-            phone: null,
+            phone: s.buyer_phone ?? null,
             plan_type: s.plan === "lifetime" ? "lifetime" : "annual",
             amount: Number(s.amount) || 0,
             status: paid ? (s.client_id ? "completed" : "paid") : s.status === "pending" ? "pending" : s.status,
