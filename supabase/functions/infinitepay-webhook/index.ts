@@ -1032,18 +1032,16 @@ serve(async (req) => {
 
         // 1. Logic for lotargrupos_users
         // First check if user exists in auth for the membership area
-        const { data: authUser } = await supabase.auth.admin.getUserByEmail(uEmail);
-        
-        if (!authUser?.user) {
-          log("Creating auth user for Lotar Grupos membership", { uEmail });
-          const { data: newAuth, error: authErr } = await supabase.auth.admin.createUser({
+        // createUser falha sem efeito se o e-mail já existir (não interrompe o fluxo).
+        try {
+          const { error: authErr } = await supabase.auth.admin.createUser({
             email: uEmail,
             password: passwordPlain,
             email_confirm: true,
             user_metadata: { full_name: uName }
           });
-          if (authErr) log("Error creating auth user", authErr);
-        }
+          if (authErr) log("Auth user not created (may already exist)", authErr.message);
+        } catch (e) { log("Error creating auth user", e); }
 
         const { data: newUser, error: userErr } = await supabase.from("lotargrupos_users").upsert({
           name: uName,
