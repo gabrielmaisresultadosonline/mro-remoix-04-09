@@ -955,9 +955,9 @@ const DescontoAlunosRendaExtra = ({ whitelabel }: { whitelabel?: WlSalesContext 
             <div className="text-center mb-4 sm:mb-6">
               <h3 className="text-xl sm:text-2xl font-bold mb-2">Finalize seu Cadastro</h3>
               <div className="text-2xl sm:text-3xl font-bold text-green-400">
-                12x de R$41
+                12x de R${MRO_ANNUAL_OFFER.installment}
               </div>
-              <p className="text-gray-400 text-xs sm:text-sm">ou R$397 à vista no PIX</p>
+              <p className="text-gray-400 text-xs sm:text-sm">ou R${MRO_ANNUAL_OFFER.price} à vista no PIX</p>
             </div>
             
             <form onSubmit={handleCheckout} className="space-y-3 sm:space-y-4">

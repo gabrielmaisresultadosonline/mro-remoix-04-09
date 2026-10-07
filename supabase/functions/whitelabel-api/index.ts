@@ -27,6 +27,34 @@ const HANDLE = "paguemro";
 const asPlan = (v: unknown): WlPlan | null => (v === "annual" || v === "lifetime" ? v : null);
 const genNsu = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
 
+type WlDb = ReturnType<typeof createClient>;
+async function logoUrl(db: WlDb, path: string | null): Promise<string | null> {
+  if (!path) return null;
+  const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 86400);
+  return data?.signedUrl ?? null;
+}
+
+async function handleLogo(db: WlDb, id: string, action: string, body: Record<string, unknown>): Promise<Response> {
+  if (action.endsWith('logo_upload_url')) {
+    const extensions: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+    const extension = extensions[String(body.content_type)];
+    if (!extension) return json({ success: false, error: 'Formato de logo inválido' }, 400);
+    const path = `${id}/logos/${crypto.randomUUID()}.${extension}`;
+    const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path);
+    if (error || !data) return json({ success: false, error: 'Não foi possível preparar o envio' }, 500);
+    return json({ success: true, path, token: data.token });
+  }
+  const path = String(body.path ?? '');
+  // A signed upload only authorizes this reseller's logo directory.
+  if (!path.startsWith(`${id}/logos/`) || path.includes('..') || !/\.(png|jpg|webp)$/.test(path))
+    return json({ success: false, error: 'Logo inválida' }, 400);
+  const { data: file, error: fileError } = await db.storage.from(BUCKET).download(path);
+  if (fileError || !file || file.size > 5 * 1024 * 1024 || !['image/png', 'image/jpeg', 'image/webp'].includes(file.type))
+    return json({ success: false, error: 'Envie uma logo PNG, JPG ou WebP de até 5 MB' }, 400);
+  const { error } = await db.from('whitelabel_resellers').update({ brand_logo_path: path }).eq('id', id);
+  return error ? json({ success: false, error: 'Não foi possível salvar a logo' }, 500) : json({ success: true });
+}
+
 async function createInfinitePayLink(nsu: string, cents: number, email: string, redirect: string): Promise<string> {
   const webhook = `${Deno.env.get("SUPABASE_URL")}/functions/v1/infinitepay-webhook`;
   const items = [{ description: nsu, quantity: 1, price: cents }];
@@ -63,9 +91,9 @@ serve(async (req) => {
     }
 
     if (action === "public_link_info") {
-      const { data: r } = await db.from("whitelabel_resellers").select("name, status, active_until").eq("link_code", clean(body.code, 40)).maybeSingle();
+      const { data: r } = await db.from("whitelabel_resellers").select("name, status, active_until, brand_logo_path").eq("link_code", clean(body.code, 40)).maybeSingle();
       const ok = r && r.status === "active" && (!r.active_until || new Date(r.active_until) > new Date());
-      return json({ success: !!ok, name: ok ? r.name : null, prices: WL_PRICES });
+      return json({ success: !!ok, name: ok ? r.name : null, logo_url: ok ? await logoUrl(db, r.brand_logo_path) : null, prices: WL_PRICES });
     }
 
     if (action === "public_checkout") {
@@ -81,10 +109,11 @@ serve(async (req) => {
       const amount = WL_PRICES[plan], fee = WL_FEES[plan];
       const nsu = genNsu("WLSALE");
       const url = await createInfinitePayLink(nsu, Math.round(amount * 100), email, `${SITE}/wl/${body.code}?pago=1`);
-      await db.from("whitelabel_sales").insert({
+      const { error: saleError } = await db.from("whitelabel_sales").insert({
         reseller_id: r.id, link_type: linkType, plan, buyer_name: name, buyer_email: email, buyer_username: username,
         amount, fee_amount: fee, net_amount: amount - fee, nsu, checkout_url: url,
       });
+      if (saleError) return json({ success: false, error: 'Não foi possível registrar a venda. Tente novamente.' }, 500);
       return json({ success: true, checkout_url: url });
     }
 
@@ -101,6 +130,8 @@ serve(async (req) => {
     if (!me || me.status !== "active") return json({ success: false, error: "Acesso bloqueado" }, 403);
     const canSell = !me.active_until || new Date(me.active_until) > new Date();
 
+    if (action === 'logo_upload_url' || action === 'set_logo') return await handleLogo(db, me.id, action, body);
+
     if (action === "me") {
       const [clients, fees, sales, tutorials] = await Promise.all([
         db.from("whitelabel_clients").select("*").eq("reseller_id", me.id).order("created_at", { ascending: false }),
@@ -114,7 +145,7 @@ serve(async (req) => {
         : { data: [] };
       const { password_hash: _h, password_plain: _p, ...safe } = me;
       return json({
-        success: true, reseller: { ...safe, can_sell: canSell }, clients: clients.data ?? [], users: users ?? [],
+        success: true, reseller: { ...safe, can_sell: canSell, brand_logo_url: await logoUrl(db, me.brand_logo_path) }, clients: clients.data ?? [], users: users ?? [],
         fees: fees.data ?? [], sales: sales.data ?? [], tutorials: tutorials.data ?? [], prices: WL_PRICES, fee_table: WL_FEES,
       });
     }
@@ -199,7 +230,14 @@ async function handleAdmin(db: any, action: string, body: Record<string, unknown
     const { data: users } = ids.length
       ? await db.from("mro_tool_users").select("id, is_active, extra_accounts, plan_accounts, trials_used, expires_at, password_plain").in("id", ids)
       : { data: [] };
-    return json({ success: true, resellers: r.data ?? [], clients: c.data ?? [], users: users ?? [], fees: f.data ?? [], sales: s.data ?? [], tutorials: t.data ?? [], payments: p.data ?? [] });
+    const resellers = await Promise.all((r.data ?? []).map(async (reseller: { brand_logo_path: string | null }) => ({ ...reseller, brand_logo_url: await logoUrl(db, reseller.brand_logo_path) })));
+    return json({ success: true, resellers, clients: c.data ?? [], users: users ?? [], fees: f.data ?? [], sales: s.data ?? [], tutorials: t.data ?? [], payments: p.data ?? [] });
+  }
+
+  if (action === 'admin_logo_upload_url' || action === 'admin_set_logo') {
+    const { data: reseller } = await db.from('whitelabel_resellers').select('id').eq('id', id).maybeSingle();
+    if (!reseller) return json({ success: false, error: 'Revendedor não encontrado' }, 404);
+    return await handleLogo(db, id, action, body);
   }
 
   if (action === "admin_save_reseller") {
