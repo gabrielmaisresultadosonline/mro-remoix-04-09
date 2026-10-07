@@ -1,6 +1,24 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { verifyAdminSessionToken } from "../_shared/admin-session.ts";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { htmlToPlainText } from "../_shared/email-encode.ts";
+
+const esc = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+/** Envia e-mail e senha de acesso ao Lotar Grupos (entrada pelo /dashboard). */
+async function sendCredentialsEmail(to: string, name: string, password: string): Promise<boolean> {
+  const smtpPassword = Deno.env.get("SMTP_PASSWORD");
+  if (!smtpPassword) return false;
+  const url = "https://maisresultadosonline.com.br/dashboard";
+  const html = `<!DOCTYPE html><html lang="pt-BR"><body style="margin:0;padding:0;background:#f4f7f9;font-family:Arial,sans-serif;color:#333"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:20px auto;background:#fff;border-radius:8px"><tr><td style="padding:30px;text-align:center;background:#16a34a;color:#fff"><h1 style="margin:0;font-size:24px">Lotar Grupos</h1><p style="margin:8px 0 0">Seus dados de acesso</p></td></tr><tr><td style="padding:30px"><p>Olá, <strong>${esc(name)}</strong>!</p><p>Seus dados de acesso ao <strong>Lotar Grupos</strong> foram atualizados. Entre pela área de membros:</p><table width="100%" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:16px;margin:16px 0"><tr><td><p style="margin:4px 0"><strong>E-mail:</strong> ${esc(to)}</p><p style="margin:4px 0"><strong>Senha:</strong> ${esc(password)}</p></td></tr></table><p style="text-align:center"><a href="${url}" style="display:inline-block;background:#16a34a;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold">Acessar o Dashboard</a></p><p style="font-size:13px;color:#666">No dashboard, clique em <strong>Acessar</strong> no card Lotar Grupos.</p></td></tr></table></body></html>`;
+  try {
+    const client = new SMTPClient({ connection: { hostname: "smtp.hostinger.com", port: 465, tls: true, auth: { username: "suporte@maisresultadosonline.com.br", password: smtpPassword } } });
+    await client.send({ from: "MRO <suporte@maisresultadosonline.com.br>", to, subject: "Seus dados de acesso - Lotar Grupos", content: htmlToPlainText(html), html });
+    await client.close();
+    return true;
+  } catch (e) { console.error("[lotargrupos] email error", e); return false; }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -133,6 +151,52 @@ serve(async (req) => {
         .single();
       if (error) throw error;
       return new Response(JSON.stringify({ success: true, user: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "admin_set_credentials") {
+      const id = String(body.id || "");
+      const name = String(body.name || "").trim().slice(0, 120);
+      const email = String(body.email || "").trim().toLowerCase().slice(0, 255);
+      const password = String(body.password || "").trim();
+      const sendEmail = body.send_email !== false;
+      if (!id || !name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Nome e e-mail válidos são obrigatórios");
+      if (password && (password.length < 6 || password.length > 72)) throw new Error("A senha precisa ter de 6 a 72 caracteres");
+
+      const { data: row, error: rowErr } = await supabaseClient.from("lotargrupos_users").select("*").eq("id", id).maybeSingle();
+      if (rowErr) throw rowErr;
+      if (!row) throw new Error("Aluno não encontrado");
+
+      // Localiza o login do aluno: pelo vínculo salvo ou pelo e-mail atual.
+      let authId: string | null = row.user_id || null;
+      if (!authId) {
+        for (let page = 1; page <= 20 && !authId; page++) {
+          const { data: list } = await supabaseClient.auth.admin.listUsers({ page, perPage: 1000 });
+          const found = list?.users?.find((u) => (u.email || "").toLowerCase() === String(row.email).toLowerCase());
+          if (found) authId = found.id;
+          if (!list?.users?.length || list.users.length < 1000) break;
+        }
+      }
+      if (authId) {
+        const attrs: Record<string, unknown> = { email, email_confirm: true, user_metadata: { name } };
+        if (password) attrs.password = password;
+        const { error } = await supabaseClient.auth.admin.updateUserById(authId, attrs);
+        if (error) throw error;
+      } else {
+        if (!password) throw new Error("Defina uma senha para criar o login deste aluno");
+        const { data: created, error } = await supabaseClient.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { name } });
+        if (error) throw error;
+        authId = created.user?.id || null;
+      }
+
+      const { data: updated, error: upErr } = await supabaseClient.from("lotargrupos_users")
+        .update({ name, email, user_id: authId }).eq("id", id).select().single();
+      if (upErr) throw upErr;
+
+      let emailSent = false;
+      if (sendEmail && password) emailSent = await sendCredentialsEmail(email, name, password);
+      return new Response(JSON.stringify({ success: true, user: updated, email_sent: emailSent }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
