@@ -168,6 +168,30 @@ serve(async (req) => {
         }
       }
 
+      // 4) Compradores do Lotar Grupos: o pedido pago guarda usuário/e-mail e a
+      // senha (metadata.password_plain ou usuário minúsculo). Antes essas compras
+      // viravam acesso ZAPMRO por engano; agora o login não depende disso.
+      if (!matched) {
+        const { data: lgOrders } = await supabase
+          .from("zapmro_orders")
+          .select("*")
+          .like("nsu_order", "LOTARGRUPOS%")
+          .eq("status", "paid")
+          .ilike(lookupColumn, identifier)
+          .limit(20);
+        const lg = (lgOrders || []).find((o: Record<string, unknown>) => {
+          const meta = (o.metadata || {}) as Record<string, unknown>;
+          const plain = String(meta.password_plain || String(o.username || "").toLowerCase()).trim();
+          return !!plain && (plain === password || plain === password.toLowerCase());
+        });
+        if (lg) {
+          matched = true;
+          username = lg.username ? String(lg.username) : null;
+          email = lg.email ? String(lg.email) : null;
+          name = lg.username ? String(lg.username) : null;
+        }
+      }
+
       if (!matched) return json({ success: false, error: "Usuário ou senha incorretos" }, 200);
 
       // Bloqueio manual feito pelo admin na dashboard de produtos.
