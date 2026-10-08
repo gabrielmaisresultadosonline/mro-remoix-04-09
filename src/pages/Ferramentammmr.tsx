@@ -687,7 +687,7 @@ const Ferramentammmr = () => {
                     type: 'lifetime',
                     amount: 1197,
                     label: 'Agência Vitalício',
-                    installments: '12x de R$ 122,83',
+                    installments: '12x de R$ 122',
                     oneTime: 'R$ 1.197,00 à vista'
                   });
                   setShowCheckoutModal(true);
