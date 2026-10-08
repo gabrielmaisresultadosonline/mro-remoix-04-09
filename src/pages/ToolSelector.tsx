@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Users, Camera, Megaphone, ArrowRight, ArrowUpRight, ShieldCheck, LogIn } from 'lucide-react';
+import { Users, Camera, Megaphone, ArrowRight, ArrowUpRight, ShieldCheck, LogIn, MessageCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 const InstagramIcon = (LucideIcons as any).Instagram || Camera;
 
@@ -40,7 +40,6 @@ const heading = { fontFamily: "'Archivo Black', 'Inter', sans-serif" } as const;
 
 const ToolSelector = () => {
   const navigate = useNavigate();
-  const [showMembersModal, setShowMembersModal] = useState(false);
 
   useEffect(() => {
     trackPageView('Tool Selector - Homepage');
@@ -69,6 +68,17 @@ const ToolSelector = () => {
       highlight: true,
     },
     {
+      id: 'zapmro',
+      name: 'ZAPMRO API Oficial WhatsApp',
+      subtitle: 'Automatize seu WhatsApp',
+      description:
+        'API oficial do WhatsApp para envio em massa, automações e atendimento. Teste grátis por 2 dias e veja os resultados.',
+      icon: MessageCircle,
+      badge: 'FREE',
+      salesPath: 'https://zapmro.com.br',
+      index: '02',
+    },
+    {
       id: 'mktcompleto',
       name: 'Precisa de marketing completo?',
       subtitle: 'Deixe que cuidamos de tudo',
@@ -76,7 +86,7 @@ const ToolSelector = () => {
       icon: Megaphone,
       badge: 'HOT',
       salesPath: '/mktcompleto',
-      index: '02',
+      index: '03',
     },
   ];
 
@@ -86,10 +96,9 @@ const ToolSelector = () => {
     else navigate(path);
   };
 
-  const handleMembersSelect = () => {
-    trackViewContent('Members Area: instagram', 'Navigation');
-    setShowMembersModal(false);
-    // Toda a área de membros passa pelo hub central
+  const handleMembersEnter = () => {
+    trackViewContent('Members Area: dashboard', 'Navigation');
+    // Cliente identificado vai direto para o hub central
     navigate('/dashboard');
   };
 
@@ -148,7 +157,7 @@ const ToolSelector = () => {
               Ferramentas
             </a>
             <button
-              onClick={() => setShowMembersModal(true)}
+              onClick={handleMembersEnter}
               className="inline-flex items-center gap-2 px-3 md:px-5 py-2.5 md:py-3 rounded-xl text-[10px] md:text-xs uppercase tracking-[0.18em] font-black transition-transform hover:-translate-y-0.5 active:scale-95"
               style={{
                 background: `linear-gradient(135deg, ${C.yellowHot}, ${C.yellow})`,
@@ -216,7 +225,7 @@ const ToolSelector = () => {
                 Ver ferramentas <ArrowRight className="w-4 h-4" />
               </a>
               <button
-                onClick={() => setShowMembersModal(true)}
+                onClick={handleMembersEnter}
                 className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs uppercase tracking-[0.2em] font-black transition-transform hover:-translate-y-0.5"
                 style={{ background: C.surface, color: C.white, border: `1px solid ${C.gray}` }}
               >
@@ -273,7 +282,7 @@ const ToolSelector = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {tools.map((tool) => {
             const Icon = tool.icon;
             const featured = !!tool.highlight;
@@ -375,7 +384,7 @@ const ToolSelector = () => {
             </div>
             <div className="md:justify-self-end w-full md:w-auto">
               <button
-                onClick={() => setShowMembersModal(true)}
+                onClick={handleMembersEnter}
                 className="group w-full md:w-auto inline-flex flex-col items-center gap-1 px-7 py-5 rounded-2xl transition-transform hover:-translate-y-0.5 active:scale-95"
                 style={{
                   background: `linear-gradient(135deg, ${C.yellowHot}, ${C.yellow})`,
@@ -385,9 +394,9 @@ const ToolSelector = () => {
                 }}
               >
                 <span className="flex items-center gap-2 text-sm uppercase tracking-[0.18em]" style={heading}>
-                  <Users className="w-5 h-5" /> Acessar meu painel
+                  <Users className="w-5 h-5" /> Já sou cliente
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Área de membros →</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Acessar meu painel →</span>
               </button>
             </div>
           </div>
