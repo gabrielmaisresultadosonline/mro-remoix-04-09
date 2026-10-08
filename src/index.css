@@ -63,6 +63,11 @@
     --mro-green: 164 100% 26%;
     --mro-green-light: 142 76% 36%;
     --mro-green-dark: 164 100% 20%;
+    /* Sales CTA / purchase buttons (green) */
+    --cta: 142 76% 36%;
+    --cta-hover: 142 78% 29%;
+    --cta-foreground: 0 0% 100%;
+
     --whatsapp-chat-bg: 37 32% 92%; /* #E5DDD5 */
     --whatsapp-bubble-out: 142 45% 85%; /* #DCF8C6 */
     --whatsapp-bubble-in: 0 0% 100%; /* #FFFFFF */
@@ -562,6 +567,9 @@
   --muted-foreground: 0 0% 70%;
   --primary: 45.4 93.4% 47.5%;
   --primary-foreground: 0 0% 9.02%;
+  --cta: 142 76% 36%;
+  --cta-hover: 142 78% 29%;
+  --cta-foreground: 0 0% 100%;
   --accent: 45.4 93.4% 47.5%;
   --accent-foreground: 0 0% 9.02%;
   --border: 0 0% 25.1%;
@@ -573,7 +581,10 @@
 .mro-intelligent-sales .mro-sales-title { font-family: 'Archivo Black', sans-serif; font-weight: 400; }
 .mro-intelligent-sales button { white-space: normal; }
 .mro-intelligent-sales button.bg-primary,
-.mro-intelligent-sales button.bg-gradient-to-r { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: 0 6px 28px hsl(var(--primary) / .15); }
+.mro-intelligent-sales button.bg-gradient-to-r { background: hsl(var(--cta)); color: hsl(var(--cta-foreground)); box-shadow: 0 6px 28px hsl(var(--cta) / .3); }
+.mro-intelligent-sales button.bg-primary:hover,
+.mro-intelligent-sales button.bg-gradient-to-r:hover { background: hsl(var(--cta-hover)); }
+
 .mro-intelligent-sales .mro-feature { transition: border-color .25s, transform .25s; }
 .mro-intelligent-sales .mro-feature:hover { border-color: hsl(var(--primary) / .6); transform: translateY(-3px); }
 @media (prefers-reduced-motion: reduce) {
