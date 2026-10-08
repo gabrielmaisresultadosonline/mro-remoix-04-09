@@ -52,6 +52,7 @@ import {
 import logoMro from "@/assets/logo-mro.png";
 import bonus5mil from "@/assets/bonus-5mil.png";
 import ActiveClientsSection from "@/components/ActiveClientsSection";
+import { RendaExtraAgencyProposal } from "@/components/sales/RendaExtraAgencyProposal";
 
 const DescontoAlunosRendaExtra = () => {
   const [showVideoModal, setShowVideoModal] = useState(false);
@@ -366,12 +367,12 @@ const DescontoAlunosRendaExtra = () => {
           
           {/* Animated Title */}
           <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-green-500/20 blur-3xl rounded-full" />
+            <div className="absolute -inset-4 bg-gradient-to-r from-yellow-500/20 via-yellow-500/20 to-yellow-500/20 blur-3xl rounded-full" />
             <h1 className="relative text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black mb-3 sm:mb-4 px-2">
               <span className="bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">FATURE MAIS DE R$5.000</span>
             </h1>
             <h2 className="relative text-lg sm:text-xl md:text-3xl lg:text-4xl font-black mb-3">
-              <span className="bg-gradient-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-yellow-400 via-yellow-400 to-yellow-400 bg-clip-text text-transparent">
                 TRABALHANDO DE CASA!
               </span>
             </h2>
@@ -381,16 +382,16 @@ const DescontoAlunosRendaExtra = () => {
           </div>
 
           {/* Renda Extra Badge */}
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600/30 to-emerald-600/30 border border-green-500/50 rounded-full px-4 sm:px-6 py-2 mt-6">
-            <Laptop className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-600/30 to-yellow-600/30 border border-yellow-500/50 rounded-full px-4 sm:px-6 py-2 mt-6">
+            <Laptop className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
             <span className="text-white font-bold text-xs sm:text-sm">20 MINUTOS ANTES DE DORMIR = RENDA EXTRA AUTOMÁTICA</span>
-            <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+            <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
           </div>
 
 
           {/* Main Video */}
           <div className="mt-8 sm:mt-10 max-w-4xl mx-auto">
-            <div className="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-green-500/30">
+            <div className="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-yellow-500/30">
               <div className="aspect-video">
                 <iframe 
                   src="https://www.youtube.com/embed/WQwnAHNvSMU?rel=0&modestbranding=1" 
@@ -421,12 +422,12 @@ const DescontoAlunosRendaExtra = () => {
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-gray-950 to-black">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-14">
-            <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-full px-4 sm:px-6 py-2 mb-4">
-              <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
-              <span className="text-green-400 font-bold text-xs sm:text-sm">SUA RENDA EXTRA</span>
+            <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 sm:px-6 py-2 mb-4">
+              <Rocket className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+              <span className="text-yellow-400 font-bold text-xs sm:text-sm">SUA RENDA EXTRA</span>
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-black mb-4">
-              COMO VOCÊ VAI <span className="text-green-400">FATURAR</span>
+              COMO VOCÊ VAI <span className="text-yellow-400">FATURAR</span>
             </h2>
             <p className="text-gray-300 text-sm sm:text-lg max-w-3xl mx-auto">
               Seja uma <strong className="text-white">EUGência de Marketing Digital</strong> — preste serviço para empresas usando a ferramenta MRO e cobre mensalidade deles!
@@ -436,9 +437,9 @@ const DescontoAlunosRendaExtra = () => {
           {/* Business Model Cards */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
             {[
-              { icon: Monitor, title: "Instale no seu computador", desc: "Com apenas 1 notebook ou PC, você já pode começar a trabalhar de casa ou de qualquer lugar", color: "from-blue-600 to-cyan-600", border: "border-blue-500/40" },
-              { icon: Clock, title: "20 min antes de dormir", desc: "Configure a ferramenta em 20 minutos, deixe rodando automaticamente durante toda a madrugada", color: "from-purple-600 to-pink-600", border: "border-purple-500/40" },
-              { icon: CreditCard, title: "Cobre mensalidade", desc: "Ofereça o serviço para empresas e cobre uma mensalidade para rodar a ferramenta na sua máquina", color: "from-green-600 to-emerald-600", border: "border-green-500/40" },
+              { icon: Monitor, title: "Instale no seu computador", desc: "Com apenas 1 notebook ou PC, você já pode começar a trabalhar de casa ou de qualquer lugar", color: "from-zinc-600 to-yellow-600", border: "border-zinc-300/40" },
+              { icon: Clock, title: "20 min antes de dormir", desc: "Configure a ferramenta em 20 minutos, deixe rodando automaticamente durante toda a madrugada", color: "from-zinc-600 to-zinc-600", border: "border-zinc-300/40" },
+              { icon: CreditCard, title: "Cobre mensalidade", desc: "Ofereça o serviço para empresas e cobre uma mensalidade para rodar a ferramenta na sua máquina", color: "from-yellow-600 to-yellow-600", border: "border-yellow-500/40" },
             ].map((item, i) => (
               <div key={i} className={`bg-gray-900/80 border-2 ${item.border} rounded-2xl p-6 sm:p-8 text-center`}>
                 <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center mx-auto mb-4 shadow-lg`}>
@@ -460,9 +461,9 @@ const DescontoAlunosRendaExtra = () => {
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {[
-                { icon: TrendingUp, text: "Mais vendas", color: "text-green-400" },
-                { icon: Users, text: "Mais clientes", color: "text-blue-400" },
-                { icon: UserPlus, text: "Mais seguidores", color: "text-purple-400" },
+                { icon: TrendingUp, text: "Mais vendas", color: "text-yellow-400" },
+                { icon: Users, text: "Mais clientes", color: "text-zinc-300" },
+                { icon: UserPlus, text: "Mais seguidores", color: "text-zinc-300" },
                 { icon: Brain, text: "Estratégias automáticas", color: "text-amber-400" },
               ].map((item, i) => (
                 <div key={i} className="bg-black/40 border border-amber-500/20 rounded-xl p-4 sm:p-5 text-center">
@@ -473,8 +474,8 @@ const DescontoAlunosRendaExtra = () => {
                 </div>
               ))}
             </div>
-            <div className="mt-6 sm:mt-8 bg-green-500/15 border border-green-500/30 rounded-xl p-4 text-center">
-              <p className="text-green-300 font-bold text-sm sm:text-lg">
+            <div className="mt-6 sm:mt-8 bg-yellow-500/15 border border-yellow-500/30 rounded-xl p-4 text-center">
+              <p className="text-yellow-300 font-bold text-sm sm:text-lg">
                 💰 Com 5 clientes pagando R$1.000/mês cada, você já fatura R$5.000 de casa!
               </p>
             </div>
@@ -490,7 +491,7 @@ const DescontoAlunosRendaExtra = () => {
             <span className="text-amber-400 font-bold text-xs sm:text-sm">BÔNUS EXCLUSIVO</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-4">
-            Você vai receber o <span className="text-green-400">passo a passo completo</span> para faturar seus 5 mil!
+            Você vai receber o <span className="text-yellow-400">passo a passo completo</span> para faturar seus 5 mil!
           </h2>
           <p className="text-gray-300 text-sm sm:text-lg max-w-3xl mx-auto mb-8 sm:mb-10">
             Desde como se posicionar para começar, até fechar contratos e entregar testes ao cliente — além de materiais disponíveis para divulgação.
@@ -505,12 +506,12 @@ const DescontoAlunosRendaExtra = () => {
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-gray-950 to-black">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-full px-4 sm:px-6 py-2 mb-4">
-              <Star className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
-              <span className="text-green-400 font-bold text-xs sm:text-sm">RESULTADOS REAIS</span>
+            <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 sm:px-6 py-2 mb-4">
+              <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+              <span className="text-yellow-400 font-bold text-xs sm:text-sm">RESULTADOS REAIS</span>
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-3">
-              Alunos faturando <span className="text-green-400">mais de R$5.000</span>
+              Alunos faturando <span className="text-yellow-400">mais de R$5.000</span>
             </h2>
             <p className="text-gray-400 text-sm sm:text-base">
               Veja os feedbacks de quem já está lucrando com prestação de serviço usando a ferramenta MRO
@@ -523,7 +524,7 @@ const DescontoAlunosRendaExtra = () => {
                 const el = document.getElementById('feedback-carousel');
                 if (el) el.scrollBy({ left: -260, behavior: 'smooth' });
               }}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-800/80 hover:bg-green-500/80 border border-gray-700 hover:border-green-400 flex items-center justify-center transition-all -ml-2 sm:-ml-4 shadow-lg"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-800/80 hover:bg-yellow-500/80 border border-gray-700 hover:border-yellow-400 flex items-center justify-center transition-all -ml-2 sm:-ml-4 shadow-lg"
             >
               <ChevronLeft className="w-5 h-5 text-white" />
             </button>
@@ -532,7 +533,7 @@ const DescontoAlunosRendaExtra = () => {
                 const el = document.getElementById('feedback-carousel');
                 if (el) el.scrollBy({ left: 260, behavior: 'smooth' });
               }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-800/80 hover:bg-green-500/80 border border-gray-700 hover:border-green-400 flex items-center justify-center transition-all -mr-2 sm:-mr-4 shadow-lg"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-800/80 hover:bg-yellow-500/80 border border-gray-700 hover:border-yellow-400 flex items-center justify-center transition-all -mr-2 sm:-mr-4 shadow-lg"
             >
               <ChevronRight className="w-5 h-5 text-white" />
             </button>
@@ -575,14 +576,14 @@ const DescontoAlunosRendaExtra = () => {
                     openVideo(video.id);
                   }}
                 >
-                  <div className="relative aspect-[9/16] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-green-500/30 group-hover:border-green-400 transition-all shadow-lg group-hover:shadow-green-500/20">
+                  <div className="relative aspect-[9/16] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-yellow-500/30 group-hover:border-yellow-400 transition-all shadow-lg group-hover:shadow-yellow-500/20">
                     <img
                       src={`https://img.youtube.com/vi/${video.id}/0.jpg`}
                       alt={video.title}
                       className="w-full h-full object-cover pointer-events-none"
                     />
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500/90 group-hover:bg-green-500 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-yellow-500/90 group-hover:bg-yellow-500 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
                         <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white ml-1" />
                       </div>
                     </div>
@@ -598,10 +599,10 @@ const DescontoAlunosRendaExtra = () => {
       <section className="py-10 sm:py-12 px-3 sm:px-4 bg-gradient-to-b from-black to-gray-950">
         <div className="max-w-3xl mx-auto">
           <h3 className="text-xl sm:text-2xl font-bold text-center mb-6 text-white">
-            Como funciona <span className="text-cyan-400">na prática</span>
+            Como funciona <span className="text-yellow-400">na prática</span>
           </h3>
           <p className="text-center text-gray-300 text-sm sm:text-base mb-6 max-w-2xl mx-auto">
-            Você vai prestar esse serviço para <span className="text-green-400 font-semibold">empresas e negócios locais</span> — e eles vão te pagar uma <span className="text-green-400 font-semibold">mensalidade recorrente</span> pelo trabalho automático que a ferramenta faz por você.
+            Você vai prestar esse serviço para <span className="text-yellow-400 font-semibold">empresas e negócios locais</span> — e eles vão te pagar uma <span className="text-yellow-400 font-semibold">mensalidade recorrente</span> pelo trabalho automático que a ferramenta faz por você.
           </p>
           <div className="grid gap-3">
             {[
@@ -612,7 +613,7 @@ const DescontoAlunosRendaExtra = () => {
               { step: "05", title: "O cliente vende mais e te paga todo mês", desc: "Resultado real = cliente satisfeito pagando mensalidade recorrente pra você" },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-3 bg-gray-900/60 border border-gray-800 rounded-xl p-3 sm:p-4">
-                <span className="text-cyan-400 font-black text-lg shrink-0">{item.step}</span>
+                <span className="text-yellow-400 font-black text-lg shrink-0">{item.step}</span>
                 <div>
                   <p className="text-white font-semibold text-sm sm:text-base">{item.title}</p>
                   <p className="text-gray-500 text-xs sm:text-sm">{item.desc}</p>
@@ -621,7 +622,7 @@ const DescontoAlunosRendaExtra = () => {
             ))}
           </div>
           <p className="text-center text-sm sm:text-base text-gray-400 mt-5">
-            Mais seguidores → Mais conversas → <span className="text-green-400 font-bold">Mais vendas</span>
+            Mais seguidores → Mais conversas → <span className="text-yellow-400 font-bold">Mais vendas</span>
           </p>
         </div>
       </section>
@@ -629,18 +630,21 @@ const DescontoAlunosRendaExtra = () => {
 
 
 
+      {/* Nova proposta MRO Inteligente — apresentação apenas */}
+      <RendaExtraAgencyProposal onCta={scrollToPricing} />
+
       <section ref={pricingRef} className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-gray-950 to-black">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center mb-3 sm:mb-4">
-            <span className="text-green-400">OFERTA ESPECIAL</span>
+            <span className="text-yellow-400">OFERTA ESPECIAL</span>
           </h2>
           <p className="text-center text-gray-400 mb-8 sm:mb-10 text-base sm:text-lg">Promoção válida apenas por 8 horas</p>
           
           {/* Pricing Card */}
-          <div className="bg-gradient-to-b from-gray-900 to-gray-950 border-2 border-green-500 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden">
+          <div className="bg-gradient-to-b from-gray-900 to-gray-950 border-2 border-yellow-500 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden">
             {/* Badge */}
             <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-b-xl text-xs sm:text-sm whitespace-nowrap">
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-b-xl text-xs sm:text-sm whitespace-nowrap">
                 🔥 DESCONTO ESPECIAL
               </div>
             </div>
@@ -655,7 +659,7 @@ const DescontoAlunosRendaExtra = () => {
               
               <div className="text-base sm:text-lg text-gray-300 mb-2">por apenas</div>
               
-              <div className="text-green-400 mb-1">
+              <div className="text-yellow-400 mb-1">
                 <span className="text-5xl sm:text-6xl md:text-7xl font-black">12X DE R$30</span>
                 <span className="text-lg sm:text-xl md:text-2xl font-medium ml-2">mensal</span>
               </div>
@@ -687,7 +691,7 @@ const DescontoAlunosRendaExtra = () => {
             <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
               {planFeatures.map((feature, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-200 text-sm sm:text-base">{feature}</span>
                 </div>
               ))}
@@ -731,13 +735,13 @@ const DescontoAlunosRendaExtra = () => {
       {/* Garantia */}
       <section className="py-10 sm:py-16 px-3 sm:px-4 bg-black">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-xl sm:rounded-2xl p-5 sm:p-8">
+          <div className="bg-gradient-to-r from-yellow-900/30 to-yellow-900/30 border border-yellow-500/30 rounded-xl sm:rounded-2xl p-5 sm:p-8">
             <div className="flex flex-col items-center gap-4 sm:gap-6 text-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-green-400" />
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-400" />
               </div>
               <div>
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-green-400 mb-2 sm:mb-3">
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-yellow-400 mb-2 sm:mb-3">
                   30 Dias de Resultados Garantidos
                 </h3>
                 <p className="text-gray-300 text-sm sm:text-base">
@@ -753,7 +757,7 @@ const DescontoAlunosRendaExtra = () => {
       <section className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-gray-950 to-black">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-xl sm:text-2xl md:text-4xl font-bold mb-4 sm:mb-6">
-            Não perca essa <span className="text-green-400">oportunidade única!</span>
+            Não perca essa <span className="text-yellow-400">oportunidade única!</span>
           </h2>
           
           <div className="flex items-center justify-center gap-2 sm:gap-4 mb-6 sm:mb-8">
@@ -815,7 +819,7 @@ const DescontoAlunosRendaExtra = () => {
       {/* Checkout Modal */}
       {showCheckoutModal && (
         <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-gray-900 border border-green-500/30 rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 relative my-4">
+          <div className="bg-gray-900 border border-yellow-500/30 rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 relative my-4">
             <button 
               onClick={() => setShowCheckoutModal(false)}
               className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-white"
@@ -825,7 +829,7 @@ const DescontoAlunosRendaExtra = () => {
             
             <div className="text-center mb-4 sm:mb-6">
               <h3 className="text-xl sm:text-2xl font-bold mb-2">Finalize seu Cadastro</h3>
-              <div className="text-2xl sm:text-3xl font-bold text-green-400">
+              <div className="text-2xl sm:text-3xl font-bold text-yellow-400">
                 12X DE R$30 mensal
               </div>
               <p className="text-gray-400 text-xs sm:text-sm">avista R$297 por 1 ano todo</p>
@@ -886,7 +890,7 @@ const DescontoAlunosRendaExtra = () => {
               <Button
                 type="submit"
                 disabled={loading || promoTimeLeft.expired}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-5 sm:py-6 rounded-xl text-sm sm:text-base"
+                className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-bold py-5 sm:py-6 rounded-xl text-sm sm:text-base"
               >
                 {loading ? (
                   <>
