@@ -10,3 +10,5 @@
 - Whitelabel sales must render the original MRO and Renda Extra sales components with optional branding and checkout context, because videos and content must stay synchronized without changing affiliate behavior.
 - The official annual offer must be shared by sales pages and Whitelabel billing, because displayed and charged prices must stay aligned.
 - Whitelabel logos must use reseller-scoped signed storage uploads and server-validated paths, because one reseller must never overwrite another reseller's branding.
+
+- MRO sales refreshes share presentation-only introductory and feature sections with a scoped semantic theme, because original videos, checkout handlers and affiliate attribution must remain unchanged.
