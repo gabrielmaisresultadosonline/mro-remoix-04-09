@@ -77,3 +77,4 @@
 - [x] Validar apresentação e abertura do cadastro (sem compra real)
 - [x] Enxugar o topo às linhas pedidas, com fonte menor na segunda e na terceira
 - [x] Deixar verdes os botões de chamada e de compra, mantendo o resto em amarelo
+- [x] Remover o bloco "SUA RENDA EXTRA / COMO VOCÊ VAI FATURAR" de /descontoalunosrendaextra e /promorendaextra/:afiliado
