@@ -14,6 +14,7 @@ import {
   Copy, Eye, EyeOff, Mail, Minus, History, Clock, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { copyAccessToClipboard } from '@/lib/accessClipboard';
+import MroDeletedUsersCard from '@/components/admin/MroDeletedUsersCard';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -320,6 +321,7 @@ const MroUsersPanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <MroDeletedUsersCard onRestored={() => loadUsers()} />
       {/* Formulário */}
       <Card className="p-4 space-y-4">
         <div className="flex items-center gap-2">

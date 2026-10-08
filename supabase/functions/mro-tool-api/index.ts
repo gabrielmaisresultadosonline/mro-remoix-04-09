@@ -926,11 +926,64 @@ serve(async (req) => {
       return json({ success: true, extra_accounts: value });
     }
 
+    /**
+     * Exclusão segura: antes de apagar, guarda uma cópia completa (usuário,
+     * contas e histórico) na lixeira. Se a cópia falhar, NÃO exclui.
+     */
     if (action === "delete_user") {
       if (!body.id) return json({ success: false, error: "ID é obrigatório" }, 400);
+      const { data: user } = await supabase.from("mro_tool_users").select("*").eq("id", body.id).maybeSingle();
+      if (!user) return json({ success: false, error: "Usuário não encontrado" }, 404);
+      const { data: accounts } = await supabase.from("mro_tool_accounts").select("*").eq("user_id", body.id);
+      const { data: logs } = await supabase.from("mro_tool_logs").select("*").eq("user_id", body.id).limit(5000);
+      const { error: snapErr } = await supabase.from("mro_tool_deleted_users").insert({
+        original_user_id: user.id,
+        username: user.username,
+        email: user.email,
+        user_data: user,
+        accounts: accounts || [],
+        logs: logs || [],
+      });
+      if (snapErr) {
+        console.error("[mro-tool-api] snapshot falhou, exclusão cancelada:", snapErr.message);
+        return json({ success: false, error: "Não foi possível guardar a cópia de segurança; exclusão cancelada." }, 500);
+      }
       const { error } = await supabase.from("mro_tool_users").delete().eq("id", body.id);
       if (error) return json({ success: false, error: error.message }, 500);
       return json({ success: true });
+    }
+
+    if (action === "list_deleted_users") {
+      const { data, error } = await supabase
+        .from("mro_tool_deleted_users")
+        .select("id, original_user_id, username, email, accounts, deleted_at, restored_at")
+        .is("restored_at", null)
+        .order("deleted_at", { ascending: false })
+        .limit(500);
+      if (error) return json({ success: false, error: error.message }, 500);
+      return json({ success: true, deleted: data || [] });
+    }
+
+    /** Restaura usuário excluído com o mesmo ID, contas e histórico. */
+    if (action === "restore_user") {
+      if (!body.id) return json({ success: false, error: "ID é obrigatório" }, 400);
+      const { data: snap } = await supabase.from("mro_tool_deleted_users").select("*").eq("id", body.id).maybeSingle();
+      if (!snap || snap.restored_at) return json({ success: false, error: "Registro não encontrado ou já restaurado" }, 404);
+      const u = snap.user_data as Record<string, unknown>;
+      const { data: clash } = await supabase.from("mro_tool_users").select("id").ilike("username", String(u.username)).maybeSingle();
+      if (clash) return json({ success: false, error: `Já existe um usuário "${u.username}" ativo. Renomeie ou exclua antes de restaurar.` }, 409);
+      const { error: uErr } = await supabase.from("mro_tool_users").insert(u);
+      if (uErr) return json({ success: false, error: uErr.message }, 500);
+      const accs = (snap.accounts || []) as Record<string, unknown>[];
+      if (accs.length) {
+        const { error: aErr } = await supabase.from("mro_tool_accounts").insert(accs);
+        if (aErr) console.error("[mro-tool-api] restore contas:", aErr.message);
+      }
+      const logs = (snap.logs || []) as Record<string, unknown>[];
+      if (logs.length) await supabase.from("mro_tool_logs").insert(logs);
+      await supabase.from("mro_tool_logs").insert({ user_id: u.id, action_type: "user_restored", details: { accounts: accs.length } });
+      await supabase.from("mro_tool_deleted_users").update({ restored_at: new Date().toISOString() }).eq("id", snap.id);
+      return json({ success: true, accounts: accs.length });
     }
 
     /**
