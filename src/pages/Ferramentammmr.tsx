@@ -1,3 +1,5 @@
+import { MroIntelligentIntro } from '@/components/sales/MroIntelligentIntro';
+import { MroIntelligentFeatures } from '@/components/sales/MroIntelligentFeatures';
 import { useState, useEffect, useRef } from "react";
 import Hls from "hls.js";
 
@@ -419,38 +421,38 @@ const Ferramentammmr = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+    <div className="mro-intelligent-sales min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Popup Desconto Encerrado - REMOVED TO PREVENT BLACK SCREEN ISSUES */}
       {/* 
       {showDiscountEndedPopup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-gradient-to-b from-gray-900 to-gray-950 border-2 border-red-500 rounded-2xl p-6 sm:p-8 max-w-md w-full text-center relative animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-gradient-to-b from-card to-background border-2 border-border rounded-2xl p-6 sm:p-8 max-w-md w-full text-center relative animate-in zoom-in-95 duration-300">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-              <div className="bg-red-600 text-white font-bold px-4 py-1.5 rounded-full text-sm">
+              <div className="bg-primary text-foreground font-bold px-4 py-1.5 rounded-full text-sm">
                 ⚠️ AVISO
               </div>
             </div>
             
             <div className="mt-4 mb-6">
-              <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+              <AlertTriangle className="w-16 h-16 text-primary mx-auto mb-4" />
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
                 Desconto Encerrado!
               </h2>
-              <p className="text-gray-300 text-base sm:text-lg leading-relaxed">
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
                 Aguarde um próximo desconto ou siga para página oficial para adquirir o plano hoje
               </p>
             </div>
             
             <Button 
               onClick={() => window.location.href = '/instagram-nova'}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-lg py-5 rounded-xl shadow-lg shadow-green-500/30"
+              className="w-full bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-lg py-5 rounded-xl shadow-lg shadow-primary/30"
             >
               Acessar Página <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
             
             <button 
               onClick={() => setShowDiscountEndedPopup(false)}
-              className="mt-4 text-gray-400 hover:text-white text-sm underline"
+              className="mt-4 text-muted-foreground hover:text-foreground text-sm underline"
             >
               Continuar na página mesmo assim
             </button>
@@ -466,41 +468,15 @@ const Ferramentammmr = () => {
         <div className="max-w-5xl mx-auto text-center">
 
           
-          <img src={logoMro} alt="MRO" className="h-16 sm:h-20 md:h-28 mx-auto mb-6 sm:mb-8 object-contain" />
-          
-          {/* Animated Title */}
-          <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-green-500/20 blur-[60px] md:blur-[60px] md:blur-[120px] rounded-full" />
-            <h1 className="relative text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black mb-3 sm:mb-4 px-2">
-              <span className="bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">NÃO GASTE MAIS COM ANÚNCIOS</span>
-            </h1>
-            <h2 className="relative text-lg sm:text-xl md:text-3xl lg:text-4xl font-black mb-3">
-              <span className="bg-gradient-to-r from-green-400 via-emerald-400 to-green-400 bg-clip-text text-transparent">
-                UTILIZE A MRO INTELIGENTE!
-              </span>
-            </h2>
-            <p className="relative mt-3 text-sm md:text-base text-gray-400">
-              Instale em seu notebook, macbook ou computador de mesa!
-            </p>
-          </div>
-
-          {/* V8.6 Badge */}
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600/30 to-pink-600/30 border border-purple-500/50 rounded-full px-4 sm:px-6 py-2 mt-6">
-            <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400 animate-pulse" />
-            <span className="text-white font-bold text-xs sm:text-sm">NOVA VERSÃO V8.6 — A MAIS COMPLETA</span>
-            <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400 animate-pulse" />
-          </div>
-
-
-
+          <MroIntelligentIntro />
 
           {/* Main Video */}
           <div className="mt-8 sm:mt-10 max-w-4xl mx-auto">
-            <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-black ring-1 ring-amber-500/30 shadow-[0_0_60px_rgba(251,191,36,0.15)]">
+            <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-background ring-1 ring-ring/30 shadow-lg">
               <div className="relative aspect-video">
                 <video
                   ref={mainVideoRef}
-                  className={`w-full h-full bg-black transition-opacity duration-500 ${videoStarted ? "opacity-100" : "opacity-10"}`}
+                  className={`w-full h-full bg-background transition-opacity duration-500 ${videoStarted ? "opacity-100" : "opacity-10"}`}
                   playsInline
                   controls={false}
                   muted={!videoStarted}
@@ -511,11 +487,11 @@ const Ferramentammmr = () => {
                 {!videoStarted && (
                   <button
                     onClick={handleMainVideoStart}
-                    className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/30 transition"
+                    className="absolute inset-0 flex items-center justify-center bg-background/40 hover:bg-background/30 transition"
                     aria-label="Reproduzir"
                   >
-                    <span className="w-20 h-20 rounded-full bg-amber-500 hover:bg-amber-400 flex items-center justify-center shadow-2xl animate-pulse">
-                      <Play className="w-10 h-10 text-black ml-1" fill="currentColor" />
+                    <span className="w-20 h-20 rounded-full bg-primary hover:bg-primary flex items-center justify-center shadow-2xl animate-pulse">
+                      <Play className="w-10 h-10 text-primary-foreground ml-1" fill="currentColor" />
                     </span>
                   </button>
                 )}
@@ -523,21 +499,21 @@ const Ferramentammmr = () => {
                   <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
                     <button
                       onClick={toggleMainPlay}
-                      className="w-10 h-10 rounded-full bg-black/70 hover:bg-black flex items-center justify-center"
+                      className="w-10 h-10 rounded-full bg-background/70 hover:bg-background flex items-center justify-center"
                       aria-label={videoPlaying ? "Pausar" : "Reproduzir"}
                     >
                       {videoPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                     </button>
                     <button
                       onClick={toggleMainMute}
-                      className="w-10 h-10 rounded-full bg-black/70 hover:bg-black flex items-center justify-center"
+                      className="w-10 h-10 rounded-full bg-background/70 hover:bg-background flex items-center justify-center"
                       aria-label={videoMuted ? "Ativar som" : "Silenciar"}
                     >
                       {videoMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                     </button>
                     <button
                       onClick={toggleMainFullscreen}
-                      className="ml-auto w-10 h-10 rounded-full bg-black/70 hover:bg-black flex items-center justify-center"
+                      className="ml-auto w-10 h-10 rounded-full bg-background/70 hover:bg-background flex items-center justify-center"
                       aria-label="Tela cheia"
                     >
                       <Maximize className="w-5 h-5" />
@@ -551,7 +527,7 @@ const Ferramentammmr = () => {
           {/* CTA Button */}
           <Button 
             onClick={scrollToPricing}
-            className="mt-8 sm:mt-10 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-sm sm:text-lg px-6 sm:px-10 py-5 sm:py-6 rounded-full shadow-lg shadow-green-500/30"
+            className="mt-8 sm:mt-10 bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-sm sm:text-lg px-6 sm:px-10 py-5 sm:py-6 rounded-full shadow-lg shadow-primary/30"
           >
             GARANTIR MEU ACESSO AGORA <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
@@ -560,172 +536,28 @@ const Ferramentammmr = () => {
 
 
 
-      {/* ====== O QUE VOCÊ VAI RECEBER ====== */}
-      <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-black via-gray-950 to-black">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10 sm:mb-16">
-            <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-4 sm:px-6 py-2 mb-4">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
-              <span className="text-amber-400 font-bold text-xs sm:text-sm">O QUE VOCÊ VAI RECEBER</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl md:text-5xl font-black mb-4 text-amber-50">
-              Tudo que você precisa para crescer no Instagram
-            </h2>
-          </div>
-
-          {/* Inteligência artificial automática */}
-          <div className="mb-8 sm:mb-10">
-            <div className="relative bg-gradient-to-br from-amber-950/60 to-amber-900/30 border-2 border-amber-500/40 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                    <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                  </div>
-                  <div>
-                    <div className="bg-amber-500 text-black text-[10px] font-black px-3 py-1 rounded-full inline-block mb-1">NOVO</div>
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-amber-300">Inteligência artificial automática</h3>
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                  {[
-                    "Cria legendas prontas e otimizadas para seu conteúdo",
-                    "Gera biografias profissionais para seu Instagram",
-                    "Entrega os melhores horários para postar no seu nicho",
-                    "Recomenda hashtags quentes e relevantes",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 sm:gap-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 sm:p-4">
-                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
-                      <span className="text-gray-200 font-medium text-sm sm:text-base">{item}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-4 sm:mt-5 text-amber-300 font-bold text-sm sm:text-base text-center">Tudo isso personalizado para você, em segundos!</p>
-              </div>
-            </div>
-          </div>
-
-          {/* FERRAMENTA MRO */}
-          <div className="mb-8 sm:mb-10">
-            <div className="relative bg-gradient-to-br from-amber-950/60 to-amber-900/30 border-2 border-amber-500/40 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 overflow-hidden">
-              <div className="absolute top-0 left-1/2 w-96 h-64 bg-amber-500/10 rounded-full blur-[50px] md:blur-[100px] pointer-events-none -translate-x-1/2" />
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                    <Target className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                  </div>
-                  <div>
-                    <div className="bg-amber-500 text-black text-[10px] font-black px-3 py-1 rounded-full inline-block mb-1">PRINCIPAL</div>
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-amber-300">FERRAMENTA MRO</h3>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {[
-                    { icon: Heart, text: "Curte fotos" },
-                    { icon: UserPlus, text: "Segue perfis estratégicos" },
-                    { icon: RefreshCw, text: "Segue e deixa de seguir também" },
-                    { icon: Eye, text: 'Reage aos Stories com "amei"' },
-                    { icon: Shield, text: "Remove seguidores fakes/comprados" },
-                    { icon: Zap, text: "Interação com 200 pessoas por dia" },
-                    { icon: Video, text: "Posta Stories de 1 em 1 hora automaticamente" },
-                    { icon: Rocket, text: "Se mantém sempre na frente" },
-                  ].map((item, i) => (
-                    <div key={i} className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 sm:p-5 text-center hover:scale-105 transition-transform">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                        <item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" />
-                      </div>
-                      <span className="text-gray-200 font-bold text-xs sm:text-sm">{item.text}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-4 sm:mt-5 text-amber-300 font-bold text-sm sm:text-base text-center">Tudo isso em alta escala, todos os dias, atraindo um novo público real e interessado em você.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 sm:mt-6 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 sm:p-5 text-center">
-            <p className="text-amber-300 font-bold text-base sm:text-lg">Resultados comprovados em até 7 horas de uso!</p>
-          </div>
-
-          {/* ÁREA DE MEMBROS VITALÍCIA */}
-          <div className="mb-8 sm:mb-10 mt-8 sm:mt-10">
-            <div className="relative bg-gradient-to-br from-amber-950/60 to-amber-900/30 border-2 border-amber-500/40 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 overflow-hidden">
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                    <Video className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                  </div>
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-amber-300">ÁREA DE MEMBROS VITALÍCIA</h3>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                  {[
-                    "Vídeos estratégicos com passo a passo",
-                    "Como deixar seu perfil mais atrativo e profissional",
-                    "Como agendar suas postagens e deixar tudo no automático",
-                    "Estratégias para bombar seu Instagram mesmo começando do zero",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 sm:gap-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 sm:p-4">
-                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
-                      <span className="text-gray-200 font-medium text-sm sm:text-base">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* GRUPO VIP */}
-          <div className="mb-8 sm:mb-10">
-            <div className="relative bg-gradient-to-br from-amber-950/60 to-amber-900/30 border-2 border-amber-500/40 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 overflow-hidden">
-              <div className="absolute bottom-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                    <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                  </div>
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-amber-300">GRUPO VIP DE SUPORTE E NETWORKING</h3>
-                </div>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {[
-                    "Acesse o grupo VIP",
-                    "Tire dúvidas",
-                    "Compartilhe resultados",
-                    "Receba atualizações em primeira mão",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 sm:p-4">
-                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
-                      <span className="text-gray-200 font-medium text-sm sm:text-base">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <MroIntelligentFeatures />
 
       {/* Guarantee Section */}
-      <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-gray-950 to-black">
+      <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
         <div className="max-w-4xl mx-auto">
-          <div className="relative bg-gradient-to-br from-green-950/80 to-black border-2 border-green-500/50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-14 text-center shadow-2xl shadow-green-500/10 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-green-500/5 to-transparent pointer-events-none" />
+          <div className="relative bg-gradient-to-br from-card/80 to-background border-2 border-border/50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-14 text-center shadow-2xl shadow-primary/10 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-card/5 to-transparent pointer-events-none" />
             <div className="relative flex items-center justify-center mb-6">
-              <div className="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-green-500/10 animate-ping pointer-events-none" style={{animationDuration: '3s'}} />
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-green-500/20 border-2 border-green-500/40 flex items-center justify-center">
-                <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-green-400" />
+              
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/20 border-2 border-border/40 flex items-center justify-center">
+                <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
               </div>
             </div>
-            <span className="text-green-400 font-bold text-[10px] sm:text-xs tracking-[0.3em] uppercase">GARANTIA TOTAL</span>
+            <span className="text-primary font-bold text-[10px] sm:text-xs tracking-[0.3em] uppercase">GARANTIA TOTAL</span>
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-black mt-3 mb-4 sm:mb-6 leading-tight">
-              30 Dias de Resultados <span className="text-green-400">Garantidos</span>
+              30 Dias de Resultados <span className="text-primary">Garantidos</span>
             </h2>
-            <div className="bg-green-500/10 border border-green-500/30 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-4 sm:py-5 max-w-2xl mx-auto mb-6 sm:mb-8">
-              <p className="text-white text-base sm:text-lg md:text-xl leading-relaxed">
-                Se em <strong className="text-green-400">30 dias</strong> não tiver os resultados prometidos, <strong className="text-white">devolvemos o seu dinheiro.</strong>
+            <div className="bg-primary/10 border border-border/30 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-4 sm:py-5 max-w-2xl mx-auto mb-6 sm:mb-8">
+              <p className="text-foreground text-base sm:text-lg md:text-xl leading-relaxed">
+                Se em <strong className="text-primary">30 dias</strong> não tiver os resultados prometidos, <strong className="text-foreground">devolvemos o seu dinheiro.</strong>
               </p>
-              <p className="text-green-300 font-bold text-sm sm:text-lg mt-2">Nós garantimos resultados. Sem risco para você.</p>
+              <p className="text-primary font-bold text-sm sm:text-lg mt-2">Nós garantimos resultados. Sem risco para você.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-2xl mx-auto mb-6 sm:mb-8">
               {[
@@ -733,61 +565,61 @@ const Ferramentammmr = () => {
                 { emoji: "💰", label: "Reembolso Garantido" },
                 { emoji: "✅", label: "Satisfação ou Dinheiro de Volta" }
               ].map((item, i) => (
-                <div key={i} className="bg-green-500/10 border border-green-500/20 rounded-xl px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 justify-center">
+                <div key={i} className="bg-primary/10 border border-border/20 rounded-xl px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 justify-center">
                   <span className="text-lg sm:text-xl">{item.emoji}</span>
-                  <span className="text-green-300 text-xs sm:text-sm font-semibold">{item.label}</span>
+                  <span className="text-primary text-xs sm:text-sm font-semibold">{item.label}</span>
                 </div>
               ))}
             </div>
-            <p className="text-gray-500 text-xs sm:text-sm">Garantia válida por 30 dias após a data da compra.</p>
+            <p className="text-muted-foreground text-xs sm:text-sm">Garantia válida por 30 dias após a data da compra.</p>
           </div>
         </div>
       </section>
 
       {/* O que está incluso */}
-      <section ref={pricingRef} className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-gray-950 to-black">
+      <section ref={pricingRef} className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center mb-3 sm:mb-4">
-            ESCOLHA SEU <span className="text-green-400">PLANO</span>
+            ESCOLHA SEU <span className="text-primary">PLANO</span>
           </h2>
-          <p className="text-center text-gray-400 mb-8 sm:mb-10 text-base sm:text-lg">
+          <p className="text-center text-muted-foreground mb-8 sm:mb-10 text-base sm:text-lg">
             Selecione o plano ideal para você
           </p>
 
           <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
             {/* Plano Anual Pro */}
-            <div className="bg-gradient-to-b from-gray-900 to-gray-950 border-2 border-green-500/60 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-b from-card to-background border-2 border-border/60 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden flex flex-col">
               <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-b-xl text-xs sm:text-sm whitespace-nowrap">
+                <div className="bg-gradient-to-r from-card to-background text-foreground font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-b-xl text-xs sm:text-sm whitespace-nowrap">
                   MAIS POPULAR
                 </div>
               </div>
 
               <div className="text-center mt-6 mb-6 sm:mb-8">
                 <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">Anual Pro</h3>
-                <div className="text-base sm:text-lg text-gray-300 mb-2">por apenas</div>
-                <div className="text-green-400 mb-1">
+                <div className="text-base sm:text-lg text-muted-foreground mb-2">por apenas</div>
+                <div className="text-primary mb-1">
                   <span className="text-lg sm:text-xl md:text-2xl font-medium">12x de</span>
                   <span className="text-5xl sm:text-6xl md:text-7xl font-black ml-2">R$40</span>
                 </div>
-                <p className="text-gray-300 text-lg sm:text-xl mb-1">
-                  ou <span className="text-white font-bold">R$ 397,00 à vista</span>
+                <p className="text-muted-foreground text-lg sm:text-xl mb-1">
+                  ou <span className="text-foreground font-bold">R$ 397,00 à vista</span>
                 </p>
-                <p className="text-gray-400 text-xs sm:text-sm">Acesso por 1 ano</p>
+                <p className="text-muted-foreground text-xs sm:text-sm">Acesso por 1 ano</p>
               </div>
 
               <div className="space-y-3 mb-6 sm:mb-8 flex-1">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-200 text-sm sm:text-base">4 contas do Instagram</span>
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground text-sm sm:text-base">4 contas do Instagram</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-200 text-sm sm:text-base">Ferramenta MRO completa</span>
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground text-sm sm:text-base">Ferramenta MRO completa</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-200 text-sm sm:text-base">Suporte VIP</span>
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground text-sm sm:text-base">Suporte VIP</span>
                 </div>
               </div>
 
@@ -802,50 +634,50 @@ const Ferramentammmr = () => {
                   });
                   setShowCheckoutModal(true);
                 }}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-base sm:text-xl py-5 sm:py-7 rounded-xl shadow-lg shadow-green-500/30"
+                className="w-full bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-base sm:text-xl py-5 sm:py-7 rounded-xl shadow-lg shadow-primary/30"
               >
                 QUERO O PLANO ANUAL
               </Button>
 
-              <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 text-xs sm:text-sm text-gray-400 flex-wrap">
+              <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
                 <div className="flex items-center gap-1"><Shield className="w-3 h-3 sm:w-4 sm:h-4" /><span>Compra Segura</span></div>
                 <div className="flex items-center gap-1"><CreditCard className="w-3 h-3 sm:w-4 sm:h-4" /><span>PIX ou Cartão</span></div>
               </div>
             </div>
 
             {/* Plano Agência Vitalício */}
-            <div className="bg-gradient-to-b from-gray-900 to-gray-950 border-2 border-yellow-500/70 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-b from-card to-background border-2 border-border/70 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden flex flex-col">
               <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-                <div className="bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-b-xl text-xs sm:text-sm whitespace-nowrap">
+                <div className="bg-gradient-to-r from-card to-background text-primary-foreground font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-b-xl text-xs sm:text-sm whitespace-nowrap">
                   ⭐ PREMIUM VITALÍCIO
                 </div>
               </div>
 
               <div className="text-center mt-6 mb-6 sm:mb-8">
                 <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">Agência Vitalício</h3>
-                <div className="text-base sm:text-lg text-gray-300 mb-2">pagamento único</div>
-                <div className="text-yellow-400 mb-1">
+                <div className="text-base sm:text-lg text-muted-foreground mb-2">pagamento único</div>
+                <div className="text-primary mb-1">
                   <span className="text-lg sm:text-xl md:text-2xl font-medium">12x de</span>
                   <span className="text-5xl sm:text-6xl md:text-7xl font-black ml-2">R$122,83</span>
                 </div>
-                <p className="text-gray-300 text-lg sm:text-xl mb-1">
-                  ou <span className="text-white font-bold">R$ 1.197,00 à vista</span>
+                <p className="text-muted-foreground text-lg sm:text-xl mb-1">
+                  ou <span className="text-foreground font-bold">R$ 1.197,00 à vista</span>
                 </p>
-                <p className="text-yellow-400 text-xs sm:text-sm font-medium">Acesso vitalício — sem renovação</p>
+                <p className="text-primary text-xs sm:text-sm font-medium">Acesso vitalício — sem renovação</p>
               </div>
 
               <div className="space-y-3 mb-6 sm:mb-8 flex-1">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-200 text-sm sm:text-base">12 contas do Instagram</span>
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground text-sm sm:text-base">12 contas do Instagram</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-200 text-sm sm:text-base">Ferramenta MRO completa</span>
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground text-sm sm:text-base">Ferramenta MRO completa</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-200 text-sm sm:text-base">Suporte VIP</span>
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground text-sm sm:text-base">Suporte VIP</span>
                 </div>
               </div>
 
@@ -860,12 +692,12 @@ const Ferramentammmr = () => {
                   });
                   setShowCheckoutModal(true);
                 }}
-                className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-bold text-base sm:text-xl py-5 sm:py-7 rounded-xl shadow-lg shadow-yellow-500/30"
+                className="w-full bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-primary-foreground font-bold text-base sm:text-xl py-5 sm:py-7 rounded-xl shadow-lg shadow-primary/30"
               >
                 QUERO O VITALÍCIO
               </Button>
 
-              <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 text-xs sm:text-sm text-gray-400 flex-wrap">
+              <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
                 <div className="flex items-center gap-1"><Shield className="w-3 h-3 sm:w-4 sm:h-4" /><span>Compra Segura</span></div>
                 <div className="flex items-center gap-1"><CreditCard className="w-3 h-3 sm:w-4 sm:h-4" /><span>PIX ou Cartão</span></div>
               </div>
@@ -876,15 +708,15 @@ const Ferramentammmr = () => {
 
 
       {/* Final CTA */}
-      <section className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-gray-950 to-black">
+      <section className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-xl sm:text-2xl md:text-4xl font-bold mb-4 sm:mb-6">
-            Não perca essa <span className="text-green-400">oportunidade única!</span>
+            Não perca essa <span className="text-primary">oportunidade única!</span>
           </h2>
           
           <Button
             onClick={scrollToPricing}
-            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-sm sm:text-xl px-6 sm:px-12 py-5 sm:py-7 rounded-full shadow-lg shadow-green-500/30"
+            className="bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-sm sm:text-xl px-6 sm:px-12 py-5 sm:py-7 rounded-full shadow-lg shadow-primary/30"
           >
             VER OS PLANOS
           </Button>
@@ -894,11 +726,11 @@ const Ferramentammmr = () => {
       {/* Video Modal */}
       {showVideoModal && (
         <div 
-          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-2 sm:p-4"
+          className="fixed inset-0 z-[100] bg-background/95 flex items-center justify-center p-2 sm:p-4"
           onClick={() => setShowVideoModal(false)}
         >
           <button 
-            className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:text-gray-300 z-10"
+            className="absolute top-2 right-2 sm:top-4 sm:right-4 text-foreground hover:text-muted-foreground z-10"
             onClick={() => setShowVideoModal(false)}
           >
             <X className="w-6 h-6 sm:w-8 sm:h-8" />
@@ -916,27 +748,27 @@ const Ferramentammmr = () => {
 
       {/* Checkout Modal */}
       {showCheckoutModal && (
-        <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-gray-900 border border-green-500/30 rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 relative my-4">
+        <div className="fixed inset-0 z-[100] bg-background/90 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-card border border-border/30 rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 relative my-4">
             <button 
               onClick={() => setShowCheckoutModal(false)}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-white"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 text-muted-foreground hover:text-foreground"
             >
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             
             <div className="text-center mb-4 sm:mb-6">
               <h3 className="text-xl sm:text-2xl font-bold mb-2">Finalize seu Cadastro</h3>
-              <p className="text-green-400 font-bold text-sm sm:text-base mb-1">Plano {selectedPlan.label}</p>
-              <div className="text-2xl sm:text-3xl font-bold text-green-400">
+              <p className="text-primary font-bold text-sm sm:text-base mb-1">Plano {selectedPlan.label}</p>
+              <div className="text-2xl sm:text-3xl font-bold text-primary">
                 {selectedPlan.installments}
               </div>
-              <p className="text-gray-400 text-xs sm:text-sm">ou {selectedPlan.oneTime}</p>
+              <p className="text-muted-foreground text-xs sm:text-sm">ou {selectedPlan.oneTime}</p>
             </div>
             
             <form onSubmit={handleCheckout} className="space-y-3 sm:space-y-4">
               <div>
-                <label className="text-xs sm:text-sm text-gray-400 mb-1 block">
+                <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">
                   <Mail className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
                   E-mail
                 </label>
@@ -945,13 +777,13 @@ const Ferramentammmr = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="bg-gray-800 border-gray-700 text-white text-sm sm:text-base"
+                  className="bg-card border-border text-foreground text-sm sm:text-base"
                   required
                 />
               </div>
               
               <div>
-                <label className="text-xs sm:text-sm text-gray-400 mb-1 block">
+                <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">
                   <Phone className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
                   Celular com DDD
                 </label>
@@ -960,13 +792,13 @@ const Ferramentammmr = () => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="(11) 99999-9999"
-                  className="bg-gray-800 border-gray-700 text-white text-sm sm:text-base"
+                  className="bg-card border-border text-foreground text-sm sm:text-base"
                   required
                 />
               </div>
               
               <div>
-                <label className="text-xs sm:text-sm text-gray-400 mb-1 block">
+                <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">
                   <User className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
                   Nome de usuário (login)
                 </label>
@@ -975,13 +807,13 @@ const Ferramentammmr = () => {
                   value={username}
                   onChange={(e) => validateUsername(e.target.value)}
                   placeholder="seunome"
-                  className={`bg-gray-800 border-gray-700 text-white text-sm sm:text-base ${usernameError ? 'border-red-500' : ''}`}
+                  className={`bg-card border-border text-foreground text-sm sm:text-base ${usernameError ? 'border-border' : ''}`}
                   required
                 />
                 {usernameError && (
-                  <p className="text-red-400 text-[10px] sm:text-xs mt-1">{usernameError}</p>
+                  <p className="text-primary text-[10px] sm:text-xs mt-1">{usernameError}</p>
                 )}
-                <p className="text-gray-500 text-[10px] sm:text-xs mt-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs mt-1">
                   Apenas letras minúsculas, sem espaços ou números
                 </p>
               </div>
@@ -989,7 +821,7 @@ const Ferramentammmr = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-5 sm:py-6 rounded-xl text-sm sm:text-base"
+                className="w-full bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold py-5 sm:py-6 rounded-xl text-sm sm:text-base"
               >
                 {loading ? (
                   <>
@@ -1005,7 +837,7 @@ const Ferramentammmr = () => {
               </Button>
             </form>
             
-            <div className="flex items-center justify-center gap-2 mt-3 sm:mt-4 text-[10px] sm:text-xs text-gray-500">
+            <div className="flex items-center justify-center gap-2 mt-3 sm:mt-4 text-[10px] sm:text-xs text-muted-foreground">
               <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
               <span>Pagamento 100% seguro via InfiniPay</span>
             </div>
@@ -1014,8 +846,8 @@ const Ferramentammmr = () => {
       )}
 
       {/* Footer */}
-      <footer className="py-6 sm:py-8 px-3 sm:px-4 border-t border-gray-800">
-        <div className="max-w-7xl mx-auto text-center text-gray-500 text-xs sm:text-sm">
+      <footer className="py-6 sm:py-8 px-3 sm:px-4 border-t border-border">
+        <div className="max-w-7xl mx-auto text-center text-muted-foreground text-xs sm:text-sm">
           <p>© 2025 MRO - Mais Resultados Online. Todos os direitos reservados.</p>
         </div>
       </footer>

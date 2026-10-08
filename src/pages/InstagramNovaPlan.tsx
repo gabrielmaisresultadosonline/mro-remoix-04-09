@@ -1,3 +1,5 @@
+import { MroIntelligentIntro } from '@/components/sales/MroIntelligentIntro';
+import { MroIntelligentFeatures } from '@/components/sales/MroIntelligentFeatures';
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -288,47 +290,26 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
 
   const faqs = [
     { q: "Quais são os planos disponíveis hoje?", a: "Oferecemos duas opções de planos anuais: Plano Pro (4 contas fixas + 5 testes mensais) e Plano Agência (10 contas fixas + 10 testes mensais). Ambos os planos são assinaturas anuais que garantem acesso total à ferramenta e suporte especializado." },
-    { q: "O que é a automação de Direct (DM) em massa?", a: "É uma funcionalidade exclusiva da V7+ Plus que permite enviar mensagens automáticas no Direct para novos seguidores, seus seguidores atuais e até seguidores de qualquer outra página — tudo com copy otimizada pelo Corretor de IA exclusivo MRO." },
+    { q: "O que é a automação de Direct (DM) em massa?", a: "É uma funcionalidade da MRO Inteligente que permite enviar mensagens automáticas no Direct para novos seguidores, seus seguidores atuais e até seguidores de qualquer outra página — tudo com copy otimizada pelo Corretor de IA exclusivo MRO." },
     { q: "O que são os Filtros Inteligentes (Público Quente)?", a: "São filtros avançados de segmentação que identificam pessoas que já demonstraram interesse no seu nicho — como quem curtiu posts, comentou ou segue perfis concorrentes. Isso garante mais precisão, mais respostas e mais conversões." },
-    { q: "Isso em massa não gera bloqueio?", a: "Não. Nosso sistema simula um humano com tela ligada, interações espaçadas e pausas naturais. Você deixa rodando por 7 a 8 horas diárias com segurança. O algoritmo entende como uso real, evitando bloqueios." },
+    { q: "Isso em massa não gera bloqueio?", a: "Toda automação exige cuidado. Configure pausas e limites, respeite as regras do Instagram e evite mensagens indesejadas. Nenhuma ferramenta pode garantir ausência de bloqueios." },
     { q: "Funciona só em computador?", a: "Sim, nossa ferramenta é compatível apenas com computadores de mesa, notebooks ou MacBooks. Não funciona em celulares, tablets ou dispositivos móveis." },
     { q: "Como funciona a IA exclusiva da MRO?", a: "Nossa IA analisa seu perfil completo, gera estratégias de conteúdo, engajamento e vendas, otimiza sua BIO e entrega relatórios de acompanhamento — tudo personalizado para o seu nicho." },
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+    <div className="mro-intelligent-sales min-h-screen bg-background text-foreground overflow-x-hidden">
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-8 px-4">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-[60px] md:blur-[60px] md:blur-[120px]" />
-          <div className="absolute top-40 right-1/4 w-80 h-80 bg-orange-500/5 rounded-full blur-[50px] md:blur-[50px] md:blur-[100px]" />
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-40 bg-gradient-to-t from-purple-500/5 to-transparent" />
-        </div>
+      <section className="relative pt-10 md:pt-16 pb-12 px-4">
         <div className="max-w-5xl mx-auto text-center relative">
-          {whitelabel && <WlBrandOrbit logoUrl={whitelabel.logoUrl} name={whitelabel.name} />}
-          <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 blur-3xl rounded-full" />
-            <h1 className="relative text-4xl md:text-6xl lg:text-8xl font-[1000] mb-2 leading-tight tracking-tighter filter drop-shadow-[0_0_1px_rgba(255,255,255,0.8)]">
-               <span className="bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">NÃO GASTE MAIS COM ANÚNCIOS</span>
-             </h1>
-             <h2 className="relative text-2xl md:text-4xl lg:text-5xl font-[1000] mb-4">
-              <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 bg-clip-text text-transparent uppercase tracking-tight">
-                Utilize a MRO Inteligente!
-              </span>
-            </h2>
-            
-
-            <p className="relative mt-2 text-sm md:text-base text-gray-400">
-              Instale em seu notebook, macbook ou computador de mesa!
-            </p>
-          </div>
+          <MroIntelligentIntro branding={whitelabel ? <WlBrandOrbit logoUrl={whitelabel.logoUrl} name={whitelabel.name} /> : undefined} />
 
           <div className="mt-6 max-w-4xl mx-auto" id="hero-video">
             {videoSlot ? (
               videoSlot
             ) : (
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border">
                 <iframe
                   src="https://www.youtube.com/embed/lecSwt54sa0?rel=0&modestbranding=1"
                   title="Video MRO"
@@ -345,228 +326,39 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
             <div className="mt-8 mb-4">
               <Button 
                 onClick={scrollToPricing}
-                className="bg-[#39FF14] hover:bg-[#32e612] text-black font-black px-12 py-7 rounded-full text-lg shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all hover:scale-105"
+                className="bg-primary hover:bg-primary text-primary-foreground font-black px-12 py-7 rounded-full text-lg shadow-lg transition-all hover:scale-105"
               >
-                VER PLANOS DISPONÍVEIS
+                GARANTIR MEU ACESSO AGORA
               </Button>
             </div>
 
             <div className="mt-6 animate-bounce">
-              <ChevronDown className="w-10 h-10 text-gray-500 mx-auto" />
+              <ChevronDown className="w-10 h-10 text-muted-foreground mx-auto" />
             </div>
         </div>
       </section>
 
-      {/* Nova Seção Combinada: Assistente IA + STORIES+ */}
-      <section className="py-20 px-4 bg-gradient-to-b from-black via-gray-950 to-black">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="inline-block bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wider border border-cyan-500/20">
-              Novidades MRO V7+
-            </span>
-            <h2 className="text-3xl md:text-5xl font-black mb-4">
-              <span className="bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
-                Potencialize seu Instagram com IA
-              </span>
-            </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Duas ferramentas poderosas trabalhando juntas para multiplicar seus resultados
-            </p>
-          </div>
+      <MroIntelligentFeatures />
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Assistente IA */}
-            <div className="group relative bg-gradient-to-br from-gray-900/80 to-black border border-cyan-500/20 rounded-3xl p-8 md:p-10 overflow-hidden transition-all duration-500 hover:border-cyan-500/40 hover:shadow-[0_0_40px_rgba(6,182,212,0.1)]">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 border border-cyan-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Bot className="w-7 h-7 text-cyan-400" />
-                  </div>
-                  <h3 className="text-2xl md:text-3xl font-black text-white">Assistente IA Automático</h3>
-                </div>
-                <p className="text-gray-300 text-lg leading-relaxed mb-6">
-                  Automatize e potencialize sua prospecção com inteligência artificial.
-                </p>
-                <div className="space-y-3 mb-6">
-                  {[
-                    "Rastreia potenciais clientes no seu nicho",
-                    "Filtra oportunidades usando IA",
-                    "Aborda automaticamente os contatos mais qualificados",
-                    "Envia mensagens personalizadas em escala",
-                    "Economiza tempo e aumenta sua produtividade",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-300">{item}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-cyan-400 font-bold text-lg">
-                  Enquanto você foca nas vendas, o Assistente MRO trabalha todos os dias.
-                </p>
-              </div>
-            </div>
-
-            {/* STORIES+ */}
-            <div className="group relative bg-gradient-to-br from-gray-900/80 to-black border border-rose-500/20 rounded-3xl p-8 md:p-10 overflow-hidden transition-all duration-500 hover:border-rose-500/40 hover:shadow-[0_0_40px_rgba(244,63,94,0.1)]">
-              <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500/20 to-rose-500/5 border border-rose-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Sparkles className="w-7 h-7 text-rose-400" />
-                  </div>
-                  <h3 className="text-2xl md:text-3xl font-black text-white">STORIES+</h3>
-                </div>
-                <p className="text-gray-300 text-lg leading-relaxed mb-6">
-                  Mantenha seu perfil ativo, visível e sempre à frente da concorrência.
-                </p>
-                <div className="space-y-3 mb-6">
-                  {[
-                    "Publicações automáticas durante todo o dia",
-                    "Programação de dezenas de Stories de uma só vez",
-                    "Intervalos personalizados entre as postagens",
-                    "Perfil sempre ativo e em evidência",
-                    "Mais alcance, presença e oportunidades de venda",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-300">{item}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-rose-400 font-bold text-lg">
-                  Seu perfil continua aparecendo enquanto outros desaparecem.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-8 px-4 bg-black">
-        <div className="max-w-4xl mx-auto text-center">
-          <Button 
-            onClick={scrollToPricing}
-            className="bg-[#39FF14] hover:bg-[#32e612] text-black font-black px-12 py-7 rounded-full text-lg shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all hover:scale-105"
-          >
-            QUERO COMEÇAR AGORA
-            <ArrowRight className="w-6 h-6 ml-2" />
-          </Button>
-        </div>
-      </section>
-
-      {/* Active Clients section removed as requested */}
-
-
-      <section className="py-20 px-4 bg-gradient-to-b from-black via-gray-950 to-black">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-2xl md:text-3xl font-black mt-4 bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-              Conheça tudo que entregamos
-            </p>
-          </div>
-
-          <div className="bg-gray-900/50 border border-gray-800 rounded-3xl p-8 md:p-12 text-left space-y-8">
-            <div>
-              <h3 className="text-xl font-black text-blue-400 mb-4">NOVO: Automação de Direct (DM) em Massa</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li>• Envio automático para novos seguidores</li>
-                <li>• Envio para seus seguidores atuais</li>
-                <li>• Envio para seguidores de qualquer página</li>
-                <li>• Copy otimizada com Corretor de IA exclusivo MRO</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-black text-purple-400 mb-4">NOVO: Filtros Inteligentes (Público Quente)</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li>• Segmentação avançada para atingir quem realmente tem interesse</li>
-                <li>• Mais precisão = mais respostas e conversões</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-black text-amber-400 mb-4">PRINCIPAL: Automação Completa de Crescimento</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li>• Seguir em massa</li>
-                <li>• Curtir fotos automaticamente</li>
-                <li>• Curtir stories</li>
-                <li>• Deixar de seguir</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-black text-green-400 mb-4">AVANÇADO: Captura Avançada de Público</h3>
-              <p className="text-gray-400 mb-3">Extraia leads altamente qualificados:</p>
-              <ul className="space-y-2 text-gray-300">
-                <li>• Pessoas que curtem posts</li>
-                <li>• Pessoas que comentam</li>
-                <li>• Seguidores de qualquer perfil</li>
-                <li>• Quem o perfil está seguindo</li>
-              </ul>
-              <p className="mt-4 text-green-400 font-bold">👉 Você atinge exatamente quem já demonstra interesse.</p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-black text-pink-400 mb-4">IA EXCLUSIVA: Inteligência Artificial Exclusiva</h3>
-              <p className="text-gray-400 mb-3">A MRO V7+ vai além da automação:</p>
-              <ul className="space-y-2 text-gray-300">
-                <li>• Análise completa do seu perfil</li>
-                <li>• Estratégias de conteúdo</li>
-                <li>• Estratégias de engajamento</li>
-                <li>• Estratégias de vendas</li>
-                <li>• Otimização da BIO</li>
-                <li>• Relatórios e acompanhamento</li>
-              </ul>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-
-      <div className="py-20 bg-black relative overflow-hidden">
-        <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none blur-3xl rounded-full translate-x-1/2" />
-        <div className="max-w-5xl mx-auto px-4 relative z-10 text-center">
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8 md:p-12">
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-6">
-              A Solução Mais <span className="text-emerald-400">Acessível</span> do Mercado
-            </h2>
-            <p className="text-gray-400 text-lg md:text-xl mb-10 max-w-2xl mx-auto">
-              Libere o poder da automação e IA no seu Instagram hoje mesmo. Planos flexíveis que cabem no seu bolso.
-            </p>
-            <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-              <Button 
-                onClick={scrollToPricing}
-                className="bg-[#39FF14] hover:bg-[#32e612] text-black font-black px-12 py-7 rounded-full text-lg shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all hover:scale-105"
-              >
-                VER TODOS OS PLANOS
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <section className="py-20 px-4 bg-gradient-to-b from-gray-950 to-black">
+      <section className="py-20 px-4 bg-gradient-to-b from-card to-background">
         <div className="max-w-4xl mx-auto">
-          <div className="relative bg-gradient-to-br from-green-950/80 to-black border-2 border-green-500/50 rounded-3xl p-8 md:p-14 text-center shadow-2xl shadow-green-500/10 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-green-500/5 to-transparent pointer-events-none" />
+          <div className="relative bg-gradient-to-br from-card/80 to-background border-2 border-border/50 rounded-3xl p-8 md:p-14 text-center shadow-2xl shadow-primary/10 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-card/5 to-transparent pointer-events-none" />
             <div className="relative flex items-center justify-center mb-6">
-              <div className="absolute w-28 h-28 rounded-full bg-green-500/10 animate-ping pointer-events-none" style={{animationDuration: '3s'}} />
-              <div className="relative w-24 h-24 rounded-full bg-green-500/20 border-2 border-green-500/40 flex items-center justify-center">
-                <Shield className="w-12 h-12 text-green-400" />
+              
+              <div className="relative w-24 h-24 rounded-full bg-primary/20 border-2 border-border/40 flex items-center justify-center">
+                <Shield className="w-12 h-12 text-primary" />
               </div>
             </div>
-            <span className="text-green-400 font-bold text-xs tracking-[0.3em] uppercase">GARANTIA TOTAL</span>
+            <span className="text-primary font-bold text-xs tracking-[0.3em] uppercase">GARANTIA TOTAL</span>
             <h2 className="text-3xl md:text-5xl font-black mt-3 mb-6 leading-tight">
-              30 Dias de Resultados <span className="text-green-400">Garantidos</span>
+              30 Dias de Resultados <span className="text-primary">Garantidos</span>
             </h2>
-            <div className="bg-green-500/10 border border-green-500/30 rounded-2xl px-6 py-5 max-w-2xl mx-auto mb-8">
-              <p className="text-white text-lg md:text-xl leading-relaxed">
-                Se em <strong className="text-green-400">30 dias</strong> não tiver os resultados prometidos, <strong className="text-white">devolvemos o seu dinheiro.</strong>
+            <div className="bg-primary/10 border border-border/30 rounded-2xl px-6 py-5 max-w-2xl mx-auto mb-8">
+              <p className="text-foreground text-lg md:text-xl leading-relaxed">
+                Se em <strong className="text-primary">30 dias</strong> não tiver os resultados prometidos, <strong className="text-foreground">devolvemos o seu dinheiro.</strong>
               </p>
-              <p className="text-green-300 font-bold text-lg mt-2">Nós garantimos resultados. Sem risco para você.</p>
+              <p className="text-primary font-bold text-lg mt-2">Nós garantimos resultados. Sem risco para você.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8">
               {[
@@ -574,30 +366,30 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
                 { emoji: "💰", label: "Reembolso Garantido" },
                 { emoji: "✅", label: "Satisfação ou Dinheiro de Volta" }
               ].map((item, i) => (
-                <div key={i} className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 flex items-center gap-2 justify-center">
+                <div key={i} className="bg-primary/10 border border-border/20 rounded-xl px-4 py-3 flex items-center gap-2 justify-center">
                   <span className="text-xl">{item.emoji}</span>
-                  <span className="text-green-300 text-sm font-semibold">{item.label}</span>
+                  <span className="text-primary text-sm font-semibold">{item.label}</span>
                 </div>
               ))}
             </div>
-            <p className="text-gray-500 text-sm">Garantia válida por 30 dias após a data da compra.</p>
+            <p className="text-muted-foreground text-sm">Garantia válida por 30 dias após a data da compra.</p>
           </div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section ref={pricingRef} className="py-20 px-4 bg-black relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent" />
+      <section ref={pricingRef} className="py-20 px-4 bg-background relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/5 to-transparent" />
         <div className="max-w-6xl mx-auto relative z-10">
 
           <div className="text-center mb-12">
-            <span className="inline-block bg-amber-500/10 text-amber-500 text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+            <span className="inline-block bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
               Planos Anuais
             </span>
             <h2 className="text-3xl md:text-5xl font-black mb-4">
-              ESCOLHA SEU <span className="text-amber-400">PLANO ANUAL</span>
+              ESCOLHA SEU <span className="text-primary">PLANO ANUAL</span>
             </h2>
-            <p className="text-gray-400 text-lg mb-6">
+            <p className="text-muted-foreground text-lg mb-6">
               A solução definitiva para crescer no Instagram sem gastar com anúncios
             </p>
           </div>
@@ -605,47 +397,47 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
           <div className="grid grid-cols-1 gap-6 max-w-xl mx-auto">
 
             {/* Plano Pro */}
-            <div className={`relative bg-gradient-to-br from-zinc-800 to-zinc-900 border-2 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl transition-all hover:scale-[1.05] z-10 ${selectedPlan === 'pro' ? 'border-amber-500 ring-4 ring-amber-500/20' : 'border-amber-500/50'}`}>
+            <div className={`relative bg-gradient-to-br from-card to-background border-2 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl transition-all hover:scale-[1.05] z-10 ${selectedPlan === 'pro' ? 'border-border ring-4 ring-ring/20' : 'border-border/50'}`}>
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black px-4 py-1.5 rounded-full whitespace-nowrap">⭐ RECOMENDADO</div>
+                <div className="bg-gradient-to-r from-card to-background text-primary-foreground text-xs font-black px-4 py-1.5 rounded-full whitespace-nowrap">⭐ RECOMENDADO</div>
               </div>
-              <h3 className="text-3xl font-black mb-2 text-center text-amber-400 mt-2">Plano Pro Anual</h3>
-              <p className="text-gray-400 text-center mb-6 text-sm">4 contas simultâneas</p>
+              <h3 className="text-3xl font-black mb-2 text-center text-primary mt-2">Plano Pro Anual</h3>
+              <p className="text-muted-foreground text-center mb-6 text-sm">4 contas simultâneas</p>
               <div className="text-center mb-6">
                 <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-lg sm:text-xl text-gray-400">12x de</span>
-                  <span className="text-6xl sm:text-7xl font-[1000] text-amber-400">R${MRO_ANNUAL_OFFER.installment}</span>
+                  <span className="text-lg sm:text-xl text-muted-foreground">12x de</span>
+                  <span className="text-6xl sm:text-7xl font-[1000] text-primary">R${MRO_ANNUAL_OFFER.installment}</span>
                 </div>
-                <p className="text-gray-400 mt-2 font-bold">R${MRO_ANNUAL_OFFER.price} à vista</p>
+                <p className="text-muted-foreground mt-2 font-bold">R${MRO_ANNUAL_OFFER.price} à vista</p>
               </div>
               <div className="space-y-2 mb-6">
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span className="text-gray-300 font-bold">Ferramenta completa</span>
+                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-muted-foreground font-bold">Ferramenta completa</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span className="text-gray-300 font-bold">Inteligência artificial</span>
+                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-muted-foreground font-bold">Inteligência artificial</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span className="text-gray-300 font-bold">Suporte</span>
+                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-muted-foreground font-bold">Suporte</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span className="text-gray-300 font-bold">Grupo Vip no WhatsApp</span>
+                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-muted-foreground font-bold">Grupo Vip no WhatsApp</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span className="text-gray-300">4 contas fixas</span>
+                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-muted-foreground">4 contas fixas</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span className="text-gray-300">Vídeos Passo a Passo</span>
+                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-muted-foreground">Vídeos Passo a Passo</span>
                 </div>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <Button size="lg" className="w-full bg-[#39FF14] hover:bg-[#32e612] text-black font-black py-7 rounded-xl shadow-[0_0_20px_rgba(57,255,20,0.4)] hover:shadow-[0_0_30px_rgba(57,255,20,0.6)] transition-all hover:scale-105 flex items-center justify-center gap-2"
+                <Button size="lg" className="w-full bg-primary hover:bg-primary text-primary-foreground font-black py-7 rounded-xl shadow-lg hover:shadow-lg transition-all hover:scale-105 flex items-center justify-center gap-2"
                   onClick={() => { 
                     trackLead('Instagram MRO - Plano Pro'); 
                     setSelectedPlan("pro"); 
@@ -655,7 +447,7 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
                   <ShoppingCart className="w-6 h-6" />
                   ESCOLHER PRO
                 </Button>
-                <span className="text-amber-500/70 font-bold text-xs uppercase tracking-widest">( ANUAL )</span>
+                <span className="text-primary/70 font-bold text-xs uppercase tracking-widest">( ANUAL )</span>
               </div>
             </div>
           </div>
@@ -666,14 +458,14 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
             <Button variant="outline" onClick={() => { setSelectedPlan('agencia'); setShowCheckoutModal(true); }}>Escolher Vitalício</Button>
           </div>}
           <div className="mt-16 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <h3 className="text-2xl md:text-3xl font-black text-white mb-4">Ficou com dúvidas?</h3>
-            <p className="text-gray-400 mb-6 text-lg">Fale no WhatsApp agora mesmo para falar com um especialista.</p>
+            <h3 className="text-2xl md:text-3xl font-black text-foreground mb-4">Ficou com dúvidas?</h3>
+            <p className="text-muted-foreground mb-6 text-lg">Fale no WhatsApp agora mesmo para falar com um especialista.</p>
             <Button 
               onClick={() => {
                 trackLead("Instagram Nova - WhatsApp CTA Below Pricing");
                 window.location.href = "/whatsapp";
               }}
-              className="bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-lg px-10 py-7 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 flex items-center gap-3 mx-auto"
+              className="bg-primary hover:bg-primary text-foreground font-bold text-lg px-10 py-7 rounded-2xl shadow-lg shadow-primary/20 transition-all hover:scale-105 flex items-center gap-3 mx-auto"
             >
               <WhatsAppIcon className="w-7 h-7" />
               CONVERSAR NO WHATSAPP
@@ -685,22 +477,22 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
       {/* Bonus 5K Section - Design único e diferenciado */}
       <section className="relative py-24 px-4 overflow-hidden">
         {/* Background gradiente especial */}
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-gray-950 to-emerald-950" />
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(245, 158, 11, 0.2) 0%, transparent 50%)' }} />
+        <div className="absolute inset-0 bg-gradient-to-br from-card via-background to-background" />
+        <div className="absolute inset-0 opacity-20" />
         
         {/* Borda brilhante superior e inferior */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-background to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-background to-transparent" />
         
         <div className="relative max-w-5xl mx-auto">
           {/* Pergunta inicial */}
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight text-white">
+            <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight text-foreground">
               Sabia que você pode prestar serviço e faturar com essa ferramenta mais de 5 mil mensal?
             </h2>
             <Button 
               onClick={() => setShowBonusDetails(!showBonusDetails)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-black font-black text-lg px-10 py-6 rounded-full shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
+              className="bg-primary hover:bg-primary text-primary-foreground font-black text-lg px-10 py-6 rounded-full shadow-lg shadow-primary/20 transition-all hover:scale-105"
             >
               SABER COMO {showBonusDetails ? <ChevronDown className="ml-2 rotate-180" /> : <ChevronDown className="ml-2" />}
             </Button>
@@ -710,76 +502,76 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
               {/* Badge exclusivo */}
               <div className="text-center mb-10">
-                <div className="inline-flex items-center gap-3 bg-emerald-500/20 border-2 border-emerald-400/50 rounded-full px-6 py-3 mb-6 shadow-lg shadow-emerald-500/20">
+                <div className="inline-flex items-center gap-3 bg-primary/20 border-2 border-border/50 rounded-full px-6 py-3 mb-6 shadow-lg shadow-primary/20">
                   <span className="text-2xl">💰</span>
-                  <span className="text-emerald-300 text-base font-black tracking-wider uppercase">Bônus Exclusivo</span>
+                  <span className="text-primary text-base font-black tracking-wider uppercase">Bônus Exclusivo</span>
                   <span className="text-2xl">💰</span>
                 </div>
                 
                 <h2 className="text-4xl md:text-5xl font-black mb-3 leading-tight">
-                  <span className="text-white">PRESTE SERVIÇO COM A MRO</span>
+                  <span className="text-foreground">PRESTE SERVIÇO COM A MRO</span>
                 </h2>
                 <h3 className="text-3xl md:text-4xl font-black mb-6">
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-400">FATURE MAIS DE R$5.000/MÊS</span>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-card via-background to-background">FATURE MAIS DE R$5.000/MÊS</span>
                 </h3>
-                <p className="text-amber-400 font-bold text-xl max-w-2xl mx-auto">
+                <p className="text-primary font-bold text-xl max-w-2xl mx-auto">
                   Rode esse sistema para outras empresas e ganhe mensalmente com isso!
                 </p>
               </div>
 
               {/* Cards informativos */}
               <div className="grid md:grid-cols-3 gap-6 mb-10">
-                <div className="bg-black/40 backdrop-blur-sm border border-emerald-500/30 rounded-2xl p-6 text-center hover:border-emerald-400/60 transition-all hover:scale-105">
-                  <div className="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                    <Laptop className="w-7 h-7 text-emerald-400" />
+                <div className="bg-background/40 backdrop-blur-sm border border-border/30 rounded-2xl p-6 text-center hover:border-border/60 transition-all hover:scale-105">
+                  <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                    <Laptop className="w-7 h-7 text-primary" />
                   </div>
-                  <h4 className="text-white font-bold text-lg mb-2">Trabalhe de Qualquer Lugar</h4>
-                  <p className="text-gray-400 text-sm">Tudo pode ser feito do seu notebook, de qualquer lugar do mundo</p>
+                  <h4 className="text-foreground font-bold text-lg mb-2">Trabalhe de Qualquer Lugar</h4>
+                  <p className="text-muted-foreground text-sm">Tudo pode ser feito do seu notebook, de qualquer lugar do mundo</p>
                 </div>
-                <div className="bg-black/40 backdrop-blur-sm border border-emerald-500/30 rounded-2xl p-6 text-center hover:border-emerald-400/60 transition-all hover:scale-105">
-                  <div className="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-7 h-7 text-emerald-400" />
+                <div className="bg-background/40 backdrop-blur-sm border border-border/30 rounded-2xl p-6 text-center hover:border-border/60 transition-all hover:scale-105">
+                  <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-7 h-7 text-primary" />
                   </div>
-                  <h4 className="text-white font-bold text-lg mb-2">4 Contas Vitalícias</h4>
-                  <p className="text-gray-400 text-sm">+ 5 testes grátis por mês para apresentar o serviço aos clientes</p>
+                  <h4 className="text-foreground font-bold text-lg mb-2">4 contas fixas</h4>
+                  <p className="text-muted-foreground text-sm">+ 5 testes grátis por mês para apresentar o serviço aos clientes</p>
                 </div>
-                <div className="bg-black/40 backdrop-blur-sm border border-emerald-500/30 rounded-2xl p-6 text-center hover:border-emerald-400/60 transition-all hover:scale-105">
-                  <div className="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="w-7 h-7 text-emerald-400" />
+                <div className="bg-background/40 backdrop-blur-sm border border-border/30 rounded-2xl p-6 text-center hover:border-border/60 transition-all hover:scale-105">
+                  <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="w-7 h-7 text-primary" />
                   </div>
-                  <h4 className="text-white font-bold text-lg mb-2">Renda Recorrente</h4>
-                  <p className="text-gray-400 text-sm">Cobra uma mensalidade dos clientes e gera renda recorrente</p>
+                  <h4 className="text-foreground font-bold text-lg mb-2">Renda Recorrente</h4>
+                  <p className="text-muted-foreground text-sm">Cobra uma mensalidade dos clientes e gera renda recorrente</p>
                 </div>
               </div>
 
               {/* Bloco explicativo */}
-              <div className="bg-black/60 backdrop-blur-sm border border-emerald-500/20 rounded-3xl p-8 md:p-10 mb-10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
-                <div className="relative space-y-5 text-gray-300 text-lg leading-relaxed">
-                  <p>Temos um <strong className="text-emerald-400">método completo</strong> no qual você pode prestar serviços utilizando essa ferramenta, fechando contratos com empresas que buscam engajamento, clientes e vendas.</p>
-                  <p>Você roda a ferramenta para o cliente, cobra uma mensalidade, e gera uma <strong className="text-emerald-400">renda recorrente</strong>.</p>
-                  <p>Os testes servem para apresentar o serviço: você roda a ferramenta por 1 dia, o cliente vê o resultado e você <strong className="text-white">fecha um contrato mensal</strong> com ele.</p>
+              <div className="bg-background/60 backdrop-blur-sm border border-border/20 rounded-3xl p-8 md:p-10 mb-10 relative overflow-hidden">
+                
+                <div className="relative space-y-5 text-muted-foreground text-lg leading-relaxed">
+                  <p>Temos um <strong className="text-primary">método completo</strong> no qual você pode prestar serviços utilizando essa ferramenta, fechando contratos com empresas que buscam engajamento, clientes e vendas.</p>
+                  <p>Você roda a ferramenta para o cliente, cobra uma mensalidade, e gera uma <strong className="text-primary">renda recorrente</strong>.</p>
+                  <p>Os testes servem para apresentar o serviço: você roda a ferramenta por até 6 horas, o cliente vê o resultado e você <strong className="text-foreground">fecha um contrato mensal</strong> com ele.</p>
                   
-                  <div className="bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-emerald-500/10 border border-amber-400/30 rounded-2xl p-6 mt-8">
-                    <p className="text-2xl md:text-3xl font-black text-center text-amber-400 leading-tight">
+                  <div className="bg-gradient-to-r from-card/10 via-background/10 to-background/10 border border-border/30 rounded-2xl p-6 mt-8">
+                    <p className="text-2xl md:text-3xl font-black text-center text-primary leading-tight">
                       OU SEJA, VOCÊ PODE FATURAR MAIS DE<br />
-                      <span className="text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">R$5.000,00/MÊS</span><br />
-                      <span className="text-xl text-amber-300">PRESTANDO SERVIÇO COM ESSA FERRAMENTA!</span>
+                      <span className="text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-card to-background">R$5.000,00/MÊS</span><br />
+                      <span className="text-xl text-primary">PRESTANDO SERVIÇO COM ESSA FERRAMENTA!</span>
                     </p>
                   </div>
                   
-                  <p className="text-center text-gray-500 text-sm mt-4">Caso precise de mais contas no futuro, cobramos R$150 por conta adicional para quem já utiliza o sistema.</p>
+                  <p className="text-center text-muted-foreground text-sm mt-4">Caso precise de mais contas no futuro, cobramos R$150 por conta adicional para quem já utiliza o sistema.</p>
                 </div>
               </div>
 
               {/* Vídeo */}
               <div className="max-w-3xl mx-auto">
-                <h4 className="text-center text-xl font-bold mb-6 text-emerald-300">🎬 CONFIRA UMA APRESENTAÇÃO DE COMO DESENVOLVEMOS ESSA SOLUÇÃO:</h4>
-                <div onClick={() => openVideo("WQwnAHNvSMU")} className="relative rounded-2xl overflow-hidden cursor-pointer group shadow-2xl shadow-emerald-500/10 border-2 border-emerald-500/30 hover:border-emerald-400/60 transition-all">
+                <h4 className="text-center text-xl font-bold mb-6 text-primary">🎬 CONFIRA UMA APRESENTAÇÃO DE COMO DESENVOLVEMOS ESSA SOLUÇÃO:</h4>
+                <div onClick={() => openVideo("WQwnAHNvSMU")} className="relative rounded-2xl overflow-hidden cursor-pointer group shadow-2xl shadow-primary/10 border-2 border-border/30 hover:border-border/60 transition-all">
                   <img src="https://img.youtube.com/vi/WQwnAHNvSMU/maxresdefault.jpg" alt="Video 5K" className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition-colors">
-                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/40">
-                      <Play className="w-8 h-8 text-white ml-1" fill="white" />
+                  <div className="absolute inset-0 bg-background/40 flex items-center justify-center group-hover:bg-background/30 transition-colors">
+                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-primary/40">
+                      <Play className="w-8 h-8 text-foreground ml-1" fill="currentColor" />
                     </div>
                   </div>
                 </div>
@@ -790,28 +582,28 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
       </section>
 
       {/* Posso usar trafego pago e a ferramenta MRO? Section */}
-      <section className="py-20 px-4 bg-zinc-950/50">
+      <section className="py-20 px-4 bg-card/50">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-black/60 backdrop-blur-sm border border-emerald-500/20 rounded-3xl p-8 md:p-12 relative overflow-hidden text-center">
-            <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl" />
+          <div className="bg-background/60 backdrop-blur-sm border border-border/20 rounded-3xl p-8 md:p-12 relative overflow-hidden text-center">
             
-            <h2 className="text-3xl md:text-4xl font-black text-white mb-6">
+            
+            <h2 className="text-3xl md:text-4xl font-black text-foreground mb-6">
               Posso usar tráfego pago e a ferramenta MRO?
             </h2>
             
-            <div className="space-y-6 text-gray-300 text-lg leading-relaxed mb-10 max-w-2xl mx-auto">
+            <div className="space-y-6 text-muted-foreground text-lg leading-relaxed mb-10 max-w-2xl mx-auto">
               <p>
-                Sim! A ferramenta MRO foi desenhada para <strong className="text-emerald-400">potencializar</strong> seus resultados. 
+                Sim! A ferramenta MRO foi desenhada para <strong className="text-primary">potencializar</strong> seus resultados. 
                 Enquanto o tráfego pago traz novas pessoas para o seu perfil, a MRO garante que essas pessoas se tornem seguidores e clientes fiéis através da nossa automação inteligente.
               </p>
-              <p className="text-base text-gray-400 italic">
+              <p className="text-base text-muted-foreground italic">
                 Veja o vídeo abaixo para entender como essa combinação pode acelerar o seu crescimento.
               </p>
             </div>
 
             <div className="max-w-2xl mx-auto">
               {showSecondaryVideo ? (
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border">
                   <iframe
                     src="https://www.youtube.com/embed/EHTtdvtoI_A?rel=0&autoplay=1"
                     title="Tráfego Pago e MRO"
@@ -823,7 +615,7 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
               ) : (
                 <Button 
                   onClick={() => setShowSecondaryVideo(true)}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-8 py-6 rounded-xl shadow-lg transition-all hover:scale-105 flex items-center gap-3 mx-auto"
+                  className="bg-primary hover:bg-primary text-foreground font-bold px-8 py-6 rounded-xl shadow-lg transition-all hover:scale-105 flex items-center gap-3 mx-auto"
                 >
                   <Play className="w-6 h-6 fill-current" />
                   VER O VÍDEO
@@ -835,19 +627,19 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 px-4 bg-black">
+      <section className="py-20 px-4 bg-background">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-            Perguntas <span className="text-amber-400">Frequentes</span>
+            Perguntas <span className="text-primary">Frequentes</span>
           </h2>
           <div className="space-y-4">
             {faqs.map((faq, i) => (
-              <div key={i} className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
+              <div key={i} className="bg-card/50 border border-border rounded-xl overflow-hidden">
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full flex items-center justify-between p-5 text-left">
                   <span className="font-semibold pr-4">{faq.q}</span>
-                  <ChevronDown className={`w-5 h-5 text-amber-400 transition-transform flex-shrink-0 ${openFaq === i ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-5 h-5 text-primary transition-transform flex-shrink-0 ${openFaq === i ? 'rotate-180' : ''}`} />
                 </button>
-                {openFaq === i && <div className="px-5 pb-5 text-gray-400">{faq.a}</div>}
+                {openFaq === i && <div className="px-5 pb-5 text-muted-foreground">{faq.a}</div>}
               </div>
             ))}
           </div>
@@ -858,13 +650,13 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
       {/* Computer Only Note */}
       <section className="py-10 px-4">
         <div className="max-w-3xl mx-auto">
-          <div className="bg-gray-900/50 border border-gray-700 rounded-2xl p-6 flex items-center gap-4">
+          <div className="bg-card/50 border border-border rounded-2xl p-6 flex items-center gap-4">
             <div className="flex gap-2">
-              <Monitor className="w-8 h-8 text-gray-400" />
-              <Laptop className="w-8 h-8 text-gray-400" />
+              <Monitor className="w-8 h-8 text-muted-foreground" />
+              <Laptop className="w-8 h-8 text-muted-foreground" />
             </div>
-            <p className="text-gray-400 text-sm">
-              <strong className="text-white">Nota:</strong> Nossa ferramenta é compatível apenas com computadores de mesa, notebooks ou MacBooks.
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Nota:</strong> Nossa ferramenta é compatível apenas com computadores de mesa, notebooks ou MacBooks.
             </p>
           </div>
         </div>
@@ -872,10 +664,10 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
 
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-gray-800">
-        <div className="max-w-6xl mx-auto text-center text-gray-500">
+      <footer className="py-8 px-4 border-t border-border">
+        <div className="max-w-6xl mx-auto text-center text-muted-foreground">
           <img src={logoMro} alt="MRO" className="h-10 mx-auto mb-4 object-contain" />
-          <p className="font-medium text-gray-400">Mais Resultados Online</p>
+          <p className="font-medium text-muted-foreground">Mais Resultados Online</p>
           <p className="text-sm mt-1">Gabriel Fernandes da Silva</p>
           <p className="text-sm mt-1">CNPJ: 54.840.738/0001-96</p>
           <p className="text-sm mt-3">© 2024. Todos os direitos reservados.</p>
@@ -884,8 +676,8 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
 
       {/* Video Modal */}
       {showVideoModal && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onClick={() => setShowVideoModal(false)}>
-          <button className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors" onClick={() => setShowVideoModal(false)}>
+        <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center p-4" onClick={() => setShowVideoModal(false)}>
+          <button className="absolute top-4 right-4 p-2 rounded-full bg-card/10 hover:bg-card/20 transition-colors" onClick={() => setShowVideoModal(false)}>
             <X className="w-6 h-6" />
           </button>
           <div className="w-full max-w-5xl aspect-video" onClick={e => e.stopPropagation()}>
@@ -896,18 +688,18 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
 
       {/* Checkout Modal */}
       {showCheckoutModal && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setShowCheckoutModal(false)}>
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <button className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors" onClick={() => setShowCheckoutModal(false)}>
+        <div className="fixed inset-0 bg-background/90 z-50 flex items-center justify-center p-4" onClick={() => setShowCheckoutModal(false)}>
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <button className="absolute top-4 right-4 p-2 rounded-full bg-card/10 hover:bg-card/20 transition-colors" onClick={() => setShowCheckoutModal(false)}>
               <X className="w-5 h-5" />
             </button>
             <div className="text-center mb-6">
-              <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-3 ${selectedPlan === "pro" ? "bg-amber-500/20" : "bg-purple-500/20"}`}>
-                <Sparkles className={`w-7 h-7 ${selectedPlan === "pro" ? "text-amber-400" : "text-purple-400"}`} />
+              <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-3 ${selectedPlan === "pro" ? "bg-primary/20" : "bg-primary/20"}`}>
+                <Sparkles className={`w-7 h-7 ${selectedPlan === "pro" ? "text-primary" : "text-primary"}`} />
               </div>
-              <h3 className="text-xl font-bold text-white">Plano {PLANS[selectedPlan].name}</h3>
+              <h3 className="text-xl font-bold text-foreground">Plano {PLANS[selectedPlan].name}</h3>
               <p className="text-2xl font-bold mt-2">
-                <span className={selectedPlan === "pro" ? "text-amber-400" : "text-purple-400"}>
+                <span className={selectedPlan === "pro" ? "text-primary" : "text-primary"}>
                   R$ {PLANS[selectedPlan].price.toFixed(2).replace(".", ",")}
                 </span>
               </p>
@@ -916,30 +708,30 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
               {!hideContactFields && (
                 <>
                   <div>
-                    <label className="text-sm text-zinc-300 flex items-center gap-2 mb-2"><Mail className="w-4 h-4" />Seu Email</label>
-                    <Input type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-zinc-800/50 border-zinc-600 text-white placeholder:text-zinc-500" required />
+                    <label className="text-sm text-muted-foreground flex items-center gap-2 mb-2"><Mail className="w-4 h-4" />Seu Email</label>
+                    <Input type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground" required />
                   </div>
                   <div>
-                    <label className="text-sm text-zinc-300 flex items-center gap-2 mb-2"><Phone className="w-4 h-4" />Celular com DDD</label>
-                    <Input type="tel" placeholder="(51) 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-zinc-800/50 border-zinc-600 text-white placeholder:text-zinc-500" required />
+                    <label className="text-sm text-muted-foreground flex items-center gap-2 mb-2"><Phone className="w-4 h-4" />Celular com DDD</label>
+                    <Input type="tel" placeholder="(51) 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground" required />
                   </div>
                 </>
               )}
               <div>
-                <label className="text-sm text-zinc-300 flex items-center gap-2 mb-2"><User className="w-4 h-4" />Nome de Usuário (será sua senha também)</label>
-                <Input type="text" placeholder="seuusuario" value={username} onChange={(e) => validateUsername(e.target.value)} className={`bg-zinc-800/50 border-zinc-600 text-white placeholder:text-zinc-500 ${usernameError ? "border-red-500" : ""}`} required />
-                {usernameError && <p className="text-xs text-red-400 mt-1">{usernameError}</p>}
-                <p className="text-xs text-zinc-500 mt-1">Apenas letras minúsculas, sem espaços ou números</p>
+                <label className="text-sm text-muted-foreground flex items-center gap-2 mb-2"><User className="w-4 h-4" />Nome de Usuário (será sua senha também)</label>
+                <Input type="text" placeholder="seuusuario" value={username} onChange={(e) => validateUsername(e.target.value)} className={`bg-card/50 border-border text-foreground placeholder:text-muted-foreground ${usernameError ? "border-border" : ""}`} required />
+                {usernameError && <p className="text-xs text-primary mt-1">{usernameError}</p>}
+                <p className="text-xs text-muted-foreground mt-1">Apenas letras minúsculas, sem espaços ou números</p>
               </div>
-              <div className="bg-zinc-800/30 rounded-lg p-3 space-y-1.5 text-sm">
-                <div className="flex justify-between"><span className="text-zinc-400">Usuário/Senha</span><span className="text-white font-mono">{username || "---"}</span></div>
-                <div className="flex justify-between"><span className="text-zinc-400">Total</span><span className={`font-bold ${selectedPlan === "pro" ? "text-amber-400" : "text-purple-400"}`}>R$ {PLANS[selectedPlan].price.toFixed(2).replace(".", ",")}</span></div>
+              <div className="bg-card/30 rounded-lg p-3 space-y-1.5 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Usuário/Senha</span><span className="text-foreground font-mono">{username || "---"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className={`font-bold ${selectedPlan === "pro" ? "text-primary" : "text-primary"}`}>R$ {PLANS[selectedPlan].price.toFixed(2).replace(".", ",")}</span></div>
               </div>
-              <Button type="submit" className={`w-full font-bold py-5 ${selectedPlan === "pro" ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black" : "bg-purple-600 hover:bg-purple-700 text-white"}`}
+              <Button type="submit" className={`w-full font-bold py-5 ${selectedPlan === "pro" ? "bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-primary-foreground" : "bg-primary hover:bg-primary text-foreground"}`}
                 disabled={loading || !!usernameError || !username || !email || !phone}>
                 {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Gerando...</>) : (<><CreditCard className="mr-2 h-5 w-5" />Ir para Pagamento</>)}
               </Button>
-              <p className="text-xs text-zinc-500 text-center">Após o pagamento, seu acesso será liberado automaticamente</p>
+              <p className="text-xs text-muted-foreground text-center">Após o pagamento, seu acesso será liberado automaticamente</p>
             </form>
           </div>
         </div>

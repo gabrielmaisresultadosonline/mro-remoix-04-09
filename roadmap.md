@@ -70,3 +70,8 @@
 - [x] Impedir backups `.pre-mro-cors` nos includes ativos e recuperar o Nginx antes do reload
 - [ ] Executar a atualização na VPS e confirmar um login real da extensão (bloqueado até o código chegar ao servidor)
 - [x] Whitelabel MRO (revendedores, /whitelabel, /wl/:code, menu no /admin)
+
+## Atualização MRO Inteligente
+- [x] Aplicar direção preta com amarelo nas páginas oficiais e de afiliados
+- [x] Detalhar as oito funções mantendo vídeos, preços e compras
+- [x] Validar apresentação e abertura do cadastro (sem compra real)
