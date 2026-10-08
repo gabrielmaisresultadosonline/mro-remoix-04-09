@@ -74,4 +74,4 @@
 ## Atualização MRO Inteligente
 - [x] Aplicar direção preta com amarelo nas páginas oficiais e de afiliados
 - [x] Detalhar as oito funções mantendo vídeos, preços e compras
-- [ ] Validar apresentação e abertura do cadastro
+- [x] Validar apresentação e abertura do cadastro (sem compra real)
