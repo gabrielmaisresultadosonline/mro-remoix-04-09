@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Monitor, Sparkles } from 'lucide-react';
 import logoMro from '@/assets/logo-mro.png';
 
@@ -7,6 +7,14 @@ export interface MroIntelligentIntroProps {
 }
 
 export function MroIntelligentIntro({ branding }: MroIntelligentIntroProps) {
+  useEffect(() => {
+    if (document.getElementById('mro-sales-fonts')) return;
+    const link = document.createElement('link');
+    link.id = 'mro-sales-fonts';
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Archivo+Black&family=Hind:wght@400;500;600;700&display=swap';
+    document.head.appendChild(link);
+  }, []);
   return <>
     {branding || <img src={logoMro} alt="MRO — Mais Resultados Online" width={180} height={90} className="h-16 md:h-20 w-auto object-contain mx-auto mb-10" />}
     <p className="text-primary text-sm font-bold uppercase mb-4">Prospecção · Atendimento · Estratégia</p>
