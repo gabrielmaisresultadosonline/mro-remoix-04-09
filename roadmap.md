@@ -1,5 +1,10 @@
 # Roadmap
 
+## Página inicial
+- [x] Re-incluir o card da API Oficial WhatsApp em "Ferramentas & Serviços" (somente ele)
+- [x] Trocar "Acessar meu painel" por "Já sou cliente" e levar direto ao /dashboard
+- [x] Validar os 3 cards e o redirecionamento no navegador
+
 ## Página de ativação Whitelabel
 - [x] Substituir a imagem enviada e incluir recursos Instagram, proposta comercial e suporte MRO em /whitelabel/vendas
 - [x] Criar /whitelabel/vendas com oferta R$2.997 e dez acessos iniciais sem taxas por usuário

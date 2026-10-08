@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Users, Camera, Megaphone, ArrowRight, ArrowUpRight, ShieldCheck, LogIn } from 'lucide-react';
+import { Users, Camera, Megaphone, ArrowRight, ArrowUpRight, ShieldCheck, LogIn, MessageCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 const InstagramIcon = (LucideIcons as any).Instagram || Camera;
 
@@ -40,7 +40,6 @@ const heading = { fontFamily: "'Archivo Black', 'Inter', sans-serif" } as const;
 
 const ToolSelector = () => {
   const navigate = useNavigate();
-  const [showMembersModal, setShowMembersModal] = useState(false);
 
   useEffect(() => {
     trackPageView('Tool Selector - Homepage');
@@ -69,6 +68,17 @@ const ToolSelector = () => {
       highlight: true,
     },
     {
+      id: 'zapmro',
+      name: 'ZAPMRO API Oficial WhatsApp',
+      subtitle: 'Automatize seu WhatsApp',
+      description:
+        'API oficial do WhatsApp para envio em massa, automações e atendimento. Teste grátis por 2 dias e veja os resultados.',
+      icon: MessageCircle,
+      badge: 'FREE',
+      salesPath: 'https://zapmro.com.br',
+      index: '02',
+    },
+    {
       id: 'mktcompleto',
       name: 'Precisa de marketing completo?',
       subtitle: 'Deixe que cuidamos de tudo',
@@ -76,7 +86,7 @@ const ToolSelector = () => {
       icon: Megaphone,
       badge: 'HOT',
       salesPath: '/mktcompleto',
-      index: '02',
+      index: '03',
     },
   ];
 
@@ -86,10 +96,9 @@ const ToolSelector = () => {
     else navigate(path);
   };
 
-  const handleMembersSelect = () => {
-    trackViewContent('Members Area: instagram', 'Navigation');
-    setShowMembersModal(false);
-    // Toda a área de membros passa pelo hub central
+  const handleMembersEnter = () => {
+    trackViewContent('Members Area: dashboard', 'Navigation');
+    // Cliente identificado vai direto para o hub central
     navigate('/dashboard');
   };
 
@@ -148,7 +157,7 @@ const ToolSelector = () => {
               Ferramentas
             </a>
             <button
-              onClick={() => setShowMembersModal(true)}
+              onClick={handleMembersEnter}
               className="inline-flex items-center gap-2 px-3 md:px-5 py-2.5 md:py-3 rounded-xl text-[10px] md:text-xs uppercase tracking-[0.18em] font-black transition-transform hover:-translate-y-0.5 active:scale-95"
               style={{
                 background: `linear-gradient(135deg, ${C.yellowHot}, ${C.yellow})`,
@@ -216,7 +225,7 @@ const ToolSelector = () => {
                 Ver ferramentas <ArrowRight className="w-4 h-4" />
               </a>
               <button
-                onClick={() => setShowMembersModal(true)}
+                onClick={handleMembersEnter}
                 className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs uppercase tracking-[0.2em] font-black transition-transform hover:-translate-y-0.5"
                 style={{ background: C.surface, color: C.white, border: `1px solid ${C.gray}` }}
               >
@@ -273,7 +282,7 @@ const ToolSelector = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {tools.map((tool) => {
             const Icon = tool.icon;
             const featured = !!tool.highlight;
@@ -375,7 +384,7 @@ const ToolSelector = () => {
             </div>
             <div className="md:justify-self-end w-full md:w-auto">
               <button
-                onClick={() => setShowMembersModal(true)}
+                onClick={handleMembersEnter}
                 className="group w-full md:w-auto inline-flex flex-col items-center gap-1 px-7 py-5 rounded-2xl transition-transform hover:-translate-y-0.5 active:scale-95"
                 style={{
                   background: `linear-gradient(135deg, ${C.yellowHot}, ${C.yellow})`,
@@ -385,9 +394,9 @@ const ToolSelector = () => {
                 }}
               >
                 <span className="flex items-center gap-2 text-sm uppercase tracking-[0.18em]" style={heading}>
-                  <Users className="w-5 h-5" /> Acessar meu painel
+                  <Users className="w-5 h-5" /> Já sou cliente
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Área de membros →</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Acessar meu painel →</span>
               </button>
             </div>
           </div>
@@ -406,69 +415,6 @@ const ToolSelector = () => {
           © 2024 • Todos os direitos reservados
         </p>
       </footer>
-
-      {/* Members modal */}
-      {showMembersModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-          style={{ background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(8px)' }}
-          onClick={() => setShowMembersModal(false)}
-        >
-          <div
-            className="relative w-full max-w-md rounded-2xl p-5 md:p-6 animate-scale-in"
-            style={{ background: C.surface, border: `1px solid ${C.yellow}`, boxShadow: `0 40px 80px -30px ${C.black}` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span
-              aria-hidden
-              className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
-              style={{ background: `linear-gradient(90deg, transparent, ${C.yellow}, transparent)` }}
-            />
-            <div className="flex items-start justify-between mb-5 gap-3">
-              <div>
-                <h3 className="text-lg md:text-xl uppercase" style={{ ...heading, color: C.white }}>
-                  Área de Membros
-                </h3>
-                <p className="text-sm mt-1" style={{ color: C.grayLight }}>
-                  Acesse o seu painel de cliente
-                </p>
-              </div>
-              <button
-                onClick={() => setShowMembersModal(false)}
-                aria-label="Fechar"
-                className="p-2 rounded-lg transition-colors"
-                style={{ background: C.black, border: `1px solid ${C.gray}`, color: C.white }}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleMembersSelect}
-                className="group w-full flex items-center gap-4 p-4 rounded-xl text-left transition-all hover:-translate-y-0.5"
-                style={{ background: C.black, border: `1px solid ${C.gray}` }}
-              >
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `linear-gradient(135deg, ${C.yellowHot}, ${C.yellow})`, color: C.black }}
-                >
-                  <InstagramIcon className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-black uppercase tracking-wide" style={{ color: C.white }}>
-                    MRO Instagram
-                  </div>
-                  <div className="text-xs" style={{ color: C.grayLight }}>
-                    Ferramenta para Instagram
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 flex-shrink-0 transition-transform group-hover:translate-x-1" style={{ color: C.yellow }} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <WhatsAppFloatingWidget />
     </div>
