@@ -57,7 +57,7 @@ const PLANS: Record<PlanKey, {
   lifetime: {
     name: "Agência Vitalício",
     price: 1197.0,
-    installment: "122,83",
+    installment: "122",
     accounts: 12,
     planType: "lifetime",
     durationLabel: "Pagamento único · Vitalício",

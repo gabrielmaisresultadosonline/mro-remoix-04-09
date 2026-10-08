@@ -658,7 +658,7 @@ const Ferramentammmr = () => {
                 <div className="text-base sm:text-lg text-muted-foreground mb-2">pagamento único</div>
                 <div className="text-primary mb-1">
                   <span className="text-lg sm:text-xl md:text-2xl font-medium">12x de</span>
-                  <span className="text-5xl sm:text-6xl md:text-7xl font-black ml-2">R$122,83</span>
+                  <span className="text-5xl sm:text-6xl md:text-7xl font-black ml-2">R$122</span>
                 </div>
                 <p className="text-muted-foreground text-lg sm:text-xl mb-1">
                   ou <span className="text-foreground font-bold">R$ 1.197,00 à vista</span>
@@ -687,7 +687,7 @@ const Ferramentammmr = () => {
                     type: 'lifetime',
                     amount: 1197,
                     label: 'Agência Vitalício',
-                    installments: '12x de R$ 122,83',
+                    installments: '12x de R$ 122',
                     oneTime: 'R$ 1.197,00 à vista'
                   });
                   setShowCheckoutModal(true);
