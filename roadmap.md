@@ -75,3 +75,5 @@
 - [x] Aplicar direção preta com amarelo nas páginas oficiais e de afiliados
 - [x] Detalhar as oito funções mantendo vídeos, preços e compras
 - [x] Validar apresentação e abertura do cadastro (sem compra real)
+- [x] Enxugar o topo às linhas pedidas, com fonte menor na segunda e na terceira
+- [x] Deixar verdes os botões de chamada e de compra, mantendo o resto em amarelo
