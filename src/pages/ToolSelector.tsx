@@ -416,69 +416,6 @@ const ToolSelector = () => {
         </p>
       </footer>
 
-      {/* Members modal */}
-      {showMembersModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-          style={{ background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(8px)' }}
-          onClick={() => setShowMembersModal(false)}
-        >
-          <div
-            className="relative w-full max-w-md rounded-2xl p-5 md:p-6 animate-scale-in"
-            style={{ background: C.surface, border: `1px solid ${C.yellow}`, boxShadow: `0 40px 80px -30px ${C.black}` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span
-              aria-hidden
-              className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
-              style={{ background: `linear-gradient(90deg, transparent, ${C.yellow}, transparent)` }}
-            />
-            <div className="flex items-start justify-between mb-5 gap-3">
-              <div>
-                <h3 className="text-lg md:text-xl uppercase" style={{ ...heading, color: C.white }}>
-                  Área de Membros
-                </h3>
-                <p className="text-sm mt-1" style={{ color: C.grayLight }}>
-                  Acesse o seu painel de cliente
-                </p>
-              </div>
-              <button
-                onClick={() => setShowMembersModal(false)}
-                aria-label="Fechar"
-                className="p-2 rounded-lg transition-colors"
-                style={{ background: C.black, border: `1px solid ${C.gray}`, color: C.white }}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleMembersSelect}
-                className="group w-full flex items-center gap-4 p-4 rounded-xl text-left transition-all hover:-translate-y-0.5"
-                style={{ background: C.black, border: `1px solid ${C.gray}` }}
-              >
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `linear-gradient(135deg, ${C.yellowHot}, ${C.yellow})`, color: C.black }}
-                >
-                  <InstagramIcon className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-black uppercase tracking-wide" style={{ color: C.white }}>
-                    MRO Instagram
-                  </div>
-                  <div className="text-xs" style={{ color: C.grayLight }}>
-                    Ferramenta para Instagram
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 flex-shrink-0 transition-transform group-hover:translate-x-1" style={{ color: C.yellow }} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <WhatsAppFloatingWidget />
     </div>
   );
