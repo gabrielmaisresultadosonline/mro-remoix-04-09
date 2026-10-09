@@ -590,3 +590,29 @@
 @media (prefers-reduced-motion: reduce) {
   .mro-intelligent-sales *, .mro-intelligent-sales *::before, .mro-intelligent-sales *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Teste grátis /teste002 — preto, cinza, branco e amarelo (escopado). */
+.teste002-theme {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 9%;
+  --card-foreground: 0 0% 98%;
+  --secondary: 0 0% 25%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 16%;
+  --muted-foreground: 0 0% 68%;
+  --primary: 45.4 93.4% 47.5%;
+  --primary-foreground: 0 0% 9%;
+  --accent: 45.4 93.4% 47.5%;
+  --accent-foreground: 0 0% 9%;
+  --border: 0 0% 22%;
+  --input: 0 0% 22%;
+  --ring: 45.4 93.4% 47.5%;
+  font-family: 'Hind', sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+.teste002-theme .t2-title { font-family: 'Archivo Black', sans-serif; font-weight: 400; }
+.teste002-theme .t2-glow { background: radial-gradient(60% 50% at 50% 0%, hsl(var(--primary) / .18), transparent 70%); }
+@keyframes t2-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.teste002-theme .t2-rise { animation: t2-rise .5s ease-out both; }
