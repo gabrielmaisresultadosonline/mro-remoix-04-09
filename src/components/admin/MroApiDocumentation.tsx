@@ -282,8 +282,9 @@ function onRemoveClick(conta) {
     <Card className="p-4 space-y-2 border-primary/40">
       <h4 className="font-semibold text-sm text-primary">🧪 Usuário de TESTE GRÁTIS (/teste002)</h4>
       <p className="text-xs text-muted-foreground">
-        Cadastros feitos em /teste002 entram pela mesma action <code>login</code>. Usuário = senha = @ do Instagram (minúsculo).
-        A resposta traz <code>is_test_user: true</code> e o objeto <code>test</code>. Duração: 1 dia a partir do cadastro, 1 conta do Instagram,
+        Cadastros feitos em /teste002 (nome, e-mail, WhatsApp) entram pela mesma action <code>login</code>. Usuário = senha (minúsculo, enviado por e-mail).
+        O Instagram é cadastrado pela extensão: envie <code>instagram</code> no <code>login</code> ou use <code>add_account</code> com <code>password</code>.
+        A resposta traz <code>is_test_user: true</code> e o objeto <code>test</code> (<code>started</code>, <code>instagram_registered</code>). Duração: 1 dia a partir do cadastro do Instagram, 1 conta do Instagram,
         liberados apenas <strong>seguir, curtir e boas-vindas</strong>. Depois de expirado, o Instagram fica marcado como teste já feito e não pode refazer.
       </p>
     </Card>
@@ -320,7 +321,7 @@ function onRemoveClick(conta) {
       code={`// Expirado
 { "success": false, "is_test_user": true, "test_expired": true, "needs_renewal": true,
   "error": "Seu teste grátis de 1 dia terminou. Este Instagram já fez o teste — para continuar, adquira um plano.",
-  "buy_link": "https://maisresultadosonline.com.br/ferramentamropromo", "test": { "expired": true, ... } }
+  "buy_link": "https://maisresultadosonline.com.br/ferramentapromo", "test": { "expired": true, ... } }
 
 // Outro @instagram
 { "success": false, "is_test_user": true, "instagram_not_registered": true, "instagram": "outroperfil",
@@ -332,6 +333,75 @@ if (data.is_test_user) {
   liberarSomente(data.test.allowed_features);              // follow, like, welcome_message
   bloquear(data.test.blocked_features);
   mostrarAviso(\`Teste grátis: termina em \${new Date(data.test.expires_at).toLocaleString("pt-BR")}\`);
+}`}
+    />
+
+    <Block
+      title="Teste — cadastrar o Instagram pela extensão / Instagram já testado"
+      description="Cada Instagram só faz 1 teste. Se outro cadastro (outro e-mail) tentar usar o mesmo Instagram, a extensão deve mostrar o erro e abrir buy_link."
+      code={`POST { "action": "add_account", "username": "joao", "password": "joao", "instagram": "perfilteste" }
+// ou: POST { "action": "login", "username": "joao", "password": "joao", "instagram": "perfilteste" }
+
+// Sucesso (o dia de teste começa agora)
+{ "success": true, "is_test_user": true, "registered_now": true, "test": { "instagram": "perfilteste", "started": true, "expires_at": "...", ... } }
+
+// Instagram já usado em outro teste
+{ "success": false, "is_test_user": true, "instagram_already_tested": true, "needs_purchase": true,
+  "instagram": "perfilteste", "tested_by": { "name": "Maria Silva", "email": "maria@email.com" },
+  "error": "Este Instagram @perfilteste já foi usado no teste grátis de Maria Silva (maria@email.com). Para usar novamente neste Instagram é preciso comprar um plano.",
+  "buy_link": "https://maisresultadosonline.com.br/ferramentapromo" }
+
+if (data.instagram_already_tested || data.test_expired) {
+  alert(data.error);
+  chrome.tabs.create({ url: data.buy_link });
+}`}
+    />
+
+    <Card className="p-4 space-y-2 border-primary/40">
+      <h4 className="font-semibold text-sm text-primary">📣 Avisos do teste grátis (enviados pelo /teste002/admin)</h4>
+      <p className="text-xs text-muted-foreground">
+        Endpoint: <code>{ENDPOINT.replace('mro-tool-api', 'teste002-api')}</code> (POST, JSON, CORS liberado para qualquer origem, inclusive chrome-extension://).
+        Funciona também depois que o teste expira, enquanto a extensão estiver instalada. Avisos agendados por horário (São Paulo), repetidos todo dia;
+        cada horário volta a aparecer até o usuário fechar. Exibir no centro da tela, grande, com fundo escurecido, em todas as abas/sites.
+        Se <code>lock_seconds</code> &gt; 0, o botão fechar só libera após esse tempo.
+      </p>
+    </Card>
+
+    <Block
+      title="1) ext_ping — sinal de vida + avisos pendentes"
+      description="Chame ao abrir o navegador, a cada 5 minutos no service worker (context: extension) e ao carregar cada página no content script (context: browser). Alimenta o relatório de último acesso e 'extensão ativa'."
+      code={`POST { "action": "ext_ping", "username": "joao", "password": "joao",
+       "context": "extension" | "browser", "url": "https://site-atual.com", "version": "1.0.3" }
+
+{
+  "success": true, "is_test_user": true, "test": { "expired": true, ... },
+  "notices": [{
+    "id": "uuid", "slot_key": "2026-10-09T09:00",
+    "title": "Seu teste terminou!", "message": "Garanta seu plano com desconto hoje.",
+    "image_url": "https://.../imagem.png", "youtube_url": "https://youtube.com/watch?v=...",
+    "youtube_embed_url": "https://www.youtube.com/embed/XXXXXXXXXXX",
+    "buttons": [{ "label": "Comprar plano", "url": "https://maisresultadosonline.com.br/ferramentapromo" }],
+    "lock_seconds": 10,
+    "display": { "position": "center", "overlay": true, "size": "large", "block_close_seconds": 10 }
+  }]
+}`}
+    />
+
+    <Block
+      title="2) notice_event — registrar exibição, clique e fechamento"
+      description="Envie 'shown' ao exibir, 'click' ao clicar num botão (com button_url) e 'closed' ao fechar. O 'closed' com o slot_key marca o aviso como visto e ele só volta no próximo horário."
+      code={`POST { "action": "notice_event", "username": "joao", "password": "joao",
+       "notice_id": "uuid", "slot_key": "2026-10-09T09:00", "event": "shown" | "click" | "closed",
+       "button_url": "https://..." }
+// -> { "success": true }
+
+// content script (exemplo)
+for (const n of data.notices) {
+  showOverlay(n);                                  // centro, grande, fundo rgba(0,0,0,.8), z-index máximo
+  post({ action: "notice_event", username, password, notice_id: n.id, slot_key: n.slot_key, event: "shown" });
+  enableCloseAfter(n.lock_seconds * 1000);         // trava de leitura
+  onButton(b => { post({ ...ids, event: "click", button_url: b.url }); window.open(b.url, "_blank"); });
+  onClose(() => post({ ...ids, event: "closed" }));
 }`}
     />
 
