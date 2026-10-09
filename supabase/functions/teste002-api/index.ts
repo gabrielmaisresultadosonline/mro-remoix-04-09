@@ -112,11 +112,6 @@ serve(async (req) => {
       return json({ success: true });
     }
 
-    if (action === "delete") {
-      await db.from("teste002_users").delete().eq("id", String(body.id ?? ""));
-      return json({ success: true });
-    }
-
     return json({ success: false, error: "Ação inválida" }, 400);
   } catch (e) {
     return json({ success: false, error: e instanceof Error ? e.message : String(e) }, 500);

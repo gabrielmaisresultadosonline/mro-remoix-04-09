@@ -1,3 +1,4 @@
+import { teste002ExtensionLogin } from "../_shared/teste002.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -398,6 +399,11 @@ serve(async (req) => {
       if (identifier.length > 255 || password.length > 255) return json({ success: false, error: "Credenciais inválidas" }, 400);
 
       let user = await findUser(identifier);
+      if (!user) {
+        // Usuário do teste grátis /teste002 (1 dia, 1 Instagram, só seguir/curtir/boas-vindas).
+        const testLogin = await teste002ExtensionLogin(supabase, identifier, password, body.instagram || body.instagram_username);
+        if (testLogin) return json(testLogin);
+      }
       if (!user || !user.password_hash) return json({ success: false, error: "Usuário ou senha incorretos" });
 
       const hash = await sha256(password);
