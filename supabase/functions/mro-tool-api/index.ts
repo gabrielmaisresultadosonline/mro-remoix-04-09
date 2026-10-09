@@ -1,4 +1,4 @@
-import { teste002ExtensionLogin } from "../_shared/teste002.ts";
+import { teste002AddAccount, teste002ExtensionLogin } from "../_shared/teste002.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -548,7 +548,12 @@ serve(async (req) => {
       if (instagram.length > 120) return json({ success: false, error: "Conta inválida" }, 400);
 
       let user = await findUser(identifier);
-      if (!user) return json({ success: false, error: "Usuário não encontrado" });
+      if (!user) {
+        // Usuário do teste grátis: cadastra o único Instagram do teste (exige senha).
+        const testAdd = await teste002AddAccount(supabase, identifier, body.password, instagram);
+        if (testAdd) return json(testAdd);
+        return json({ success: false, error: "Usuário não encontrado" });
+      }
       if (!planInfo(user).access_allowed) return json({ success: false, error: "Acesso expirado ou desativado" });
 
       user = await ensureTrialPeriod(user);

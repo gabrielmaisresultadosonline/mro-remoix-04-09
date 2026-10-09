@@ -8381,6 +8381,105 @@ export type Database = {
         }
         Relationships: []
       }
+      teste002_notice_events: {
+        Row: {
+          button_url: string | null
+          created_at: string
+          event: string
+          id: string
+          notice_id: string
+          slot_key: string
+          user_id: string
+        }
+        Insert: {
+          button_url?: string | null
+          created_at?: string
+          event: string
+          id?: string
+          notice_id: string
+          slot_key?: string
+          user_id: string
+        }
+        Update: {
+          button_url?: string | null
+          created_at?: string
+          event?: string
+          id?: string
+          notice_id?: string
+          slot_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teste002_notice_events_notice_id_fkey"
+            columns: ["notice_id"]
+            isOneToOne: false
+            referencedRelation: "teste002_notices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teste002_notice_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "teste002_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teste002_notices: {
+        Row: {
+          buttons: Json
+          created_at: string
+          end_date: string | null
+          id: string
+          image_url: string
+          is_active: boolean
+          lock_seconds: number
+          message: string
+          repeat_daily: boolean
+          schedule_times: string[]
+          start_date: string | null
+          target: string
+          title: string
+          updated_at: string
+          youtube_url: string
+        }
+        Insert: {
+          buttons?: Json
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          lock_seconds?: number
+          message?: string
+          repeat_daily?: boolean
+          schedule_times?: string[]
+          start_date?: string | null
+          target?: string
+          title: string
+          updated_at?: string
+          youtube_url?: string
+        }
+        Update: {
+          buttons?: Json
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          lock_seconds?: number
+          message?: string
+          repeat_daily?: boolean
+          schedule_times?: string[]
+          start_date?: string | null
+          target?: string
+          title?: string
+          updated_at?: string
+          youtube_url?: string
+        }
+        Relationships: []
+      }
       teste002_settings: {
         Row: {
           created_at: string
@@ -8410,11 +8509,15 @@ export type Database = {
           created_at: string
           email: string
           email_sent: boolean
-          expires_at: string
+          expires_at: string | null
+          extension_version: string | null
           full_name: string
           id: string
-          instagram_username: string
+          instagram_username: string | null
           last_access: string | null
+          last_browser_access: string | null
+          last_browser_url: string | null
+          last_extension_access: string | null
           password_hash: string
           updated_at: string
           username: string
@@ -8424,11 +8527,15 @@ export type Database = {
           created_at?: string
           email: string
           email_sent?: boolean
-          expires_at?: string
+          expires_at?: string | null
+          extension_version?: string | null
           full_name: string
           id?: string
-          instagram_username: string
+          instagram_username?: string | null
           last_access?: string | null
+          last_browser_access?: string | null
+          last_browser_url?: string | null
+          last_extension_access?: string | null
           password_hash: string
           updated_at?: string
           username: string
@@ -8438,11 +8545,15 @@ export type Database = {
           created_at?: string
           email?: string
           email_sent?: boolean
-          expires_at?: string
+          expires_at?: string | null
+          extension_version?: string | null
           full_name?: string
           id?: string
-          instagram_username?: string
+          instagram_username?: string | null
           last_access?: string | null
+          last_browser_access?: string | null
+          last_browser_url?: string | null
+          last_extension_access?: string | null
           password_hash?: string
           updated_at?: string
           username?: string

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Teste002Features } from "@/components/teste002/Teste002Features";
+import { Teste002NoSupport } from "@/components/teste002/Teste002NoSupport";
 import { MRO_LOGO, fmtDate, loadTeste002Fonts, teste002Call, type Teste002Test } from "@/lib/teste002";
 
 interface Session { name: string; test: Teste002Test; video_url: string; install_url: string }
@@ -88,7 +89,11 @@ const Teste002Dashboard = () => {
           <p className="text-sm font-bold uppercase tracking-widest text-primary">Olá, {session.name.split(" ")[0]}</p>
           <h1 className="t2-title mt-1 text-2xl md:text-4xl">TESTE DE 1 DIA · APENAS 1 CONTA DO INSTAGRAM</h1>
           <p className="mt-2 text-muted-foreground">
-            Instagram do teste: <strong className="text-foreground">@{test.instagram}</strong> · {test.expired ? "Teste encerrado" : `Termina em ${fmtDate(test.expires_at)}`}
+            {test.instagram ? (
+              <>Instagram do teste: <strong className="text-foreground">@{test.instagram}</strong> · {test.expired ? "Teste encerrado" : `Termina em ${fmtDate(test.expires_at)}`}</>
+            ) : (
+              <>Instale a ferramenta e cadastre seu Instagram na extensão. O dia de teste começa nesse momento.</>
+            )}
           </p>
         </section>
 
@@ -100,6 +105,8 @@ const Teste002Dashboard = () => {
           </section>
         ) : null}
 
+        <Teste002NoSupport />
+
         <section className="t2-rise overflow-hidden rounded-2xl border border-border bg-card">
           <div className="aspect-video w-full bg-background">
             {media?.kind === "iframe" ? (
@@ -110,7 +117,8 @@ const Teste002Dashboard = () => {
               <div className="flex h-full items-center justify-center text-muted-foreground">Vídeo em breve</div>
             )}
           </div>
-          <div className="p-5">
+          <div className="space-y-3 p-5">
+            <Teste002NoSupport compact />
             <Button asChild={Boolean(session.install_url)} disabled={!session.install_url || test.expired} className="w-full py-6 text-base font-bold">
               {session.install_url ? (
                 <a href={session.install_url} target="_blank" rel="noopener noreferrer"><Download className="mr-2 h-5 w-5" aria-hidden />INSTALAR A FERRAMENTA</a>

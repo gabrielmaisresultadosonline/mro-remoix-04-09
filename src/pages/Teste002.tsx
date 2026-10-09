@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { trackLead } from "@/lib/facebookTracking";
 import { MRO_LOGO, loadTeste002Fonts, teste002Call } from "@/lib/teste002";
 
-interface Form { full_name: string; email: string; whatsapp: string; instagram: string }
+interface Form { full_name: string; email: string; whatsapp: string }
 
 const maskPhone = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -18,7 +18,7 @@ const maskPhone = (v: string) => {
 
 /** /teste002 — cadastro do TESTE GRÁTIS de 1 dia da Ferramenta MRO. */
 const Teste002 = () => {
-  const [form, setForm] = useState<Form>({ full_name: "", email: "", whatsapp: "", instagram: "" });
+  const [form, setForm] = useState<Form>({ full_name: "", email: "", whatsapp: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ username: string; email_sent: boolean } | null>(null);
@@ -54,7 +54,7 @@ const Teste002 = () => {
         <p className="t2-rise text-center text-sm font-bold uppercase tracking-widest text-primary">Teste grátis · 1 dia</p>
         <h1 className="t2-title t2-rise mt-2 text-center text-3xl md:text-5xl">TESTE GRÁTIS FERRAMENTA MRO</h1>
         <p className="t2-rise mt-3 text-center text-muted-foreground">
-          Veja na prática que somos reais e entregamos o que prometemos. Teste em 1 conta do Instagram com Seguir, Curtir e Boas-vindas.
+          Veja na prática que somos reais e entregamos o que prometemos. Teste em 1 conta do Instagram com Seguir, Curtir e Boas-vindas. O Instagram é cadastrado direto na extensão, na hora de usar.
         </p>
 
         <section className="t2-rise mt-8 rounded-2xl border border-border bg-card p-6 shadow-2xl">
@@ -81,14 +81,12 @@ const Teste002 = () => {
                 <Input id="t2-email" type="email" required value={form.email} onChange={set("email")} autoComplete="email" /></div>
               <div className="space-y-1.5"><Label htmlFor="t2-wpp">WhatsApp</Label>
                 <Input id="t2-wpp" inputMode="tel" required value={form.whatsapp} onChange={set("whatsapp")} placeholder="(11) 99999-9999" /></div>
-              <div className="space-y-1.5"><Label htmlFor="t2-ig">@ do Instagram que vai usar</Label>
-                <Input id="t2-ig" required value={form.instagram} onChange={set("instagram")} placeholder="@seuperfil" autoCapitalize="none" /></div>
               {error ? <p role="alert" className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
               <Button type="submit" disabled={loading} className="w-full py-6 text-base font-bold">
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : "QUERO MEU TESTE GRÁTIS"}
               </Button>
               <p className="text-center text-xs text-muted-foreground">
-                Cada Instagram pode fazer o teste só uma vez. Após o teste, o acesso é bloqueado e o perfil fica registrado como teste já realizado.
+                Cada Instagram pode fazer o teste só uma vez (o dia de teste começa quando você cadastra o Instagram na extensão). Após o teste, o acesso é bloqueado e o perfil fica registrado como teste já realizado.
               </p>
             </form>
           )}
