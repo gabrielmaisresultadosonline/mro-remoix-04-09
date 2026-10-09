@@ -2,9 +2,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Teste002Test {
   username: string;
-  instagram: string;
+  instagram: string | null;
+  instagram_registered: boolean;
+  started: boolean;
   created_at: string;
-  expires_at: string;
+  expires_at: string | null;
   expired: boolean;
   remaining_hours: number;
 }
@@ -14,10 +16,14 @@ export interface Teste002AdminUser {
   full_name: string;
   email: string;
   whatsapp: string;
-  instagram_username: string;
+  instagram_username: string | null;
   username: string;
-  expires_at: string;
+  expires_at: string | null;
   last_access: string | null;
+  last_extension_access: string | null;
+  last_browser_access: string | null;
+  last_browser_url: string | null;
+  extension_version: string | null;
   email_sent: boolean;
   created_at: string;
 }
@@ -53,3 +59,28 @@ export const MRO_LOGO = "https://maisresultadosonline.com.br/assets/logo-mro-Cqe
 
 export const fmtDate = (v: string | null) =>
   v ? new Date(v).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—";
+
+export interface NoticeButton { label: string; url: string }
+export interface Teste002Notice {
+  id?: string;
+  title: string;
+  message: string;
+  image_url: string;
+  youtube_url: string;
+  buttons: NoticeButton[];
+  lock_seconds: number;
+  schedule_times: string[];
+  repeat_daily: boolean;
+  target: "all" | "active" | "expired" | "not_started";
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+  created_at?: string;
+}
+export interface Teste002Report {
+  by_notice: Record<string, { seen: number; not_seen: number; shown: number; closed: number; clicks: number; seen_users: string[] }>;
+  by_user: Record<string, { read_notices: number; closed_total: number; clicks: number; last_closed_at: string | null }>;
+  extension_active: number;
+  extension_inactive: number;
+  active_window_hours: number;
+}
