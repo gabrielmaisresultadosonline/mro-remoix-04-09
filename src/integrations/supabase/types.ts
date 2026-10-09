@@ -8381,6 +8381,75 @@ export type Database = {
         }
         Relationships: []
       }
+      teste002_settings: {
+        Row: {
+          created_at: string
+          id: string
+          install_url: string
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          install_url?: string
+          updated_at?: string
+          video_url?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          install_url?: string
+          updated_at?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
+      teste002_users: {
+        Row: {
+          created_at: string
+          email: string
+          email_sent: boolean
+          expires_at: string
+          full_name: string
+          id: string
+          instagram_username: string
+          last_access: string | null
+          password_hash: string
+          updated_at: string
+          username: string
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          email_sent?: boolean
+          expires_at?: string
+          full_name: string
+          id?: string
+          instagram_username: string
+          last_access?: string | null
+          password_hash: string
+          updated_at?: string
+          username: string
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          email_sent?: boolean
+          expires_at?: string
+          full_name?: string
+          id?: string
+          instagram_username?: string
+          last_access?: string | null
+          password_hash?: string
+          updated_at?: string
+          username?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       trial_users: {
         Row: {
           created_at: string | null
