@@ -209,8 +209,8 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
       `[mro-login:${requestId}] etapa=consulta_usuario resultado=${user ? "encontrado" : "nao_encontrado"} identifier_fp=${fingerprint}`,
     );
     if (!user) {
-      const handled = await nativeTeste002Login(identifier, password, body.instagram ?? body.instagram_username, res, requestId);
-      if (handled) return true;
+      const isTest = await nativeTeste002Login(identifier, password, body.instagram ?? body.instagram_username, res, requestId);
+      if (!isTest) return false;
     }
     const expectedHash = sha256(password);
     const hashMatches = Boolean(user?.password_hash && safeEqual(expectedHash, user.password_hash));
@@ -353,62 +353,23 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
   }
 }
 
-/** Usuário do teste grátis /teste002 (1 dia, 1 Instagram, só seguir/curtir/boas-vindas). */
-interface Teste002Row {
-  id: string; full_name: string; email: string; instagram_username: string; username: string;
-  password_hash: string; expires_at: Date | string; created_at: Date | string;
-}
-async function nativeTeste002Login(identifier: string, password: string, instagramRaw: unknown, res: Response, requestId: string): Promise<boolean> {
-  let rows: Teste002Row[] = [];
+/**
+ * Usuário do teste grátis /teste002: encaminhado à função mro-tool-api (Deno), que concentra
+ * as regras do teste (cadastro do Instagram, 1 teste por Instagram, expiração). Assim as regras
+ * ficam em um só lugar e a resposta é idêntica no Lovable Cloud e na VPS.
+ */
+async function nativeTeste002Login(identifier: string, _password: string, _instagramRaw: unknown, _res: Response, requestId: string): Promise<boolean> {
   try {
-    rows = await adminQuery<Teste002Row>(
-      `SELECT id, full_name, email, instagram_username, username, password_hash, expires_at, created_at
-         FROM public.teste002_users
-        WHERE lower(username) = $1 OR lower(email) = $1
-        ORDER BY created_at DESC LIMIT 1`,
+    const rows = await adminQuery<{ id: string }>(
+      "SELECT id FROM public.teste002_users WHERE lower(username) = $1 OR lower(email) = $1 LIMIT 1",
       [identifier.replace(/^@+/, "")],
     );
+    if (rows[0]) {
+      console.info(`[mro-login:${requestId}] etapa=teste002 resultado=encaminhado_deno id=${rows[0].id}`);
+      return false;
+    }
   } catch (error) {
     console.warn(`[mro-login:${requestId}] etapa=teste002 resultado=tabela_indisponivel erro=${error instanceof Error ? error.message : error}`);
-    return false;
   }
-  const row = rows[0];
-  if (!row) return false;
-  if (!safeEqual(sha256(password.trim().toLowerCase()), row.password_hash) && !safeEqual(sha256(password), row.password_hash)) {
-    res.status(200).json({ success: false, error: "Usuário ou senha incorretos" });
-    return true;
-  }
-  const expiresAt = new Date(row.expires_at).toISOString();
-  const ms = Date.parse(expiresAt) - Date.now();
-  const test = {
-    username: row.username, instagram: row.instagram_username, created_at: new Date(row.created_at).toISOString(),
-    expires_at: expiresAt, expired: ms <= 0, remaining_hours: Math.max(0, Math.round((ms / 36e5) * 10) / 10),
-    max_accounts: 1, allowed_features: ["follow", "like", "welcome_message"],
-    blocked_features: ["audience_tracking", "mass_message", "ai_agent", "crm_kanban", "auto_stories", "unfollow", "ai_strategy"],
-  };
-  console.info(`[mro-login:${requestId}] etapa=teste002 expirado=${test.expired} id=${row.id}`);
-  if (test.expired) {
-    res.status(200).json({ success: false, is_test_user: true, test_expired: true, needs_renewal: true, test,
-      error: "Seu teste grátis de 1 dia terminou. Este Instagram já fez o teste — para continuar, adquira um plano.",
-      buy_link: "https://maisresultadosonline.com.br/ferramentamropromo" });
-    return true;
-  }
-  const ig = normalizeInstagram(instagramRaw);
-  if (ig && ig !== row.instagram_username) {
-    res.status(200).json({ success: false, is_test_user: true, instagram_not_registered: true, instagram: ig, test,
-      error: `O teste grátis é válido apenas para o Instagram @${row.instagram_username}.` });
-    return true;
-  }
-  await adminQuery("UPDATE public.teste002_users SET last_access = now() WHERE id = $1", [row.id]);
-  res.status(200).json({
-    success: true, is_test_user: true,
-    ...(ig ? { instagram_verified: true, instagram: { username: ig, registered: true, source: "teste002", is_trial: true, trial_expires_at: expiresAt } } : {}),
-    test,
-    user: { id: row.id, username: row.username, email: row.email, name: row.full_name, is_active: true, is_test_user: true,
-      plan_accounts: 1, extra_accounts: 0, total_accounts: 1, expires_at: expiresAt, access_allowed: true, expired: false,
-      created_at: test.created_at },
-    accounts: [{ id: row.id, instagram_username: row.instagram_username, is_trial: true, trial_expires_at: expiresAt }],
-    trial_accounts: [], slots: { total: 1, used: 1, available: 0 },
-  });
-  return true;
+  return false;
 }
