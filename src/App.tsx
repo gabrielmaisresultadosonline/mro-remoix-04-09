@@ -212,6 +212,9 @@ import ZapZap from "./pages/ZapZap";
 import ZapZapAdmin from "./pages/ZapZapAdmin";
 import GrupoWhatsapp from "./pages/GrupoWhatsapp";
 import GrupoWhatsappAdmin from "./pages/GrupoWhatsappAdmin";
+import Teste002 from "./pages/Teste002";
+import Teste002Dashboard from "./pages/Teste002Dashboard";
+import Teste002Admin from "./pages/Teste002Admin";
 import Whitelabel from "./pages/WhitelabelPainel";
 import WhitelabelCheckout from "./pages/WhitelabelCheckout";
 import WhitelabelSales from "./pages/WhitelabelSales";
@@ -488,6 +491,9 @@ const App = () => (
           <Route path="/whitelabel/vendas" element={<WhitelabelSales />} />
           <Route path="/wl/:code" element={<WhitelabelCheckout />} />
           <Route path="/grupowhatsapp/admin" element={<GrupoWhatsappAdmin />} />
+          <Route path="/teste002" element={<Teste002 />} />
+          <Route path="/teste002/dashboard" element={<Teste002Dashboard />} />
+          <Route path="/teste002/admin" element={<Teste002Admin />} />
           <Route path="/comercialaaf" element={<ComercialAAF />} />
           <Route path="/comercialaaf/admin" element={<ComercialAAFAdmin />} />
           <Route path="/mktcompleto" element={<MktCompleto />} />
