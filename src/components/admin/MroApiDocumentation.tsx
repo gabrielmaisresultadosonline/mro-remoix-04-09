@@ -279,6 +279,62 @@ function onRemoveClick(conta) {
 }`}
     />
 
+    <Card className="p-4 space-y-2 border-primary/40">
+      <h4 className="font-semibold text-sm text-primary">🧪 Usuário de TESTE GRÁTIS (/teste002)</h4>
+      <p className="text-xs text-muted-foreground">
+        Cadastros feitos em /teste002 entram pela mesma action <code>login</code>. Usuário = senha = @ do Instagram (minúsculo).
+        A resposta traz <code>is_test_user: true</code> e o objeto <code>test</code>. Duração: 1 dia a partir do cadastro, 1 conta do Instagram,
+        liberados apenas <strong>seguir, curtir e boas-vindas</strong>. Depois de expirado, o Instagram fica marcado como teste já feito e não pode refazer.
+      </p>
+    </Card>
+
+    <Block
+      title="Login com usuário de teste — ativo"
+      description="A extensão deve liberar só as funções de allowed_features e bloquear as de blocked_features. Se enviar outro @instagram, o login é negado."
+      code={`POST { "action": "login", "username": "perfilteste", "password": "perfilteste", "instagram": "perfilteste" }
+
+{
+  "success": true,
+  "is_test_user": true,
+  "instagram_verified": true,
+  "instagram": { "username": "perfilteste", "registered": true, "source": "teste002", "is_trial": true, "trial_expires_at": "2026-10-10T03:00:00Z" },
+  "test": {
+    "username": "perfilteste",
+    "instagram": "perfilteste",
+    "created_at": "2026-10-09T03:00:00Z",
+    "expires_at": "2026-10-10T03:00:00Z",
+    "expired": false,
+    "remaining_hours": 23.5,
+    "max_accounts": 1,
+    "allowed_features": ["follow", "like", "welcome_message"],
+    "blocked_features": ["audience_tracking", "mass_message", "ai_agent", "crm_kanban", "auto_stories", "unfollow", "ai_strategy"]
+  },
+  "user": { "username": "perfilteste", "is_test_user": true, "total_accounts": 1, "expires_at": "2026-10-10T03:00:00Z", ... },
+  "accounts": [{ "instagram_username": "perfilteste", "is_trial": true, "trial_expires_at": "..." }],
+  "slots": { "total": 1, "used": 1, "available": 0 }
+}`}
+    />
+
+    <Block
+      title="Login com usuário de teste — expirado ou Instagram diferente"
+      code={`// Expirado
+{ "success": false, "is_test_user": true, "test_expired": true, "needs_renewal": true,
+  "error": "Seu teste grátis de 1 dia terminou. Este Instagram já fez o teste — para continuar, adquira um plano.",
+  "buy_link": "https://maisresultadosonline.com.br/ferramentamropromo", "test": { "expired": true, ... } }
+
+// Outro @instagram
+{ "success": false, "is_test_user": true, "instagram_not_registered": true, "instagram": "outroperfil",
+  "error": "O teste grátis é válido apenas para o Instagram @perfilteste." }
+
+// Na extensão
+if (data.is_test_user) {
+  if (!data.success) return alert(data.error);            // expirado ou @ diferente
+  liberarSomente(data.test.allowed_features);              // follow, like, welcome_message
+  bloquear(data.test.blocked_features);
+  mostrarAviso(\`Teste grátis: termina em \${new Date(data.test.expires_at).toLocaleString("pt-BR")}\`);
+}`}
+    />
+
   </div>
 );
 
