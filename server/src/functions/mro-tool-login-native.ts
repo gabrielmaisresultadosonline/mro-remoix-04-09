@@ -209,8 +209,9 @@ export async function handleNativeMroToolLogin(req: Request, res: Response): Pro
       `[mro-login:${requestId}] etapa=consulta_usuario resultado=${user ? "encontrado" : "nao_encontrado"} identifier_fp=${fingerprint}`,
     );
     if (!user) {
-      const isTest = await nativeTeste002Login(identifier, password, body.instagram ?? body.instagram_username, res, requestId);
-      if (!isTest) return false;
+      // Não está em mro_tool_users: pode ser usuário do teste grátis — a função Deno responde.
+      await nativeTeste002Login(identifier, password, body.instagram ?? body.instagram_username, res, requestId);
+      return false;
     }
     const expectedHash = sha256(password);
     const hashMatches = Boolean(user?.password_hash && safeEqual(expectedHash, user.password_hash));
