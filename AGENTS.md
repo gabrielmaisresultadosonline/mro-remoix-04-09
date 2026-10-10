@@ -12,3 +12,5 @@
 - Whitelabel logos must use reseller-scoped signed storage uploads and server-validated paths, because one reseller must never overwrite another reseller's branding.
 
 - MRO sales refreshes share presentation-only introductory and feature sections with a scoped semantic theme, because original videos, checkout handlers and affiliate attribution must remain unchanged.
+
+- Large video uploads to the video-server must use the chunked upload routes (parts under 100MB), because the Cloudflare proxy rejects larger request bodies before they reach Nginx.
