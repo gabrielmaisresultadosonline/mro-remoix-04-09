@@ -87,7 +87,14 @@ function track(event_type: string, extra?: Record<string, unknown>) {
   } catch {}
 }
 
-const Ferramentammmr = () => {
+export interface FerramentammmrProps {
+  promotionalOffer?: boolean;
+}
+
+const Ferramentammmr = ({ promotionalOffer = false }: FerramentammmrProps) => {
+  const annualAmount = promotionalOffer ? 300 : 397;
+  const annualInstallments = promotionalOffer ? '12x de R$30' : '12x de R$ 40,00';
+  const annualOneTime = promotionalOffer ? 'R$300 à vista' : 'R$ 397,00 à vista';
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
   const [isMainVideoPlaying, setIsMainVideoPlaying] = useState(false);
@@ -269,10 +276,10 @@ const Ferramentammmr = () => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ type: 'annual' | 'lifetime'; amount: number; label: string; installments: string; oneTime: string }>({
     type: 'annual',
-    amount: 397,
-    label: 'Anual Pro',
-    installments: '12x de R$ 40,00',
-    oneTime: 'R$ 397,00 à vista'
+    amount: annualAmount,
+    label: promotionalOffer ? 'Anual Completo' : 'Anual Pro',
+    installments: annualInstallments,
+    oneTime: annualOneTime
   });
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -424,6 +431,17 @@ const Ferramentammmr = () => {
 
   return (
     <div className="mro-intelligent-sales min-h-screen bg-background text-foreground overflow-x-hidden">
+      {promotionalOffer && (
+        <div className="sticky top-0 z-[60] bg-primary text-primary-foreground py-3 px-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-center flex-wrap">
+            <Gift className="w-5 h-5 shrink-0" />
+            <span className="text-xs sm:text-sm font-bold">VOCÊ RECEBEU UM DESCONTO ESPECIAL! Aproveite em</span>
+            <span className="bg-background/20 px-2 py-1 rounded font-mono text-sm tabular-nums">
+              {`${String(promoTimeLeft.hours).padStart(2, '0')}:${String(promoTimeLeft.minutes).padStart(2, '0')}:${String(promoTimeLeft.seconds).padStart(2, '0')}`}
+            </span>
+          </div>
+        </div>
+      )}
       {/* Popup Desconto Encerrado - REMOVED TO PREVENT BLACK SCREEN ISSUES */}
       {/* 
       {showDiscountEndedPopup && (
@@ -485,7 +503,7 @@ const Ferramentammmr = () => {
             onClick={scrollToPricing}
             className="mt-8 sm:mt-10 bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-sm sm:text-lg px-6 sm:px-10 py-5 sm:py-6 rounded-full shadow-lg shadow-primary/30"
           >
-            GARANTIR MEU ACESSO AGORA <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
+            {promotionalOffer ? 'GARANTIR MEU DESCONTO AGORA' : 'GARANTIR MEU ACESSO AGORA'} <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
       </section>
@@ -536,35 +554,43 @@ const Ferramentammmr = () => {
       <section ref={pricingRef} className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center mb-3 sm:mb-4">
-            ESCOLHA SEU <span className="text-primary">PLANO</span>
+            {promotionalOffer ? <span className="text-primary">OFERTA ESPECIAL</span> : <>ESCOLHA SEU <span className="text-primary">PLANO</span></>}
           </h2>
           <p className="text-center text-muted-foreground mb-8 sm:mb-10 text-base sm:text-lg">
-            Selecione o plano ideal para você
+            {promotionalOffer ? 'Seu plano anual completo com desconto especial' : 'Selecione o plano ideal para você'}
           </p>
 
-          <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
+          <div className={promotionalOffer ? 'max-w-2xl mx-auto' : 'grid md:grid-cols-2 gap-6 sm:gap-8'}>
             {/* Plano Anual Pro */}
             <div className="bg-gradient-to-b from-card to-background border-2 border-border/60 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden flex flex-col">
               <div className="absolute -top-1 left-1/2 -translate-x-1/2">
                 <div className="bg-gradient-to-r from-card to-background text-foreground font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-b-xl text-xs sm:text-sm whitespace-nowrap">
-                  MAIS POPULAR
+                  {promotionalOffer ? 'DESCONTO ESPECIAL' : 'MAIS POPULAR'}
                 </div>
               </div>
 
               <div className="text-center mt-6 mb-6 sm:mb-8">
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">Anual Pro</h3>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">{promotionalOffer ? 'Plano Anual Completo' : 'Anual Pro'}</h3>
+                {promotionalOffer && <p className="text-muted-foreground line-through text-lg mb-2">De R$ 397</p>}
                 <div className="text-base sm:text-lg text-muted-foreground mb-2">por apenas</div>
                 <div className="text-primary mb-1">
                   <span className="text-lg sm:text-xl md:text-2xl font-medium">12x de</span>
-                  <span className="text-5xl sm:text-6xl md:text-7xl font-black ml-2">R$40</span>
+                  <span className="text-5xl sm:text-6xl md:text-7xl font-black ml-2">{promotionalOffer ? 'R$30' : 'R$40'}</span>
                 </div>
                 <p className="text-muted-foreground text-lg sm:text-xl mb-1">
-                  ou <span className="text-foreground font-bold">R$ 397,00 à vista</span>
+                  ou <span className="text-foreground font-bold">{annualOneTime}</span>
                 </p>
                 <p className="text-muted-foreground text-xs sm:text-sm">Acesso por 1 ano</p>
+                {promotionalOffer && <p className="text-primary font-bold mt-3">R$97 REAIS DE DESCONTO!</p>}
               </div>
 
               <div className="space-y-3 mb-6 sm:mb-8 flex-1">
+                {promotionalOffer ? planFeatures.map((feature) => (
+                  <div key={feature} className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground text-sm sm:text-base">{feature}</span>
+                  </div>
+                )) : <>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0 mt-0.5" />
                   <span className="text-muted-foreground text-sm sm:text-base">4 contas do Instagram</span>
@@ -577,22 +603,23 @@ const Ferramentammmr = () => {
                   <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0 mt-0.5" />
                   <span className="text-muted-foreground text-sm sm:text-base">Suporte VIP</span>
                 </div>
+                </>}
               </div>
 
               <Button
                 onClick={() => {
                   setSelectedPlan({
                     type: 'annual',
-                    amount: 397,
-                    label: 'Anual Pro',
-                    installments: '12x de R$ 40,00',
-                    oneTime: 'R$ 397,00 à vista'
+                    amount: annualAmount,
+                    label: promotionalOffer ? 'Anual Completo' : 'Anual Pro',
+                    installments: annualInstallments,
+                    oneTime: annualOneTime
                   });
                   setShowCheckoutModal(true);
                 }}
                 className="w-full bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-base sm:text-xl py-5 sm:py-7 rounded-xl shadow-lg shadow-primary/30"
               >
-                QUERO O PLANO ANUAL
+                {promotionalOffer ? 'QUERO GARANTIR AGORA' : 'QUERO O PLANO ANUAL'}
               </Button>
 
               <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
@@ -602,6 +629,7 @@ const Ferramentammmr = () => {
             </div>
 
             {/* Plano Agência Vitalício */}
+            {!promotionalOffer && (
             <div className="bg-gradient-to-b from-card to-background border-2 border-border/70 rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden flex flex-col">
               <div className="absolute -top-1 left-1/2 -translate-x-1/2">
                 <div className="bg-gradient-to-r from-card to-background text-primary-foreground font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-b-xl text-xs sm:text-sm whitespace-nowrap">
@@ -658,6 +686,7 @@ const Ferramentammmr = () => {
                 <div className="flex items-center gap-1"><CreditCard className="w-3 h-3 sm:w-4 sm:h-4" /><span>PIX ou Cartão</span></div>
               </div>
             </div>
+            )}
           </div>
         </div>
       </section>
