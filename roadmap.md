@@ -77,6 +77,7 @@
 - [x] Whitelabel MRO (revendedores, /whitelabel, /wl/:code, menu no /admin)
 
 ## Atualização MRO Inteligente
+- [ ] Igualar /instagram-nova-promoo2 à página oficial, preservando a tarja e a oferta promocional, e verificar o cadastro.
 - [x] Aplicar direção preta com amarelo nas páginas oficiais e de afiliados
 - [x] Detalhar as oito funções mantendo vídeos, preços e compras
 - [x] Validar apresentação e abertura do cadastro (sem compra real)
