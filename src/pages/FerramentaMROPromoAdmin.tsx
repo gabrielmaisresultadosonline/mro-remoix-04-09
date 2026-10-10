@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { DEFAULT_PLAYER_SETTINGS, type PromoPlayerSettings } from "@/components/sales/PromoHlsVideo";
+import { uploadVideoInChunks } from "@/lib/chunkedVideoUpload";
 import { Loader2, Save, Trash2, Video, LogOut, BarChart3, Users, MousePointerClick, PlayCircle, TrendingUp, Clock } from "lucide-react";
 
 const VIDEO_SERVER = "https://video.maisresultadosonline.com.br";
@@ -61,6 +62,9 @@ export default function FerramentaMROPromoAdmin() {
 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadInfo, setUploadInfo] = useState("");
+  const [uploadStatus, setUploadStatus] = useState("");
+  const uploadAbort = useRef<AbortController | null>(null);
   const [transcoding, setTranscoding] = useState<{ jobId: string; progress: number; status: string } | null>(null);
   const [serverVideos, setServerVideos] = useState<ServerVideo[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
@@ -183,28 +187,40 @@ export default function FerramentaMROPromoAdmin() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     if (file.size > 5 * 1024 * 1024 * 1024) { toast.error("Máx 5GB"); return; }
-    setUploading(true); setUploadProgress(0);
+    setUploading(true); setUploadProgress(0); setUploadInfo(""); setUploadStatus("");
+    const controller = new AbortController();
+    uploadAbort.current = controller;
     try {
-      const formData = new FormData(); formData.append("video", file);
-      const result = await new Promise<any>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `${VIDEO_SERVER}/api/video/upload`); xhr.timeout = 7200000;
-        xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100)); };
-        xhr.onload = () => xhr.status === 200 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error(`HTTP ${xhr.status}`));
-        xhr.ontimeout = () => reject(new Error("Timeout"));
-        xhr.onerror = () => reject(new Error("Falha de rede"));
-        xhr.send(formData);
+      // Envio em partes: a Cloudflare recusa requisições acima de 100MB,
+      // o que deixava o envio parado em 0% sem nenhum erro.
+      const result = await uploadVideoInChunks({
+        serverUrl: VIDEO_SERVER,
+        file,
+        signal: controller.signal,
+        onStatus: setUploadStatus,
+        onProgress: (pct, info) => {
+          setUploadProgress(pct);
+          const mb = (b: number) => (b / 1048576).toFixed(0);
+          const speed = info.speedBps > 0 ? ` · ${(info.speedBps / 1048576).toFixed(1)} MB/s` : "";
+          setUploadInfo(`${mb(info.sentBytes)} de ${mb(info.totalBytes)} MB${speed}`);
+        },
       });
-      if (result.success) {
-        setVideoUrl(result.video_url); setHlsUrl(result.hls_url);
-        // Ativa imediatamente nas páginas; até o HLS ficar pronto, o player usa o arquivo original.
-        await save({ video_url: result.video_url, hls_url: result.hls_url });
+      if (result.success && result.hls_url) {
+        setVideoUrl(result.video_url || ""); setHlsUrl(result.hls_url);
+        // Ativa imediatamente nas páginas; o HLS fica disponível conforme as qualidades ficam prontas.
+        await save({ video_url: result.video_url || "", hls_url: result.hls_url });
         toast.success("Upload concluído e vídeo ativo! Transcodificando qualidades…");
-        const jobId = result.job_id || (result.hls_url || "").match(/\/videos\/hls\/(.+?)\/master\.m3u8/)?.[1];
+        const jobId = result.job_id || result.hls_url.match(/\/videos\/hls\/(.+?)\/master\.m3u8/)?.[1];
         if (jobId) { setTranscoding({ jobId, progress: 0, status: "queued" }); pollTranscoding(jobId); }
-      } else toast.error("Servidor recusou");
-    } catch (err: any) { toast.error(err.message || "Erro no upload"); }
-    finally { setUploading(false); setUploadProgress(0); if (fileRef.current) fileRef.current.value = ""; }
+      } else toast.error(result.error || "Servidor recusou");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") toast.info("Envio cancelado");
+      else toast.error(err instanceof Error ? err.message : "Erro no upload", { duration: 10000 });
+    } finally {
+      uploadAbort.current = null;
+      setUploading(false); setUploadProgress(0); setUploadInfo(""); setUploadStatus("");
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   const deleteVideo = async (name: string) => {
@@ -481,7 +497,11 @@ export default function FerramentaMROPromoAdmin() {
               {uploading && (
                 <div className="space-y-2">
                   <Progress value={uploadProgress} />
-                  <p className="text-sm text-zinc-400">Enviando… {uploadProgress}%</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-400">
+                    <span>Enviando… {uploadProgress}%{uploadInfo ? ` · ${uploadInfo}` : ""}</span>
+                    <Button size="sm" variant="outline" onClick={() => uploadAbort.current?.abort()}>Cancelar</Button>
+                  </div>
+                  {uploadStatus && <p className="text-xs text-zinc-500">{uploadStatus}</p>}
                 </div>
               )}
               {transcoding && (
