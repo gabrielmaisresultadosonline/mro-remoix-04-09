@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { DEFAULT_PLAYER_SETTINGS, type PromoPlayerSettings } from "@/components/sales/PromoHlsVideo";
 import { Loader2, Save, Trash2, Video, LogOut, BarChart3, Users, MousePointerClick, PlayCircle, TrendingUp, Clock } from "lucide-react";
 
 const VIDEO_SERVER = "https://video.maisresultadosonline.com.br";
@@ -26,10 +28,13 @@ interface Analytics {
     milestone100: number;
     conversionRate: number;
     lastAccess: string | null;
+    lastVideoAccess?: string | null;
+    visitedNoVideo?: number;
   };
+  byPage?: { page: string; views: number; visitors: number; starters: number; no_video: number; p50: number; p100: number; clicks: number; last: string }[];
   daily: { day: string; visitors: number; clicks: number; starts: number; completes: number }[];
   referrers: { host: string; count: number }[];
-  ranking: { visitor_id: string; first: string; last: string; max_progress: number; clicked: boolean }[];
+  ranking: { visitor_id: string; first: string; last: string; max_progress: number; clicked: boolean; page?: string; started?: boolean; last_video?: string | null }[];
 }
 
 interface ServerVideo {
@@ -52,6 +57,7 @@ export default function FerramentaMROPromoAdmin() {
   const [videoUrl, setVideoUrl] = useState("");
   const [hlsUrl, setHlsUrl] = useState("");
   const [videoTitle, setVideoTitle] = useState("");
+  const [player, setPlayer] = useState<PromoPlayerSettings>(DEFAULT_PLAYER_SETTINGS);
 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -121,15 +127,17 @@ export default function FerramentaMROPromoAdmin() {
       setVideoUrl(data.video_url || "");
       setHlsUrl(data.hls_url || "");
       setVideoTitle(data.video_title || "");
+      setPlayer({ ...DEFAULT_PLAYER_SETTINGS, ...(data.player_settings || {}) });
     }
   };
 
-  const save = async () => {
+  const save = async (override?: { video_url?: string; hls_url?: string }) => {
     if (!creds) return;
     const { data } = await supabase.functions.invoke("ferramentamropromo-video", {
       body: {
         action: "set_video", email: creds.email, password: creds.password,
-        video_url: videoUrl, hls_url: hlsUrl, video_title: videoTitle,
+        video_url: override?.video_url ?? videoUrl, hls_url: override?.hls_url ?? hlsUrl, video_title: videoTitle,
+        player_settings: player,
       },
     });
     if (data?.success) toast.success("Vídeo salvo");
@@ -189,7 +197,9 @@ export default function FerramentaMROPromoAdmin() {
       });
       if (result.success) {
         setVideoUrl(result.video_url); setHlsUrl(result.hls_url);
-        toast.success("Upload concluído! Transcodificando…");
+        // Ativa imediatamente nas páginas; até o HLS ficar pronto, o player usa o arquivo original.
+        await save({ video_url: result.video_url, hls_url: result.hls_url });
+        toast.success("Upload concluído e vídeo ativo! Transcodificando qualidades…");
         const jobId = result.job_id || (result.hls_url || "").match(/\/videos\/hls\/(.+?)\/master\.m3u8/)?.[1];
         if (jobId) { setTranscoding({ jobId, progress: 0, status: "queued" }); pollTranscoding(jobId); }
       } else toast.error("Servidor recusou");
@@ -265,6 +275,50 @@ export default function FerramentaMROPromoAdmin() {
                   <MetricCard icon={<MousePointerClick className="w-4 h-4" />} label="Cliques CTA (Lead)" value={analytics.summary.uniqueClickers} sub={`${analytics.summary.totalClicks} cliques totais`} />
                   <MetricCard icon={<TrendingUp className="w-4 h-4" />} label="Taxa de conversão" value={`${analytics.summary.conversionRate}%`} sub="clique / visitante" />
                 </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <MetricCard icon={<Users className="w-4 h-4" />} label="Acessaram e NÃO viram o vídeo" value={analytics.summary.visitedNoVideo ?? 0} />
+                  <MetricCard icon={<PlayCircle className="w-4 h-4" />} label="Assistiram 50%" value={analytics.summary.milestone50} />
+                  <MetricCard icon={<PlayCircle className="w-4 h-4" />} label="Assistiram 100%" value={analytics.summary.milestone100} />
+                  <MetricCard icon={<Clock className="w-4 h-4" />} label="Último acesso ao vídeo" value={analytics.summary.lastVideoAccess ? new Date(analytics.summary.lastVideoAccess).toLocaleString("pt-BR") : "—"} />
+                </div>
+
+                <Card className="p-6 bg-zinc-900 border-zinc-800">
+                  <h3 className="text-lg font-semibold mb-4">Visitas por página (ferramentamropromo e afiliados)</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-xs text-zinc-400 border-b border-zinc-800">
+                        <tr>
+                          <th className="text-left py-2 px-2">Página</th>
+                          <th className="text-right py-2 px-2">Visitantes</th>
+                          <th className="text-right py-2 px-2">Sem vídeo</th>
+                          <th className="text-right py-2 px-2">Iniciaram</th>
+                          <th className="text-right py-2 px-2">50%</th>
+                          <th className="text-right py-2 px-2">100%</th>
+                          <th className="text-right py-2 px-2">Cliques</th>
+                          <th className="text-right py-2 px-2">Último</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(analytics.byPage || []).map((p) => (
+                          <tr key={p.page} className="border-b border-zinc-800/60">
+                            <td className="py-2 px-2 font-mono text-xs">{p.page}</td>
+                            <td className="text-right py-2 px-2">{p.visitors}</td>
+                            <td className="text-right py-2 px-2 text-red-400">{p.no_video}</td>
+                            <td className="text-right py-2 px-2">{p.starters}</td>
+                            <td className="text-right py-2 px-2 text-amber-400">{p.p50}</td>
+                            <td className="text-right py-2 px-2 text-green-400">{p.p100}</td>
+                            <td className="text-right py-2 px-2">{p.clicks}</td>
+                            <td className="text-right py-2 px-2 text-xs text-zinc-400">{new Date(p.last).toLocaleString("pt-BR")}</td>
+                          </tr>
+                        ))}
+                        {(analytics.byPage || []).length === 0 && (
+                          <tr><td colSpan={8} className="text-center text-zinc-500 py-4">Sem dados.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
 
                 <Card className="p-6 bg-zinc-900 border-zinc-800">
                   <h3 className="text-lg font-semibold mb-4">Progresso do vídeo (visitantes únicos)</h3>
@@ -349,7 +403,7 @@ export default function FerramentaMROPromoAdmin() {
                         {analytics.ranking.slice(0, 30).map((r, i) => (
                           <tr key={r.visitor_id} className="border-b border-zinc-800/60">
                             <td className="py-2 px-2 text-zinc-500">{i + 1}</td>
-                            <td className="py-2 px-2 font-mono text-xs text-zinc-300">{r.visitor_id.slice(0, 12)}…</td>
+                            <td className="py-2 px-2 font-mono text-xs text-zinc-300">{r.visitor_id.slice(0, 12)}…<div className="text-[10px] text-zinc-500">{r.page}{r.started ? "" : " · não viu o vídeo"}</div></td>
                             <td className="text-right py-2 px-2">
                               <span className={r.max_progress >= 100 ? "text-green-400 font-bold" : r.max_progress >= 75 ? "text-amber-400" : "text-zinc-300"}>
                                 {r.max_progress}%
@@ -397,12 +451,31 @@ export default function FerramentaMROPromoAdmin() {
                 <Input placeholder="Título (opcional)" value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} />
                 <Input placeholder="Video URL (direto .mp4)" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
                 <Input placeholder="HLS URL (.m3u8)" value={hlsUrl} onChange={(e) => setHlsUrl(e.target.value)} />
-                <Button onClick={save} className="w-full"><Save className="w-4 h-4 mr-2" /> Salvar vídeo</Button>
+                <Button onClick={() => save()} className="w-full"><Save className="w-4 h-4 mr-2" /> Salvar vídeo</Button>
               </div>
             </Card>
 
             <Card className="p-6 bg-zinc-900 border-zinc-800 space-y-4">
+              <h2 className="text-xl font-semibold">Controles do player</h2>
+              <p className="text-xs text-zinc-400">Vale para /ferramentamropromo e para todas as páginas de afiliados /promo/nome. Clique em Salvar vídeo para aplicar.</p>
+              {([
+                ["allow_seek", "Permitir avançar o vídeo (arrastar para frente)"],
+                ["show_progress", "Mostrar barra de progresso / cursor do vídeo"],
+                ["force_max_volume", "Volume sempre no máximo (só botão de mudo)"],
+                ["minimal_controls", "Controles mínimos: só play/pause, recomeçar e mudo"],
+                ["show_fullscreen", "Mostrar botão de tela cheia"],
+              ] as [keyof PromoPlayerSettings, string][]).map(([k, label]) => (
+                <label key={k} className="flex items-center justify-between gap-3 text-sm">
+                  <span>{label}</span>
+                  <Switch checked={player[k]} onCheckedChange={(c) => setPlayer((p) => ({ ...p, [k]: c }))} />
+                </label>
+              ))}
+              <Button onClick={() => save()} className="w-full"><Save className="w-4 h-4 mr-2" /> Salvar controles</Button>
+            </Card>
+
+            <Card className="p-6 bg-zinc-900 border-zinc-800 space-y-4">
               <h2 className="text-xl font-semibold">Upload novo vídeo</h2>
+              <p className="text-xs text-zinc-400">Aceita arquivos grandes (500MB+). O servidor transcodifica em várias qualidades (HLS) para internet lenta, como na /live. O vídeo fica ativo assim que o envio terminar.</p>
               <input ref={fileRef} type="file" accept="video/*" onChange={handleUpload} disabled={uploading}
                 className="block w-full text-sm text-zinc-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-amber-500 file:text-black file:font-semibold hover:file:bg-amber-400" />
               {uploading && (

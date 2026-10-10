@@ -501,6 +501,7 @@ const App = () => (
           <Route path="/mktcc/admin" element={<MktCCAdmin />} />
           <Route path="/ferramentamropromo2" element={<FerramentaMROPromo />} />
           <Route path="/ferramentamropromo/admin" element={<FerramentaMROPromoAdmin />} />
+          <Route path="/ferramentamropromo/video" element={<FerramentaMROPromoAdmin />} />
           <Route path="/eleitoral" element={<Eleitoral />} />
           <Route path="/eleitoral/admin" element={<EleitoralAdmin />} />
           <Route path="/trafegopagovisitas" element={<TrafegoPagoVisitas />} />
