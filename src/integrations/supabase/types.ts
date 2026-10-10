@@ -2280,6 +2280,7 @@ export type Database = {
           hls_url: string | null
           id: string
           is_active: boolean
+          player_settings: Json
           updated_at: string
           video_title: string | null
           video_url: string | null
@@ -2289,6 +2290,7 @@ export type Database = {
           hls_url?: string | null
           id?: string
           is_active?: boolean
+          player_settings?: Json
           updated_at?: string
           video_title?: string | null
           video_url?: string | null
@@ -2298,6 +2300,7 @@ export type Database = {
           hls_url?: string | null
           id?: string
           is_active?: boolean
+          player_settings?: Json
           updated_at?: string
           video_title?: string | null
           video_url?: string | null
