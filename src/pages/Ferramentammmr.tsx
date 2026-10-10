@@ -1,5 +1,6 @@
 import { MroIntelligentIntro } from '@/components/sales/MroIntelligentIntro';
 import { MroIntelligentFeatures } from '@/components/sales/MroIntelligentFeatures';
+import FloatingWhatsAppCta from '@/components/FloatingWhatsAppCta';
 import { useState, useEffect, useRef } from "react";
 import Hls from "hls.js";
 
@@ -799,6 +800,14 @@ const Ferramentammmr = () => {
           </div>
         </div>
       )}
+
+      {/* Floating WhatsApp contact */}
+      <FloatingWhatsAppCta
+        phone="555192835863"
+        message="Vim pela página da ferramenta MRO, gostaria de tirar uma dúvida."
+        ariaLabel="Falar no WhatsApp com a MRO"
+        hoverLabel="Tirar uma dúvida"
+      />
 
       {/* Footer */}
       <footer className="py-6 sm:py-8 px-3 sm:px-4 border-t border-border">
