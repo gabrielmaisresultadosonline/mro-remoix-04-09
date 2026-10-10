@@ -218,6 +218,12 @@ else
   fail "Instalador permanente de CORS ausente nesta revisão."
 fi
 
+# Video-server: envio de vídeos grandes em partes (Cloudflare recusa >100MB).
+if [ -f deploy/patch-video-server-chunks.sh ]; then
+  sudo bash deploy/patch-video-server-chunks.sh \
+    || warn "Envio em partes do video-server não foi ativado (veja acima). Uploads >100MB continuarão falhando."
+fi
+
 # ---------- 7. Verificação ----------
 step "7/7 Conferência"
 if [ "$DB_PRONTO" = true ] && [ "$RAPIDO" = false ]; then
