@@ -56,6 +56,7 @@ import { MessageCircle as WhatsAppIcon } from "lucide-react";
 
 import { MRO_ANNUAL_OFFER } from '../../supabase/functions/_shared/mro-sales';
 import { wlCall, type WlSalesContext } from '@/lib/whitelabel';
+import { PromoHlsVideo } from '@/components/sales/PromoHlsVideo';
 import { WlBrandOrbit } from '@/components/whitelabel/WlBrandOrbit';
 
 interface SalesSettings {
@@ -309,6 +310,7 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
             {videoSlot ? (
               videoSlot
             ) : (
+              <PromoHlsVideo fallback={
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border">
                 <iframe
                   src="https://www.youtube.com/embed/lecSwt54sa0?rel=0&modestbranding=1"
@@ -318,6 +320,7 @@ const InstagramNovaPlan = ({ videoSlot, prefillEmail, prefillPhone, hideContactF
                   allowFullScreen
                 />
               </div>
+              } />
             )}
           </div>
 

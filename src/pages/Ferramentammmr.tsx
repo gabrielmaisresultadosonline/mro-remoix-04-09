@@ -54,6 +54,7 @@ import {
   MousePointerClick
 } from "lucide-react";
 import logoMro from "@/assets/logo-mro.png";
+import { PromoHlsVideo } from "@/components/sales/PromoHlsVideo";
 import ActiveClientsSection from "@/components/ActiveClientsSection";
 
 function getVisitorId(): string {
@@ -472,56 +473,10 @@ const Ferramentammmr = () => {
 
           {/* Main Video */}
           <div className="mt-8 sm:mt-10 max-w-4xl mx-auto">
-            <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-background ring-1 ring-ring/30 shadow-lg">
-              <div className="relative aspect-video">
-                <video
-                  ref={mainVideoRef}
-                  className={`w-full h-full bg-background transition-opacity duration-500 ${videoStarted ? "opacity-100" : "opacity-10"}`}
-                  playsInline
-                  controls={false}
-                  muted={!videoStarted}
-                  autoPlay
-                  loop={!videoStarted}
-                  preload="metadata"
-                />
-                {!videoStarted && (
-                  <button
-                    onClick={handleMainVideoStart}
-                    className="absolute inset-0 flex items-center justify-center bg-background/40 hover:bg-background/30 transition"
-                    aria-label="Reproduzir"
-                  >
-                    <span className="w-20 h-20 rounded-full bg-primary hover:bg-primary flex items-center justify-center shadow-2xl animate-pulse">
-                      <Play className="w-10 h-10 text-primary-foreground ml-1" fill="currentColor" />
-                    </span>
-                  </button>
-                )}
-                {videoStarted && (
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
-                    <button
-                      onClick={toggleMainPlay}
-                      className="w-10 h-10 rounded-full bg-background/70 hover:bg-background flex items-center justify-center"
-                      aria-label={videoPlaying ? "Pausar" : "Reproduzir"}
-                    >
-                      {videoPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                    </button>
-                    <button
-                      onClick={toggleMainMute}
-                      className="w-10 h-10 rounded-full bg-background/70 hover:bg-background flex items-center justify-center"
-                      aria-label={videoMuted ? "Ativar som" : "Silenciar"}
-                    >
-                      {videoMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                    </button>
-                    <button
-                      onClick={toggleMainFullscreen}
-                      className="ml-auto w-10 h-10 rounded-full bg-background/70 hover:bg-background flex items-center justify-center"
-                      aria-label="Tela cheia"
-                    >
-                      <Maximize className="w-5 h-5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <PromoHlsVideo
+              trackPageView={false}
+              onWatched={() => { setVideoWatched(true); localStorage.setItem("ferramentamropromo:unlocked", "1"); }}
+            />
           </div>
 
           {/* CTA Button */}
