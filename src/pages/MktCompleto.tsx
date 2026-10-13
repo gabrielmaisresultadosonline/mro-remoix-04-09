@@ -523,7 +523,7 @@ export default function MktCompleto() {
                       {p.from && <div className="mt-6 text-lg text-white/45 line-through">{p.from}</div>}
                       <div className="serif yellow-glow mt-2 flex items-baseline gap-2 text-6xl leading-none md:text-7xl" style={{ color: ACCENT }}>
                         {p.price}
-                        <span className="text-lg font-normal text-white/60">{p.suffix}</span>
+                        <span className="whitespace-nowrap text-lg font-normal text-white/60">{p.suffix}</span>
                       </div>
                       <div className="mt-3 text-sm italic text-white/60">{p.perMonth}</div>
                       <p className="mt-6 text-sm leading-relaxed text-white/70">{p.note}</p>
