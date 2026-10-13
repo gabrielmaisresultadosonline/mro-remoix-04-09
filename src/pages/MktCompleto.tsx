@@ -172,6 +172,59 @@ const RESUMO = [
   "Aumento da demanda", "Acompanhamento especializado", "Garantia de 30 dias",
 ];
 
+// ---------- Planos de investimento ----------
+type Plano = {
+  name: string;
+  price: string;
+  suffix: string;
+  from: string;
+  perMonth: string;
+  note: string;
+  savings: string;
+  badge: string;
+  featured: boolean;
+  message: string;
+};
+
+const PLANOS: Plano[] = [
+  {
+    name: "Plano Mensal",
+    price: "R$ 1500",
+    suffix: "/mês",
+    from: "",
+    perMonth: "renova todo mês, sem fidelidade",
+    note: "Comece agora e renove mês a mês. Liberdade total para continuar conforme o resultado aparecer.",
+    savings: "no plano de 3 meses o mesmo trabalho sai por R$ 3.000",
+    badge: "",
+    featured: false,
+    message: "Quero contratar o plano mensal do marketing completo!",
+  },
+  {
+    name: "Plano de 3 Meses",
+    price: "R$ 3.000",
+    suffix: "no total",
+    from: "De R$ 4.500",
+    perMonth: "equivale a R$ 1.000 por mês",
+    note: "Um trabalho de marketing não se finaliza em 1 mês. O marketing precisa de, no mínimo, 3 meses para alavancar seu negócio, baseando-se no algoritmo e no aperfeiçoamento constante.",
+    savings: "economia imediata de R$ 1.500",
+    badge: "Mais escolhido",
+    featured: true,
+    message: "Quero contratar o plano de 3 meses do marketing completo!",
+  },
+  {
+    name: "Plano de 6 Meses",
+    price: "R$ 5.000",
+    suffix: "no total",
+    from: "De R$ 9.000",
+    perMonth: "equivale a R$ 833 por mês",
+    note: "O menor valor mensal de todos: mais tempo de otimização, mais aprendizado do algoritmo e resultados mais previsíveis.",
+    savings: "economia imediata de R$ 4.000",
+    badge: "Melhor custo",
+    featured: false,
+    message: "Quero contratar o plano de 6 meses do marketing completo!",
+  },
+];
+
 // ---------- Page ----------
 export default function MktCompleto() {
   const { scrollYProgress } = useScroll();
@@ -243,7 +296,7 @@ export default function MktCompleto() {
             <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
               <a href="#investimento" className="shimmer-y relative overflow-hidden rounded-full bg-[--accent] px-8 py-4 text-sm font-semibold uppercase tracking-wider text-black transition-transform hover:scale-105"
                  style={{ ["--accent" as never]: ACCENT, boxShadow: `0 10px 40px ${ACCENT}55` }}>
-                Ver oferta especial <ArrowRight className="ml-2 inline h-4 w-4" />
+                Ver planos <ArrowRight className="ml-2 inline h-4 w-4" />
               </a>
               <a href="#incluso" className="rounded-full border border-white/20 px-8 py-4 text-sm font-semibold uppercase tracking-wider text-white/80 backdrop-blur transition hover:border-white/60 hover:text-white">
                 O que está incluso
@@ -446,44 +499,54 @@ export default function MktCompleto() {
           ]}}
           transition={{ duration: 12, repeat: Infinity }}
         />
-        <div className="mx-auto max-w-5xl px-6 text-center">
+        <div className="mx-auto max-w-6xl px-6 text-center">
           <Reveal>
             <span className="text-xs uppercase tracking-[0.3em] text-white/60">Investimento</span>
-            <h2 className="serif mt-4 text-5xl md:text-7xl">Oferta <span className="italic" style={{ color: ACCENT }}>Especial</span></h2>
+            <h2 className="serif mt-4 text-5xl md:text-7xl">Escolha o <span className="italic" style={{ color: ACCENT }}>seu plano</span></h2>
+            <p className="mx-auto mt-6 max-w-2xl text-white/60">
+              Quanto maior o período, menor o valor mensal e mais tempo para a estratégia amadurecer.
+            </p>
           </Reveal>
 
           <Reveal delay={0.15}>
-            <div className="mt-16 mx-auto max-w-2xl">
-              <TiltCard>
-                <div className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-black/60 p-12 backdrop-blur-xl">
-                  <div className="text-lg uppercase tracking-wider text-white/50 line-through">De R$ 3.000,00</div>
-                  <div className="mt-2 flex items-baseline justify-center gap-3">
-                    <span className="text-2xl text-white/60">por apenas</span>
-                  </div>
-                  <div className="serif yellow-glow mt-3 text-8xl md:text-9xl" style={{ color: ACCENT }}>R$ 2000</div>
-                  <div className="mt-2 text-white/60 italic">Plano único de 3 meses</div>
-                  <div className="mt-4 px-6 text-sm text-white/70 leading-relaxed max-w-md mx-auto">
-                    Um trabalho de marketing não se finaliza em 1 mês. O marketing precisa de, no mínimo, 
-                    <span className="font-bold text-white"> 3 meses para alavancar seu negócio</span>, 
-                    baseando-se no algoritmo e no aperfeiçoamento constante.
-                  </div>
-                  <div className="mt-2 text-white/60">economia imediata de <span className="font-semibold text-white">R$ 1.000,00</span></div>
+            <div className="mt-16 grid gap-6 text-left md:grid-cols-3">
+              {PLANOS.map((p, i) => (
+                <Reveal key={p.name} delay={i * 0.08} y={24} className="h-full">
+                  <TiltCard className="h-full">
+                    <div className={`relative flex h-full flex-col overflow-hidden rounded-[2rem] border bg-black/60 p-8 backdrop-blur-xl transition-colors md:p-10 ${p.featured ? "border-[color:var(--ac)]" : "border-white/15 hover:border-white/40"}`}
+                         style={{ ["--ac" as never]: ACCENT, boxShadow: p.featured ? `0 30px 80px ${ACCENT}33` : undefined }}>
+                      {p.badge && (
+                        <div className="absolute inset-x-0 top-0 py-2 text-center text-[11px] font-bold uppercase tracking-[0.25em] text-black"
+                             style={{ background: ACCENT }}>{p.badge}</div>
+                      )}
+                      <div className={`text-xs uppercase tracking-[0.3em] text-white/50 ${p.badge ? "mt-6" : ""}`}>{p.name}</div>
+                      {p.from && <div className="mt-6 text-lg text-white/45 line-through">{p.from}</div>}
+                      <div className="serif yellow-glow mt-2 flex flex-wrap items-baseline gap-x-3 text-5xl leading-none md:text-6xl" style={{ color: ACCENT }}>
+                        <span className="whitespace-nowrap">{p.price}</span>
+                        <span className="whitespace-nowrap text-base font-normal text-white/60">{p.suffix}</span>
+                      </div>
+                      <div className="mt-3 text-sm italic text-white/60">{p.perMonth}</div>
+                      <p className="mt-6 text-sm leading-relaxed text-white/70">{p.note}</p>
+                      <div className="my-6 h-px bg-white/10" />
+                      <div className="text-sm text-white/60">{p.savings}</div>
+                      <a href={`https://wa.me/5551992835863?text=${encodeURIComponent(p.message)}`}
+                         target="_blank" rel="noopener noreferrer"
+                         className={`shimmer-y relative mt-auto inline-flex items-center justify-center gap-2 overflow-hidden rounded-full px-8 pt-4 pb-4 text-sm font-bold uppercase tracking-wider transition-transform hover:scale-105 ${p.featured ? "bg-cta text-cta-foreground" : "border border-white/20 bg-white/5 text-white hover:border-white/60"}`}
+                         style={p.featured ? { boxShadow: "0 20px 60px hsl(var(--cta) / 0.45)" } : undefined}>
+                        Quero este plano <ArrowRight className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </TiltCard>
+                </Reveal>
+              ))}
+            </div>
+          </Reveal>
 
-                  <div className="my-8 h-px bg-white/10" />
-
-                  <div className="flex flex-col items-center gap-2 text-white/80">
-                    <DollarSign className="h-6 w-6" style={{ color: ACCENT }} />
-                    <p>+ investimento em anúncios na Meta</p>
-                    <p className="text-sm text-white/55">a partir de R$ 20,00 por dia</p>
-                  </div>
-
-                  <a href={`https://wa.me/5551992835863?text=${encodeURIComponent("Quero contratar o marketing completo!")}`} target="_blank" rel="noopener noreferrer"
-                     className="shimmer-y relative mt-10 inline-flex items-center gap-2 overflow-hidden rounded-full bg-[#25D366] px-10 py-5 text-sm font-bold uppercase tracking-wider text-white transition-transform hover:scale-105"
-                     style={{ boxShadow: "0 20px 60px rgba(37,211,102,0.45)" }}>
-                    Quero contratar agora <ArrowRight className="h-4 w-4" />
-                  </a>
-                </div>
-              </TiltCard>
+          <Reveal delay={0.25}>
+            <div className="mt-12 flex flex-col items-center gap-2 text-white/80">
+              <DollarSign className="h-6 w-6" style={{ color: ACCENT }} />
+              <p>+ investimento em anúncios na Meta</p>
+              <p className="text-sm text-white/55">a partir de R$ 20,00 por dia</p>
             </div>
           </Reveal>
         </div>
@@ -526,7 +589,7 @@ export default function MktCompleto() {
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mx-auto mt-8 max-w-2xl text-lg text-white/65">
-              Estratégia completa, inteligente e focada em resultados. Comece com a oferta especial e
+              Estratégia completa, inteligente e focada em resultados. Comece com o plano ideal e
               a garantia de 30 dias.
             </p>
           </Reveal>

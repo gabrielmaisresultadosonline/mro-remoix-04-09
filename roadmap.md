@@ -84,3 +84,6 @@
 - [x] Enxugar o topo às linhas pedidas, com fonte menor na segunda e na terceira
 - [x] Deixar verdes os botões de chamada e de compra, mantendo o resto em amarelo
 - [x] Remover o bloco "SUA RENDA EXTRA / COMO VOCÊ VAI FATURAR" de /descontoalunosrendaextra e /promorendaextra/:afiliado
+
+## Preços /mktcompleto
+- [x] Trocar o plano único de R$ 2000 por três opções: mensal R$ 1500, 3 meses R$ 3.000 e 6 meses R$ 5.000, com verificação visual
