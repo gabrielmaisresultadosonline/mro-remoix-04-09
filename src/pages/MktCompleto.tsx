@@ -521,9 +521,9 @@ export default function MktCompleto() {
                       )}
                       <div className={`text-xs uppercase tracking-[0.3em] text-white/50 ${p.badge ? "mt-6" : ""}`}>{p.name}</div>
                       {p.from && <div className="mt-6 text-lg text-white/45 line-through">{p.from}</div>}
-                      <div className="serif yellow-glow mt-2 flex items-baseline gap-2 text-6xl leading-none md:text-7xl" style={{ color: ACCENT }}>
-                        {p.price}
-                        <span className="whitespace-nowrap text-lg font-normal text-white/60">{p.suffix}</span>
+                      <div className="serif yellow-glow mt-2 flex flex-wrap items-baseline gap-x-3 text-5xl leading-none md:text-6xl" style={{ color: ACCENT }}>
+                        <span className="whitespace-nowrap">{p.price}</span>
+                        <span className="whitespace-nowrap text-base font-normal text-white/60">{p.suffix}</span>
                       </div>
                       <div className="mt-3 text-sm italic text-white/60">{p.perMonth}</div>
                       <p className="mt-6 text-sm leading-relaxed text-white/70">{p.note}</p>
