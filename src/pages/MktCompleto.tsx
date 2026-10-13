@@ -296,7 +296,7 @@ export default function MktCompleto() {
             <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
               <a href="#investimento" className="shimmer-y relative overflow-hidden rounded-full bg-[--accent] px-8 py-4 text-sm font-semibold uppercase tracking-wider text-black transition-transform hover:scale-105"
                  style={{ ["--accent" as never]: ACCENT, boxShadow: `0 10px 40px ${ACCENT}55` }}>
-                Ver oferta especial <ArrowRight className="ml-2 inline h-4 w-4" />
+                Ver planos <ArrowRight className="ml-2 inline h-4 w-4" />
               </a>
               <a href="#incluso" className="rounded-full border border-white/20 px-8 py-4 text-sm font-semibold uppercase tracking-wider text-white/80 backdrop-blur transition hover:border-white/60 hover:text-white">
                 O que está incluso
@@ -589,7 +589,7 @@ export default function MktCompleto() {
           </Reveal>
           <Reveal delay={0.2}>
             <p className="mx-auto mt-8 max-w-2xl text-lg text-white/65">
-              Estratégia completa, inteligente e focada em resultados. Comece com a oferta especial e
+              Estratégia completa, inteligente e focada em resultados. Comece com o plano ideal e
               a garantia de 30 dias.
             </p>
           </Reveal>
