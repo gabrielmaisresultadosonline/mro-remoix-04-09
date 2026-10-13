@@ -172,6 +172,59 @@ const RESUMO = [
   "Aumento da demanda", "Acompanhamento especializado", "Garantia de 30 dias",
 ];
 
+// ---------- Planos de investimento ----------
+type Plano = {
+  name: string;
+  price: string;
+  suffix: string;
+  from: string;
+  perMonth: string;
+  note: string;
+  savings: string;
+  badge: string;
+  featured: boolean;
+  message: string;
+};
+
+const PLANOS: Plano[] = [
+  {
+    name: "Plano Mensal",
+    price: "R$ 1500",
+    suffix: "/mês",
+    from: "",
+    perMonth: "renova todo mês, sem fidelidade",
+    note: "Comece agora e renove mês a mês. Liberdade total para continuar conforme o resultado aparecer.",
+    savings: "no plano de 3 meses o mesmo trabalho sai por R$ 3.000",
+    badge: "",
+    featured: false,
+    message: "Quero contratar o plano mensal do marketing completo!",
+  },
+  {
+    name: "Plano de 3 Meses",
+    price: "R$ 3.000",
+    suffix: "no total",
+    from: "De R$ 4.500",
+    perMonth: "equivale a R$ 1.000 por mês",
+    note: "Um trabalho de marketing não se finaliza em 1 mês. O marketing precisa de, no mínimo, 3 meses para alavancar seu negócio, baseando-se no algoritmo e no aperfeiçoamento constante.",
+    savings: "economia imediata de R$ 1.500",
+    badge: "Mais escolhido",
+    featured: true,
+    message: "Quero contratar o plano de 3 meses do marketing completo!",
+  },
+  {
+    name: "Plano de 6 Meses",
+    price: "R$ 5.000",
+    suffix: "no total",
+    from: "De R$ 9.000",
+    perMonth: "equivale a R$ 833 por mês",
+    note: "O menor valor mensal de todos: mais tempo de otimização, mais aprendizado do algoritmo e resultados mais previsíveis.",
+    savings: "economia imediata de R$ 4.000",
+    badge: "Melhor custo",
+    featured: false,
+    message: "Quero contratar o plano de 6 meses do marketing completo!",
+  },
+];
+
 // ---------- Page ----------
 export default function MktCompleto() {
   const { scrollYProgress } = useScroll();
