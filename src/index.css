@@ -616,3 +616,26 @@
 .teste002-theme .t2-glow { background: radial-gradient(60% 50% at 50% 0%, hsl(var(--primary) / .18), transparent 70%); }
 @keyframes t2-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 .teste002-theme .t2-rise { animation: t2-rise .5s ease-out both; }
+
+/* Ao Vivo MRO /aovivo — preto, cinza, branco, amarelo + degradê Instagram (escopado). */
+.aovivo-theme {
+  --background: 0 0% 4%; --foreground: 0 0% 98%; --card: 0 0% 8%; --card-foreground: 0 0% 98%;
+  --secondary: 0 0% 18%; --secondary-foreground: 0 0% 98%; --muted: 0 0% 14%; --muted-foreground: 0 0% 66%;
+  --primary: 45.4 93.4% 47.5%; --primary-foreground: 0 0% 9%; --accent: 45.4 93.4% 47.5%; --accent-foreground: 0 0% 9%;
+  --border: 0 0% 20%; --input: 0 0% 20%; --ring: 45.4 93.4% 47.5%;
+  --ig-1: 37 97% 70%; --ig-2: 329 70% 58%; --ig-3: 262 52% 47%;
+  --ig-gradient: linear-gradient(120deg, hsl(var(--ig-1)), hsl(var(--ig-2)) 50%, hsl(var(--ig-3)));
+  background: hsl(var(--background)); color: hsl(var(--foreground));
+}
+.aovivo-theme .av-title { font-family: 'Archivo Black', sans-serif; letter-spacing: .02em; }
+.aovivo-theme .av-ig-text { background: var(--ig-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.aovivo-theme .av-ig-button { background: var(--ig-gradient); color: hsl(0 0% 100%); border: 0; box-shadow: 0 8px 24px -10px hsl(var(--ig-2) / .7); }
+.aovivo-theme .av-ig-button:hover { filter: brightness(1.08); }
+.aovivo-theme .av-hero { background: var(--ig-gradient); color: hsl(0 0% 100%); box-shadow: 0 20px 50px -25px hsl(var(--ig-2) / .8); }
+.aovivo-theme .av-glow { background: radial-gradient(50% 40% at 15% 0%, hsl(var(--ig-2) / .16), transparent 70%), radial-gradient(40% 35% at 90% 10%, hsl(var(--primary) / .12), transparent 70%); }
+.aovivo-theme .av-card { transition: border-color .25s, transform .25s; animation: t2-rise .45s ease-out both; }
+.aovivo-theme .av-card-live { border-color: hsl(var(--ig-2) / .7); box-shadow: 0 0 0 1px hsl(var(--ig-2) / .35), 0 18px 40px -24px hsl(var(--ig-2) / .8); }
+.aovivo-theme .av-live-badge { background: var(--ig-gradient); color: hsl(0 0% 100%); border-radius: 999px; padding: 2px 10px; font-size: 11px; font-weight: 800; animation: av-pulse 1.6s ease-in-out infinite; }
+.aovivo-theme .av-step { display: inline-flex; height: 22px; min-width: 22px; align-items: center; justify-content: center; border-radius: 999px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: 12px; font-weight: 700; }
+@keyframes av-pulse { 50% { opacity: .65; } }
+@media (prefers-reduced-motion: reduce) { .aovivo-theme * { animation: none !important; } }

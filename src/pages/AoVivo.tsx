@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { Activity, Loader2, LogOut, Plus, Radio, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +50,8 @@ const AoVivo = () => {
   const [me, setMe] = useState<AoVivoMe | null>(null);
   const [error, setError] = useState("");
 
+  useEffect(() => { document.title = "Ao Vivo MRO — Live contínua no Instagram"; }, []);
+
   const load = useCallback(async () => {
     try { setMe(await aovivo.me()); setError(""); }
     catch (e) { if (!getToken()) setAuthed(false); setError((e as Error).message); }
@@ -73,10 +74,6 @@ const AoVivo = () => {
 
   return (
     <div className="aovivo-theme min-h-screen">
-      <Helmet>
-        <title>Ao Vivo MRO — Live contínua no Instagram</title>
-        <meta name="description" content="Painel MRO para manter uma live do Instagram rodando em loop com seus vídeos, direto da VPS." />
-      </Helmet>
       <div className="av-glow pointer-events-none fixed inset-0" aria-hidden />
       {!authed ? <Login onDone={() => setAuthed(true)} /> : (
         <main className="relative mx-auto max-w-6xl space-y-6 px-4 py-6">
