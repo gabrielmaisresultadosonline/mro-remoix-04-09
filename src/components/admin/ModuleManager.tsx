@@ -340,14 +340,25 @@ const ModuleManager = ({ downloadLink, onDownloadLinkChange, onSaveSettings, pla
     });
   };
 
-  const handleSaveWelcomeVideo = () => {
+  const [isSavingWelcome, setIsSavingWelcome] = useState(false);
+  const handleSaveWelcomeVideo = async () => {
+    setIsSavingWelcome(true);
     const data = getLocalData();
     if (data.settings) {
       data.settings.welcomeVideo = welcomeVideo;
     }
     saveLocalData(data);
-    toast({ title: "Salvo!", description: "Vídeo de boas-vindas atualizado" });
-    refreshData();
+    try {
+      const success = await saveModulesToCloud(platform, {
+        modules: data.modules || [],
+        settings: { downloadLink, welcomeVideo },
+      });
+      if (!success) throw new Error('Não foi possível publicar. As alterações ficaram salvas neste navegador; tente salvar novamente.');
+      toast({ title: "Salvo e publicado!", description: "Boas-vindas atualizadas para todos os usuários." });
+      refreshData();
+    } catch (error) {
+      toast({ title: 'Erro ao publicar', description: error instanceof Error ? error.message : 'Tente novamente.', variant: 'destructive' });
+    } finally { setIsSavingWelcome(false); }
   };
 
   // Publish modules to cloud for all users
@@ -1152,8 +1163,9 @@ const ModuleManager = ({ downloadLink, onDownloadLinkChange, onSaveSettings, pla
             {welcomeVideo.enabled && (
               <>
                 <div>
-                  <Label>Título</Label>
+                  <Label htmlFor="mro-welcome-title">Título</Label>
                   <Input
+                    id="mro-welcome-title"
                     placeholder="Ex: Bem-vindo ao MRO!"
                     value={welcomeVideo.title}
                     onChange={(e) => setWelcomeVideo(prev => ({ ...prev, title: e.target.value }))}
@@ -1161,6 +1173,10 @@ const ModuleManager = ({ downloadLink, onDownloadLinkChange, onSaveSettings, pla
                   />
                 </div>
                 
+                {platform === 'mro' && <div>
+                  <Label htmlFor="mro-welcome-description">Descrição das boas-vindas</Label>
+                  <Textarea id="mro-welcome-description" value={welcomeVideo.description || ''} onChange={(e) => setWelcomeVideo(prev => ({ ...prev, description: e.target.value }))} className="mt-1" />
+                </div>}
                 <div className="flex items-center gap-3">
                   <Switch
                     checked={welcomeVideo.showTitle}
@@ -1195,6 +1211,10 @@ const ModuleManager = ({ downloadLink, onDownloadLinkChange, onSaveSettings, pla
               <p className="text-xs text-muted-foreground mt-2">
                 Se não definir uma capa, usaremos a thumbnail do YouTube
               </p>
+              {platform === 'mro' && <div className="mt-5">
+                <Label className="block mb-2">Imagem de fundo das boas-vindas · Tema novo</Label>
+                <CoverUploader currentUrl={welcomeVideo.backgroundUrl || ''} onUpload={(url) => setWelcomeVideo(prev => ({ ...prev, backgroundUrl: url }))} onRemove={() => setWelcomeVideo(prev => ({ ...prev, backgroundUrl: '' }))} folder="welcome-background" id="mro_welcome_background" />
+              </div>}
             </div>
           )}
         </div>
@@ -1202,9 +1222,10 @@ const ModuleManager = ({ downloadLink, onDownloadLinkChange, onSaveSettings, pla
         <Button 
           type="button" 
           onClick={handleSaveWelcomeVideo} 
+          disabled={isSavingWelcome || isLoadingCloud}
           className="mt-4 cursor-pointer"
         >
-          <Save className="w-4 h-4 mr-2" />
+          {isSavingWelcome ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
           Salvar Configurações
         </Button>
       </div>
