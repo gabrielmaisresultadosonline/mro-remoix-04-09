@@ -225,6 +225,7 @@ import MktCC from "./pages/MktCC";
 import MktCCAdmin from "./pages/MktCCAdmin";
 import FerramentaMROPromo from "./pages/FerramentaMROPromo";
 import FerramentaMROPromoAdmin from "./pages/FerramentaMROPromoAdmin";
+import AoVivo from "./pages/AoVivo";
 import Dloar from "./pages/Dloar";
 import PagamentoMRO from "./pages/PagamentoMRO";
 import PagamentoMROObrigado from "./pages/PagamentoMROObrigado";
@@ -502,6 +503,7 @@ const App = () => (
           <Route path="/ferramentamropromo2" element={<FerramentaMROPromo />} />
           <Route path="/ferramentamropromo/admin" element={<FerramentaMROPromoAdmin />} />
           <Route path="/ferramentamropromo/video" element={<FerramentaMROPromoAdmin />} />
+          <Route path="/aovivo" element={<AoVivo />} />
           <Route path="/eleitoral" element={<Eleitoral />} />
           <Route path="/eleitoral/admin" element={<EleitoralAdmin />} />
           <Route path="/trafegopagovisitas" element={<TrafegoPagoVisitas />} />

@@ -16,3 +16,5 @@
 - The promotional MRO route renders the official sales page with an explicit offer variant, because full content and configured videos must stay synchronized while promotional billing remains isolated.
 
 - Large video uploads to the video-server must use the chunked upload routes (parts under 100MB), because the Cloudflare proxy rejects larger request bodies before they reach Nginx.
+
+- Ao Vivo streaming runs natively in the VPS Express server (ffmpeg loop to RTMPS, files on local disk), because long-lived processes cannot run in edge functions.

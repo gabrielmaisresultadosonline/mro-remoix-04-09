@@ -114,6 +114,12 @@ SQL
       ok "Migração aplicada: $(basename "$m")"
     done
 
+    if ! command -v ffmpeg >/dev/null 2>&1; then
+      warn "Instalando ffmpeg (necessário para o Ao Vivo MRO)."
+      sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg || warn "Não foi possível instalar o ffmpeg."
+    fi
+    command -v ffmpeg >/dev/null 2>&1 && ok "ffmpeg disponível para o Ao Vivo."
+
     STORAGE_DIR="${STORAGE_ROOT:-/var/www/uploads}"
     mkdir -p "$STORAGE_DIR"; chmod 750 "$STORAGE_DIR"
     ok "Uploads em $STORAGE_DIR."

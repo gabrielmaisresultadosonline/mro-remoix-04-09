@@ -24,6 +24,7 @@ import { ensureStorageWritable, storageRouter } from "./storage/router.js";
 import { functionsRouter, functionsRuntime, functionsStatus, listAvailableFunctions, shutdownFunctions } from "./functions/host.js";
 import { attachRealtime, realtimeStatus } from "./realtime.js";
 import { RestError } from "./rest/identifiers.js";
+import { aovivoRouter, resumeAovivoStreams } from "./aovivo/router.js";
 
 const app = express();
 
@@ -187,6 +188,8 @@ app.use((req, res, next) => {
 
 
 // Webhooks precisam do corpo bruto para validar assinatura (Meta/Stripe/InfiniPay).
+// Ao Vivo MRO: rotas nativas com upload multipart (antes do parser bruto).
+app.use("/functions/v1/aovivo-api", aovivoRouter);
 app.use("/functions/v1", express.raw({ type: "*/*", limit: "50mb" }));
 // Storage define parsers por rota: uploads usam corpo binário/multipart, enquanto
 // listagem, assinatura e remoção usam JSON. Um parser global consumia o stream
@@ -292,6 +295,7 @@ async function startServer(): Promise<void> {
     console.log(`[api] backend no ar em http://127.0.0.1:${env.port}`);
     console.log(`[api] funções disponíveis: ${listAvailableFunctions().length}`);
     console.log(`[api] storage gravável em ${env.storage.root}`);
+    void resumeAovivoStreams();
     if (process.send) {
       process.send("ready");
     }
