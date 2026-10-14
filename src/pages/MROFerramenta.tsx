@@ -136,7 +136,6 @@ const MROFerramenta = () => {
         setSettings({
           downloadLink: localData.settings.downloadLink,
           welcomeVideo: localData.settings.welcomeVideo,
-          ...{ welcomeVideo: localData.settings.welcomeVideo },
         });
       } catch (error) {
         console.error('[MROFerramenta] Error loading modules:', error);

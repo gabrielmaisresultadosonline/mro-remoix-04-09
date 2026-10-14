@@ -2,6 +2,7 @@ import { BookOpen, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getYoutubeThumbnail, type TutorialModule, type ModuleContent, type WelcomeVideo } from '@/lib/adminConfig';
 import MroTrainingRow from './MroTrainingRow';
+import { storageAssetUrl } from '@/lib/assetUrl';
 
 export interface MroNetflixViewProps {
   modules: TutorialModule[];
@@ -14,7 +15,7 @@ export default function MroNetflixView({ modules, welcome, onWelcome, onOpen }: 
   return (
     <>
       {welcome?.enabled && <section className="mro-training-welcome relative isolate flex items-end min-h-[430px] md:min-h-[490px] overflow-hidden">
-        {image && <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover -z-20" />}
+        {image && <img src={storageAssetUrl(image)} alt="" className="absolute inset-0 w-full h-full object-cover -z-20" />}
         <div className="mro-training-shade absolute inset-0 -z-10" />
         <div className="container mx-auto px-5 md:px-8 py-12 md:py-16">
           <span className="text-primary text-xs font-semibold uppercase">MRO Inteligente · Treinamentos</span>

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ExternalLink, Gift, Play, Type } from 'lucid
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getYoutubeThumbnail, type ModuleContent } from '@/lib/adminConfig';
+import { storageAssetUrl } from '@/lib/assetUrl';
 
 export interface MroTrainingRowProps {
   title: string;
@@ -45,7 +46,7 @@ export default function MroTrainingRow({ title, description, bonus, showTitle = 
           const image = content.type === 'video' ? content.thumbnailUrl || getYoutubeThumbnail(content.youtubeUrl) : content.type === 'product_ad' ? content.productThumb : undefined;
           return <Button key={content.id} variant="ghost" onClick={() => onOpen(content)} className="group p-0 h-auto block text-left whitespace-normal shrink-0 snap-start w-[160px] sm:w-[190px] lg:w-[220px] hover:bg-transparent">
             <div className="aspect-[9/16] relative bg-card border border-border rounded-lg overflow-hidden transition-transform motion-safe:group-hover:-translate-y-1 group-hover:border-primary">
-              {image ? <img src={image} alt={content.title} loading="lazy" className="h-full w-full object-contain" onError={(e) => { e.currentTarget.src = '/placeholder.svg'; e.currentTarget.onerror = null; }} /> : <div className="h-full flex items-center justify-center text-muted-foreground"><Type className="w-8 h-8" /></div>}
+              {image ? <img src={storageAssetUrl(image)} alt={content.title} loading="lazy" className="h-full w-full object-contain" onError={(e) => { e.currentTarget.src = '/placeholder.svg'; e.currentTarget.onerror = null; }} /> : <div className="h-full flex items-center justify-center text-muted-foreground"><Type className="w-8 h-8" /></div>}
               {content.type === 'video' && content.showNumber && <span className="absolute top-3 left-3 bg-background/90 border border-primary/40 text-primary px-2 py-1 rounded text-xs font-bold">{String(index + 1).padStart(2, '0')}</span>}
               <span className={cn('absolute bottom-3 right-3 rounded-full p-2 bg-primary text-primary-foreground', 'md:opacity-0 md:group-hover:opacity-100 md:group-focus-visible:opacity-100 transition-opacity')}><Play className="h-4 w-4" /></span>
             </div>
