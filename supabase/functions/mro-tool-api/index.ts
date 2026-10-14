@@ -705,9 +705,18 @@ serve(async (req) => {
         byUser.set(a.user_id, list);
       }
 
-      const result = users.map((u) => {
+      const result = await Promise.all(users.map(async (u) => {
         const list = byUser.get(u.id) || [];
         const { password_hash, ...rest } = u as any;
+        // Senha padrão = usuário: quando só existe o hash, confirma se ele
+        // corresponde ao usuário para o admin copiar o acesso completo.
+        let plain: string | null = (u as any).password_plain ? String((u as any).password_plain) : null;
+        if (!plain && password_hash && u.username) {
+          const uname = String(u.username).trim();
+          for (const candidate of new Set([uname, uname.toLowerCase()])) {
+            if ((await sha256(candidate)) === password_hash) { plain = candidate; break; }
+          }
+        }
         const withShots = list.map((a) => {
           const ig = String(a.instagram_username || "").toLowerCase().replace("@", "").trim();
           return {
@@ -717,13 +726,14 @@ serve(async (req) => {
         });
         return {
           ...rest,
+          password_plain: plain,
           ...planInfo(u),
-          has_password: !!password_hash || !!(u as any).password_plain,
+          has_password: !!password_hash || !!plain,
           accounts: withShots.filter((a) => !a.is_trial),
           trial_accounts: withShots.filter((a) => a.is_trial),
           trials_remaining: Math.max(0, MONTHLY_TRIALS - u.trials_used),
         };
-      });
+      }));
 
 
       return json({ success: true, users: result, total: count || 0, trials_limit: MONTHLY_TRIALS });
