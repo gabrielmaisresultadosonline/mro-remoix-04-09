@@ -285,10 +285,19 @@ serve(async (req) => {
 
       if (error) return json({ success: false, error: error.message }, 500);
 
-      const users = (data || []).map((u: any) => {
+      // Senha padrão = usuário: se só existe o hash, confirma se ele corresponde ao
+      // usuário e devolve a senha em texto para o admin copiar o acesso completo.
+      const users = await Promise.all((data || []).map(async (u: any) => {
         const { password_hash, ...rest } = u;
-        return { ...rest, has_password: !!password_hash || !!u.password_plain };
-      });
+        let plain: string | null = u.password_plain ? String(u.password_plain) : null;
+        if (!plain && password_hash && u.username) {
+          const uname = String(u.username).trim();
+          for (const candidate of new Set([uname, uname.toLowerCase()])) {
+            if ((await sha256(candidate)) === password_hash) { plain = candidate; break; }
+          }
+        }
+        return { ...rest, password_plain: plain, has_password: !!password_hash || !!plain };
+      }));
 
       return json({ success: true, users });
     }
