@@ -1518,21 +1518,45 @@ serve(async (req) => {
     if (action === "recover_access") {
       const email = String(body.email || "").trim().toLowerCase();
       if (!email.includes("@") || email.length > 255) return json({ success: false, error: "Informe um e-mail válido" }, 400);
-      const safeEmail = email.replace(/[,()"']/g, "");
+      // Escapa curingas do ILIKE; a comparação exata (sem maiúsculas/espaços) é feita abaixo.
+      const pattern = `%${email.replace(/[\\%_]/g, (c) => `\\${c}`).replace(/[,()"']/g, "")}%`;
+      const sameEmail = (value: unknown) => String(value || "").trim().toLowerCase() === email;
 
-      const { data: mroRows } = await supabase
-        .from("mro_tool_users")
-        .select("username,email,password_plain,expiration_days")
-        .eq("email", safeEmail)
-        .limit(1);
-      const { data: zapRows } = await supabase
-        .from("zapmro_users")
-        .select("username,email,password_plain,days_remaining")
-        .eq("email", safeEmail)
-        .limit(1);
+      type RecoverRow = {
+        username?: string | null;
+        email?: string | null;
+        password_plain?: string | null;
+        password_hash?: string | null;
+        expiration_days?: number | null;
+        days_remaining?: number | null;
+        is_active?: boolean | null;
+      };
 
-      const account = mroRows?.[0] || zapRows?.[0] || null;
-      if (!account) {
+      // Busca nas duas ferramentas (Instagram e WhatsApp) sem diferenciar maiúsculas.
+      const [mroRes, zapRes, legacyRes] = await Promise.all([
+        supabase
+          .from("mro_tool_users")
+          .select("username,email,password_plain,password_hash,expiration_days,is_active")
+          .ilike("email", pattern)
+          .limit(50),
+        supabase
+          .from("zapmro_users")
+          .select("username,email,password_plain,password_hash,days_remaining,is_active")
+          .ilike("email", pattern)
+          .limit(50),
+        supabase
+          .from("created_accesses")
+          .select("customer_email,username,password")
+          .ilike("customer_email", pattern)
+          .limit(50),
+      ]);
+
+      const mroRows = ((mroRes.data || []) as RecoverRow[]).filter((r) => sameEmail(r.email));
+      const zapRows = ((zapRes.data || []) as RecoverRow[]).filter((r) => sameEmail(r.email));
+      const legacyRows = ((legacyRes.data || []) as { customer_email?: string; username?: string; password?: string }[])
+        .filter((r) => sameEmail(r.customer_email));
+
+      if (!mroRows.length && !zapRows.length) {
         return json({
           success: false,
           notFound: true,
@@ -1540,7 +1564,46 @@ serve(async (req) => {
             "Não encontramos seu e-mail no nosso sistema. Por favor entre em contato com nosso administrador em maisresultadosonline.com.br/whatsapp",
         }, 200);
       }
-      if (!account.password_plain) {
+
+      /**
+       * Descobre a senha atual SEM alterá-la: usa a senha salva; se só houver o
+       * hash, testa o padrão (senha = usuário) e a senha registrada no acesso criado.
+       */
+      const resolvePassword = async (row: RecoverRow): Promise<string> => {
+        const plain = String(row.password_plain || "");
+        if (plain.trim()) return plain;
+        const hash = String(row.password_hash || "");
+        const uname = String(row.username || "").trim();
+        if (!hash || !uname) return "";
+        const candidates = new Set<string>([uname, uname.toLowerCase()]);
+        for (const l of legacyRows) {
+          if (String(l.username || "").trim().toLowerCase() === uname.toLowerCase() && l.password) {
+            candidates.add(String(l.password));
+            candidates.add(String(l.password).trim());
+          }
+        }
+        for (const c of candidates) {
+          if (c && (await sha256(c)) === hash) return c;
+        }
+        return "";
+      };
+
+      // Prioriza contas ativas; Instagram (MRO) primeiro, depois WhatsApp (ZAPMRO).
+      const ordered = [
+        ...mroRows.filter((r) => r.is_active !== false),
+        ...zapRows.filter((r) => r.is_active !== false),
+        ...mroRows.filter((r) => r.is_active === false),
+        ...zapRows.filter((r) => r.is_active === false),
+      ];
+
+      let account: RecoverRow | null = null;
+      let password = "";
+      for (const row of ordered) {
+        const p = await resolvePassword(row);
+        if (p) { account = row; password = p; break; }
+      }
+
+      if (!account) {
         return json({
           success: false,
           error:
@@ -1548,7 +1611,7 @@ serve(async (req) => {
         }, 200);
       }
 
-      // Um único e-mail de lembrete, pois todos os produtos ficam vinculados ao mesmo e-mail.
+      // Um único e-mail com o acesso atual (nada é alterado), válido para todos os produtos.
       const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-welcome-email`, {
         method: "POST",
         headers: {
@@ -1558,7 +1621,7 @@ serve(async (req) => {
         body: JSON.stringify({
           email,
           username: account.username || email,
-          password: account.password_plain,
+          password,
           daysRemaining: Number(account.expiration_days ?? account.days_remaining ?? 0) || undefined,
         }),
       });
