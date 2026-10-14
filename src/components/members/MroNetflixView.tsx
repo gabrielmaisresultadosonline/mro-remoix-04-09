@@ -30,6 +30,7 @@ export default function MroNetflixView({ modules, welcome, onWelcome, onOpen }: 
       <main id="mro-training-modules" className="container mx-auto px-5 md:px-8 py-5 scroll-mt-32">
         {modules.length === 0 && <p className="py-12 text-muted-foreground">Nenhum módulo disponível ainda.</p>}
         {[...modules].sort((a, b) => a.order - b.order).map((module) => <div key={module.id}>
+          {module.contents.every((c) => c.type === 'section') && <div className="pt-8"><h2 className="text-2xl font-display font-bold">{module.title}</h2>{module.description && <p className="text-muted-foreground text-sm mt-2">{module.description}</p>}</div>}
           <MroTrainingRow title={module.title} description={module.description} bonus={module.isBonus} contents={module.contents.filter((c) => c.type !== 'section')} onOpen={(content) => onOpen(module, content)} />
           {module.contents.filter((c) => c.type === 'section').sort((a, b) => a.order - b.order).map((section) => section.type === 'section' && <MroTrainingRow key={section.id} title={section.title} description={section.description} bonus={section.isBonus} showTitle={section.showTitle} contents={section.contents || []} onOpen={(content) => onOpen(module, content)} />)}
         </div>)}
