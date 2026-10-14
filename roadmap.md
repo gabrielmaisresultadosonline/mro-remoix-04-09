@@ -1,5 +1,10 @@
 # Roadmap
 
+## Temas /mro-ferramenta
+- [ ] Preservar tema antigo e adicionar tema Netflix com escolha salva no navegador
+- [ ] Editar título, descrição e fundo das boas-vindas no admin existente
+- [ ] Validar escolha, troca, vídeos e capas em celular e desktop
+
 ## Página inicial
 - [x] Re-incluir o card da API Oficial WhatsApp em "Ferramentas & Serviços" (somente ele)
 - [x] Trocar "Acessar meu painel" por "Já sou cliente" e levar direto ao /dashboard
