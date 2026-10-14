@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { Play, Download, X, ChevronLeft, ChevronRight, Type, Loader2, ExternalLink, Link2, Gift, LayoutList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import MroNetflixView from '@/components/members/MroNetflixView';
+import MroThemeChooser, { MRO_THEME_KEY, readMroTheme, type MroTrainingTheme } from '@/components/members/MroThemeChooser';
 import { LoginPage } from '@/components/LoginPage';
 import { getUserSession, loginUser } from '@/lib/userStorage';
 import { loginToSquare } from '@/lib/squareApi';
@@ -42,6 +45,14 @@ const MROFerramenta = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [embed] = useState(() => isEmbedMode());
   const [embedError, setEmbedError] = useState<string | null>(null);
+  const [trainingTheme, setTrainingTheme] = useState<MroTrainingTheme | null>(readMroTheme);
+  const [choosingTheme, setChoosingTheme] = useState(false);
+  const netflix = trainingTheme === 'netflix';
+  const selectTheme = (theme: MroTrainingTheme) => {
+    try { localStorage.setItem(MRO_THEME_KEY, theme); } catch { /* Storage may be unavailable in embedded browsers. */ }
+    setTrainingTheme(theme);
+    setChoosingTheme(false);
+  };
 
   // Check authentication on mount
   useEffect(() => {
@@ -125,6 +136,7 @@ const MROFerramenta = () => {
         setSettings({
           downloadLink: localData.settings.downloadLink,
           welcomeVideo: localData.settings.welcomeVideo,
+          ...{ welcomeVideo: localData.settings.welcomeVideo },
         });
       } catch (error) {
         console.error('[MROFerramenta] Error loading modules:', error);
@@ -188,6 +200,10 @@ const MROFerramenta = () => {
   };
 
   const handleContentClick = (content: ModuleContent) => {
+    if (content.type === 'product_ad') {
+      window.open(content.productSalesUrl || `/dashboard/produto/${content.productSlug}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
     // If it's a button/link, open in new tab
     if (content.type === 'button') {
       window.open((content as ModuleButton).url, '_blank', 'noopener,noreferrer');
@@ -476,7 +492,8 @@ const MROFerramenta = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn('min-h-screen bg-background text-foreground', netflix && 'mro-training-theme')}>
+      <MroThemeChooser open={trainingTheme === null || choosingTheme} current={trainingTheme} onSelect={selectTheme} onClose={() => setChoosingTheme(false)} />
       {/* Header — oculto no modo embed (layout enxuto para iframe/extensão) */}
       {!embed && (
       <header className="sticky top-0 z-40 glass-card border-b border-border">
@@ -490,6 +507,7 @@ const MROFerramenta = () => {
             
             {/* Buttons row */}
             <div className="flex items-center justify-between md:justify-start gap-2 md:gap-4">
+              <Button variant="ghost" size="icon" title="Mudar tema" aria-label="Mudar tema" onClick={() => setChoosingTheme(true)}><LayoutList className="w-4 h-4" /></Button>
               <Button 
                 type="button" 
                 variant="ghost" 
@@ -524,10 +542,12 @@ const MROFerramenta = () => {
         </div>
       </header>
       )}
+      {embed && <div className="px-4 py-2"><Button variant="ghost" size="icon" title="Mudar tema" aria-label="Mudar tema" onClick={() => setChoosingTheme(true)}><LayoutList className="w-4 h-4" /></Button></div>}
 
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-8">
+      {netflix && !isLoading && <MroNetflixView modules={modules} welcome={welcomeVideo} onWelcome={() => setShowWelcomeVideo(true)} onOpen={(_module, content) => handleContentClick(content)} />}
+      {(!netflix || isLoading) && <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           
           {/* Welcome Video Section */}
@@ -536,6 +556,7 @@ const MROFerramenta = () => {
               {welcomeVideo.showTitle && welcomeVideo.title && (
                 <h2 className="text-2xl font-display font-bold mb-4">{welcomeVideo.title}</h2>
               )}
+              {welcomeVideo.description && <p className="text-muted-foreground max-w-2xl mx-auto mb-5">{welcomeVideo.description}</p>}
               <div 
                 className="relative aspect-video max-w-3xl mx-auto rounded-xl overflow-hidden cursor-pointer group shadow-lg border border-border"
                 onClick={() => setShowWelcomeVideo(true)}
@@ -680,7 +701,7 @@ const MROFerramenta = () => {
           )}
 
         </div>
-      </main>
+      </main>}
 
       {/* Welcome Video Lightbox */}
       {showWelcomeVideo && welcomeVideo?.youtubeUrl && (

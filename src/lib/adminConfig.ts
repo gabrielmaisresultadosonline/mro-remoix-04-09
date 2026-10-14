@@ -9,6 +9,8 @@ import { storageAssetUrl } from '@/lib/assetUrl';
 export interface WelcomeVideo {
   enabled: boolean;
   title: string;
+  description?: string;
+  backgroundUrl?: string;
   showTitle: boolean;
   youtubeUrl: string;
   coverUrl: string;

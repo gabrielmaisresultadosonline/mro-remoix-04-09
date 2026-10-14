@@ -1,5 +1,7 @@
 # Architecture rules
 
+- MRO training themes share the existing module data and welcome settings, with scoped styling and a browser-only layout preference, because presentation changes must not fork tutorials or authentication.
+
 - The public Whitelabel activation offer lives in an isolated presentation page with scoped theme tokens and one shared contact link, because adding marketing must not alter reseller billing, existing links or global styling.
 
 - Instagram profile sessions must use collision-proof client IDs and preserve the selected username across cloud hydration, because multiple profiles can be restored in the same millisecond.
