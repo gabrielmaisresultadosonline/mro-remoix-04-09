@@ -121,6 +121,40 @@ function evento(message_id, event, detail) {
 }`}
     />
 
+
+    <Block
+      title="3) Métricas: seguidores, boas-vindas e sessão (action: metrics)"
+      code={`// Envie ao abrir a ferramenta (session:"start"), periodicamente (ex.: a cada 10 min)
+// e ao desligar (session:"end"). Todos os campos além de "instagram" são opcionais.
+// - followers: total ATUAL de seguidores do perfil (número inteiro)
+// - welcome_sent: quantas boas-vindas foram enviadas DESDE o último envio (incremento)
+// - session: "start" | "end" (omitir nos envios intermediários)
+fetch('${ENDPOINT}', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    action: 'metrics',
+    instagram: perfilLogado(),
+    followers: 1520,
+    welcome_sent: 3,
+    session: 'start'
+  })
+});
+// Resposta: { "success": true, "day": "2026-10-19" }`}
+    />
+
+    <Card className="p-4 space-y-2">
+      <h4 className="font-semibold text-sm">Como as métricas são guardadas</h4>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li>O primeiro valor de <code>followers</code> recebido vira o <strong>inicial</strong> do perfil; os seguintes atualizam o <strong>atual</strong>.</li>
+        <li>Um registro por perfil por dia (horário de Brasília): seguidores no começo e no fim do dia e total de boas-vindas do dia. O crescimento diário é fim − começo.</li>
+        <li><code>welcome_sent</code> é somado; envie apenas o que foi enviado desde o último envio para não contar em dobro.</li>
+        <li>Sessão: <code>start</code> marca o início e limpa o fim; <code>end</code> marca o término. Sem <code>end</code>, o painel mostra "Em andamento"; o perfil é considerado online se houver envio nos últimos 5 minutos (ping ou metrics).</li>
+        <li>Requisitos: POST JSON, sem token, CORS liberado (<code>*</code>). Na extensão, inclua o domínio da API em <code>host_permissions</code> e faça o fetch pelo service worker/background para não ser bloqueado pela política do Instagram (connect-src).</li>
+        <li>Validação: <code>followers</code> inteiro ≥ 0; <code>welcome_sent</code> 0–10000 por envio. Dados ausentes aparecem como "Aguardando dados" no painel.</li>
+      </ul>
+    </Card>
+
     <Card className="p-4 space-y-2">
       <h4 className="font-semibold text-sm">Resposta do ping</h4>
       <pre className="text-[11px] bg-muted p-3 rounded-md overflow-x-auto whitespace-pre">{`{
