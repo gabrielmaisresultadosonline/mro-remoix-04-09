@@ -2,8 +2,10 @@ import { AlertTriangle, MessageCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface PlanExpiredOverlayProps {
-  /** Link do WhatsApp para renovação (já com a mensagem pronta). */
+  /** Link de renovação (usado quando onWhatsApp não é informado). */
   whatsappLink: string;
+  /** Ação ao clicar no botão do WhatsApp (ex.: navegar para /whatsapp). */
+  onWhatsApp?: () => void;
   /** Nome/usuário exibido no aviso. */
   displayName?: string | null;
   /** Data em que o acesso expirou. */
@@ -13,10 +15,11 @@ export interface PlanExpiredOverlayProps {
 
 /**
  * Bloqueio de tela inteira exibido quando o plano de 30 dias expira.
- * Cobre todo o dashboard (sem escape por clique/ESC) até a renovação.
+ * pointer-events-auto garante cliques mesmo se algum diálogo travar o body.
  */
 export const PlanExpiredOverlay = ({
   whatsappLink,
+  onWhatsApp,
   displayName,
   expiredAt,
   onLogout,
@@ -32,9 +35,9 @@ export const PlanExpiredOverlay = ({
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="plan-expired-title"
-      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-background/95 p-4 backdrop-blur-sm"
+      className="pointer-events-auto fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-background/95 p-4 backdrop-blur-sm"
     >
-      <div className="w-full max-w-lg rounded-2xl border border-destructive/40 bg-card p-6 text-center shadow-2xl sm:p-8">
+      <div className="pointer-events-auto w-full max-w-lg rounded-2xl border border-destructive/40 bg-card p-6 text-center shadow-2xl sm:p-8">
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
           <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
         </div>
@@ -58,18 +61,20 @@ export const PlanExpiredOverlay = ({
         </div>
 
         <Button
-          asChild
+          type="button"
           size="lg"
-          className="mt-6 h-auto w-full whitespace-normal break-words bg-[hsl(142_70%_40%)] py-4 text-base font-bold text-primary-foreground hover:bg-[hsl(142_70%_34%)]"
+          className="mt-6 h-auto w-full whitespace-normal break-words bg-cta py-4 text-base font-bold text-primary-foreground hover:bg-cta/90"
+          onClick={() => {
+            if (onWhatsApp) onWhatsApp();
+            else window.location.href = whatsappLink;
+          }}
         >
-          <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-            <MessageCircle className="mr-2 h-5 w-5 shrink-0" aria-hidden="true" />
-            FALAR NO WHATSAPP
-          </a>
+          <MessageCircle className="mr-2 h-5 w-5 shrink-0" aria-hidden="true" />
+          FALAR NO WHATSAPP
         </Button>
 
         {onLogout && (
-          <Button variant="ghost" size="sm" className="mt-4 text-muted-foreground" onClick={onLogout}>
+          <Button type="button" variant="ghost" size="sm" className="mt-4 text-muted-foreground" onClick={onLogout}>
             <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
             Sair da conta
           </Button>
