@@ -1668,6 +1668,17 @@ Participe também do nosso GRUPO DE AVISOS
     return daysLeft > 0 ? daysLeft : 0;
   };
 
+  // Data exata de expiração, calculada a partir da data de criação (pagamento) + dias do plano
+  const isLifetimePlan = (order: MROOrder) => order.plan_type === 'lifetime' || order.plan_type === 'agencia';
+  const getExpirationInfo = (order: MROOrder): { daysLeft: number; expirationDate: Date } | null => {
+    if (!order.paid_at) return null;
+    if (isLifetimePlan(order)) return null;
+    const planDays = order.plan_type === 'trial' ? 1 : order.plan_type === 'monthly' ? 30 : 365;
+    const expirationDate = addDays(new Date(order.paid_at), planDays);
+    const daysLeft = Math.max(differenceInDays(expirationDate, new Date()), 0);
+    return { daysLeft, expirationDate };
+  };
+
   const toggleSection = (section: string) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
