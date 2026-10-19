@@ -1252,7 +1252,8 @@ serve(async (req) => {
       if (newEmailRaw !== null && newEmailRaw && (!newEmailRaw.includes("@") || newEmailRaw.length > 255)) {
         return json({ success: false, error: "E-mail inválido" }, 400);
       }
-      }
+
+
 
 
       const { mro, zap } = await findAccounts(username, email, password);
