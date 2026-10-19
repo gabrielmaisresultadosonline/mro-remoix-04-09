@@ -1668,6 +1668,17 @@ Participe também do nosso GRUPO DE AVISOS
     return daysLeft > 0 ? daysLeft : 0;
   };
 
+  // Data exata de expiração, calculada a partir da data de criação (pagamento) + dias do plano
+  const isLifetimePlan = (order: MROOrder) => order.plan_type === 'lifetime' || order.plan_type === 'agencia';
+  const getExpirationInfo = (order: MROOrder): { daysLeft: number; expirationDate: Date } | null => {
+    if (!order.paid_at) return null;
+    if (isLifetimePlan(order)) return null;
+    const planDays = order.plan_type === 'trial' ? 1 : order.plan_type === 'monthly' ? 30 : 365;
+    const expirationDate = addDays(new Date(order.paid_at), planDays);
+    const daysLeft = Math.max(differenceInDays(expirationDate, new Date()), 0);
+    return { daysLeft, expirationDate };
+  };
+
   const toggleSection = (section: string) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
@@ -2636,6 +2647,7 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
   // Renderizar card de pedido totalmente responsivo
   const renderOrderCard = (order: MROOrder, compact = false) => {
     const daysRemaining = getDaysRemaining(order);
+    const expirationInfo = getExpirationInfo(order);
     
     return (
       <div 
@@ -2719,12 +2731,21 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
                   <Calendar className="w-3.5 h-3.5 text-purple-400/70" />
                   <span className="font-medium">Expiração</span>
                 </div>
-                <div className={`flex items-center justify-center p-2 rounded-lg border text-sm font-black shadow-inner ${
+                <div className={`flex flex-col items-center justify-center gap-0.5 p-2 rounded-lg border text-sm font-black shadow-inner ${
                   daysRemaining > 30 ? "bg-green-500/10 border-green-500/30 text-green-400" : 
                   daysRemaining > 7 ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" : 
                   "bg-red-500/10 border-red-500/30 text-red-400"
                 }`}>
-                  {daysRemaining} dias restantes
+                  {isLifetimePlan(order) ? (
+                    <span>Vitalício</span>
+                  ) : (
+                    <>
+                      <span>{daysRemaining} dias restantes</span>
+                      <span className="text-[10px] font-semibold text-zinc-300">
+                        Expira em {format(expirationInfo?.expirationDate ?? new Date(), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             )}
