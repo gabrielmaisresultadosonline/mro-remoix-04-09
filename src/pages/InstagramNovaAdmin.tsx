@@ -2647,6 +2647,7 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
   // Renderizar card de pedido totalmente responsivo
   const renderOrderCard = (order: MROOrder, compact = false) => {
     const daysRemaining = getDaysRemaining(order);
+    const expirationInfo = getExpirationInfo(order);
     
     return (
       <div 
