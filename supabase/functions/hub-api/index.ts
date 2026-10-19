@@ -1253,9 +1253,6 @@ serve(async (req) => {
         return json({ success: false, error: "E-mail inválido" }, 400);
       }
 
-
-
-
       const { mro, zap } = await findAccounts(username, email, password);
       if (!mro && !zap) return json({ success: false, error: "Senha atual incorreta" }, 200);
 
