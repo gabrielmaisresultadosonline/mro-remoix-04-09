@@ -217,6 +217,82 @@ serve(async (req) => {
       return json({ success: true, status, mro_username, registered: status !== "unknown", messages: pending });
     }
 
+    /**
+     * Métricas enviadas pela extensão: seguidores atuais, boas-vindas enviadas
+     * (incremento) e marcação de início/fim de sessão. Um registro por perfil/dia.
+     */
+    if (action === "metrics") {
+      const ig = normalizeIG(body.instagram ?? body.instagram_username);
+      if (!ig || !/^[a-z0-9._]{1,60}$/.test(ig)) return json({ success: false, error: "Instagram inválido" }, 400);
+      const rawF = body.followers;
+      const followers =
+        rawF === undefined || rawF === null || rawF === "" ? null : Math.floor(Number(rawF));
+      if (followers !== null && (!Number.isFinite(followers) || followers < 0 || followers > 1e10))
+        return json({ success: false, error: "followers inválido" }, 400);
+      const welcome = Math.max(0, Math.min(10000, Math.floor(Number(body.welcome_sent ?? 0)) || 0));
+      const sessionEvent = ["start", "end"].includes(String(body.session)) ? String(body.session) : null;
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(now);
+
+      // Garante que o perfil exista em ig_online_sessions.
+      let { data: sess } = await db
+        .from("ig_online_sessions")
+        .select("id, followers_initial, welcome_total")
+        .ilike("instagram_username", ig)
+        .maybeSingle();
+      if (!sess) {
+        const { status, mro_username } = await classify(ig);
+        const { data: created } = await db
+          .from("ig_online_sessions")
+          .insert({ instagram_username: ig, mro_username, status, flagged: status === "unknown" })
+          .select("id, followers_initial, welcome_total")
+          .single();
+        sess = created;
+      }
+      if (!sess) return json({ success: false, error: "Falha ao registrar perfil" }, 500);
+
+      const patch: Record<string, unknown> = {
+        metrics_updated_at: nowIso,
+        last_seen_at: nowIso,
+        welcome_total: Number(sess.welcome_total ?? 0) + welcome,
+      };
+      if (followers !== null) {
+        patch.followers_current = followers;
+        if (sess.followers_initial === null || sess.followers_initial === undefined) patch.followers_initial = followers;
+      }
+      if (sessionEvent === "start") {
+        patch.session_started_at = nowIso;
+        patch.session_ended_at = null;
+      }
+      if (sessionEvent === "end") patch.session_ended_at = nowIso;
+      await db.from("ig_online_sessions").update(patch).eq("id", sess.id);
+
+      const { data: row } = await db
+        .from("ig_online_metrics")
+        .select("id, followers_start, welcome_sent")
+        .ilike("instagram_username", ig)
+        .eq("day", day)
+        .maybeSingle();
+      if (row) {
+        const upd: Record<string, unknown> = { updated_at: nowIso, welcome_sent: Number(row.welcome_sent ?? 0) + welcome };
+        if (followers !== null) {
+          upd.followers_end = followers;
+          if (row.followers_start === null) upd.followers_start = followers;
+        }
+        await db.from("ig_online_metrics").update(upd).eq("id", row.id);
+      } else {
+        await db.from("ig_online_metrics").insert({
+          instagram_username: ig,
+          day,
+          followers_start: followers,
+          followers_end: followers,
+          welcome_sent: welcome,
+        });
+      }
+      return json({ success: true, day });
+    }
+
     if (action === "message_event") {
       const ig = normalizeIG(body.instagram ?? body.instagram_username);
       const messageId = clean(body.message_id, 60);
@@ -258,6 +334,100 @@ serve(async (req) => {
           trials: rows.filter((r) => r.status === "trial").length,
           unknown: rows.filter((r) => r.status === "unknown").length,
         },
+      });
+    }
+
+    if (action === "admin_metrics") {
+      const days = [1, 7, 30, 90, 365].includes(Number(body.days)) ? Number(body.days) : 30;
+      const since = new Date(Date.now() - (days - 1) * 86400000);
+      const sinceDay = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(since);
+      const [{ data: sessions }, { data: metrics }] = await Promise.all([
+        db.from("ig_online_sessions").select("*").order("last_seen_at", { ascending: false }).limit(1000),
+        db.from("ig_online_metrics").select("*").gte("day", sinceDay).order("day", { ascending: true }).limit(20000),
+      ]);
+      const onlineLimit = Date.now() - 5 * 60 * 1000;
+      const byIg = new Map<string, { growth: number | null; welcome: number; days: number }>();
+      const series = new Map<string, { day: string; followers: number; growth: number; welcome: number; hasF: boolean }>();
+      const lastFollowers = new Map<string, number>();
+      for (const m of metrics ?? []) {
+        const key = String(m.instagram_username).toLowerCase();
+        const cur = byIg.get(key) ?? { growth: null, welcome: 0, days: 0 };
+        const dayGrowth =
+          m.followers_start !== null && m.followers_end !== null ? Number(m.followers_end) - Number(m.followers_start) : null;
+        if (dayGrowth !== null) cur.growth = (cur.growth ?? 0) + dayGrowth;
+        cur.welcome += Number(m.welcome_sent ?? 0);
+        cur.days += 1;
+        byIg.set(key, cur);
+        const s = series.get(m.day) ?? { day: m.day, followers: 0, growth: 0, welcome: 0, hasF: false };
+        s.welcome += Number(m.welcome_sent ?? 0);
+        if (dayGrowth !== null) s.growth += dayGrowth;
+        if (m.followers_end !== null) lastFollowers.set(`${m.day}|${key}`, Number(m.followers_end));
+        series.set(m.day, s);
+      }
+      // Seguidores totais por dia = soma do último valor conhecido de cada perfil.
+      const known = new Map<string, number>();
+      const sortedDays = [...series.keys()].sort();
+      const profiles = new Set((metrics ?? []).map((m) => String(m.instagram_username).toLowerCase()));
+      for (const d of sortedDays) {
+        for (const p of profiles) {
+          const v = lastFollowers.get(`${d}|${p}`);
+          if (v !== undefined) known.set(p, v);
+        }
+        const s = series.get(d)!;
+        if (known.size) {
+          s.followers = [...known.values()].reduce((a, b) => a + b, 0);
+          s.hasF = true;
+        }
+      }
+      const rows = (sessions ?? []).map((s) => {
+        const agg = byIg.get(String(s.instagram_username).toLowerCase());
+        const diff =
+          s.followers_initial !== null && s.followers_current !== null
+            ? Number(s.followers_current) - Number(s.followers_initial)
+            : null;
+        return {
+          id: s.id,
+          instagram_username: s.instagram_username,
+          status: s.status,
+          followers_initial: s.followers_initial,
+          followers_current: s.followers_current,
+          followers_diff: diff,
+          period_growth: agg?.growth ?? null,
+          daily_growth: agg && agg.growth !== null && agg.days ? Math.round((agg.growth / agg.days) * 10) / 10 : null,
+          welcome_total: s.welcome_total ?? 0,
+          welcome_period: agg?.welcome ?? 0,
+          last_seen_at: s.last_seen_at,
+          session_started_at: s.session_started_at,
+          session_ended_at: s.session_ended_at,
+          metrics_updated_at: s.metrics_updated_at,
+          online: new Date(s.last_seen_at as string).getTime() >= onlineLimit,
+        };
+      });
+      const withF = rows.filter((r) => r.followers_current !== null);
+      const lastUpdate = rows.reduce<string | null>(
+        (acc, r) => (r.metrics_updated_at && (!acc || r.metrics_updated_at > acc) ? r.metrics_updated_at : acc),
+        null,
+      );
+      return json({
+        success: true,
+        days,
+        summary: {
+          profiles: rows.length,
+          followers_total: withF.length ? withF.reduce((a, r) => a + Number(r.followers_current), 0) : null,
+          growth_period: rows.some((r) => r.period_growth !== null)
+            ? rows.reduce((a, r) => a + Number(r.period_growth ?? 0), 0)
+            : null,
+          welcome_period: rows.reduce((a, r) => a + r.welcome_period, 0),
+          welcome_total: rows.reduce((a, r) => a + Number(r.welcome_total), 0),
+          active_recent: rows.filter((r) => Date.now() - new Date(r.last_seen_at as string).getTime() < 86400000).length,
+          online: rows.filter((r) => r.online).length,
+          last_update: lastUpdate,
+        },
+        rows,
+        series: sortedDays.map((d) => {
+          const s = series.get(d)!;
+          return { day: d, followers: s.hasF ? s.followers : null, growth: s.growth, welcome: s.welcome };
+        }),
       });
     }
 
