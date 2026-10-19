@@ -757,10 +757,14 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       {planExpired && (
         <PlanExpiredOverlay
-          whatsappLink={planExpired.whatsapp}
+          whatsappLink="/whatsapp"
+          onWhatsApp={() => navigate("/whatsapp")}
           displayName={session?.name || session?.username || null}
           expiredAt={planExpired.expires_at}
-          onLogout={handleLogout}
+          onLogout={() => {
+            setPlanExpired(null);
+            handleLogout();
+          }}
         />
       )}
       <div className="bg-warning text-warning-foreground text-center py-2.5 px-4 text-sm font-medium">
@@ -1020,7 +1024,7 @@ export default function Dashboard() {
       </Dialog>
 
       {/* Cadastro obrigatório de e-mail para quem ainda não tem */}
-      <Dialog open={needsEmail && !showConfig && mergeConflicts.length === 0 && !mergeResult} onOpenChange={() => { /* obrigatório */ }}>
+      <Dialog open={needsEmail && !planExpired && !showConfig && mergeConflicts.length === 0 && !mergeResult} onOpenChange={() => { /* obrigatório */ }}>
         <DialogContent className="sm:max-w-md [&>button]:hidden">
           <DialogHeader>
             <DialogTitle>Complete seu cadastro</DialogTitle>
