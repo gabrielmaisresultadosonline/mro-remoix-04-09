@@ -1241,14 +1241,19 @@ serve(async (req) => {
       const newEmailRaw = body.new_email === undefined ? null : String(body.new_email || "").trim().toLowerCase();
       const newName = body.new_name === undefined ? null : String(body.new_name || "").trim().slice(0, 120);
       const newWhats = body.new_whatsapp === undefined ? null : String(body.new_whatsapp || "").replace(/\D/g, "").slice(0, 15);
-      const newPassword = body.new_password ? String(body.new_password) : "";
+      // A senha do cliente NÃO é alterada pelo painel: apenas o mesmo acesso é reenviado.
+      if (body.new_password) {
+        return json(
+          { success: false, error: 'A senha não pode ser alterada por aqui. Use "Lembrar minha senha" para receber o mesmo acesso.' },
+          400,
+        );
+      }
 
       if (newEmailRaw !== null && newEmailRaw && (!newEmailRaw.includes("@") || newEmailRaw.length > 255)) {
         return json({ success: false, error: "E-mail inválido" }, 400);
       }
-      if (newPassword && (newPassword.length < 4 || newPassword.length > 100)) {
-        return json({ success: false, error: "A nova senha deve ter entre 4 e 100 caracteres" }, 400);
       }
+
 
       const { mro, zap } = await findAccounts(username, email, password);
       if (!mro && !zap) return json({ success: false, error: "Senha atual incorreta" }, 200);
@@ -1294,10 +1299,6 @@ serve(async (req) => {
       if (newEmailRaw) patch.email = newEmailRaw;
       if (newName !== null) patch.name = newName || null;
       if (newWhats !== null) patch.whatsapp = newWhats || null;
-      if (newPassword) {
-        patch.password_hash = await sha256(newPassword);
-        patch.password_plain = newPassword;
-      }
       if (Object.keys(patch).length === 0) return json({ success: true, unchanged: true });
 
       if (mro) await supabase.from("mro_tool_users").update(patch).eq("id", mro.id as string);
@@ -1314,7 +1315,7 @@ serve(async (req) => {
           name: (patch.name as string) ?? (mro?.name || zap?.name || ""),
           whatsapp: (patch.whatsapp as string) ?? (mro?.whatsapp || zap?.whatsapp || ""),
         },
-        password: newPassword || password,
+        password,
       });
     }
 
