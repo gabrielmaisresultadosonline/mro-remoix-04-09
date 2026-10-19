@@ -15,6 +15,7 @@ import {
   Radio, RefreshCw, Send, Trash2, FileCode, Users, AlertTriangle, History, Power,
 } from 'lucide-react';
 import IgOnlinesDocs from './IgOnlinesDocs';
+import IgOnlinesMetrics from './IgOnlinesMetrics';
 
 type Status = 'client' | 'trial' | 'unknown';
 
@@ -72,7 +73,7 @@ const STATUS_LABEL: Record<Status, string> = {
 const fmt = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—';
 
-type SubTab = 'profiles' | 'messages' | 'docs';
+type SubTab = 'profiles' | 'metrics' | 'messages' | 'docs';
 
 const IgOnlinesPanel: React.FC = () => {
   const { toast } = useToast();
@@ -186,6 +187,7 @@ const IgOnlinesPanel: React.FC = () => {
       <div className="flex flex-wrap gap-2 border-b pb-3">
         {([
           { id: 'profiles' as const, label: 'Perfis logados', icon: <Users className="w-4 h-4" /> },
+          { id: 'metrics' as const, label: 'Métricas e crescimento', icon: <Radio className="w-4 h-4" /> },
           { id: 'messages' as const, label: 'Avisos enviados', icon: <Send className="w-4 h-4" /> },
           { id: 'docs' as const, label: 'Documentação da extensão', icon: <FileCode className="w-4 h-4" /> },
         ]).map((tab) => (
@@ -194,6 +196,8 @@ const IgOnlinesPanel: React.FC = () => {
           </Button>
         ))}
       </div>
+
+      {subTab === 'metrics' && <IgOnlinesMetrics />}
 
       {subTab === 'profiles' && (
         <div className="space-y-4">
