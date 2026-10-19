@@ -123,8 +123,7 @@ export default function Dashboard() {
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formWhats, setFormWhats] = useState("");
-  const [formNewPassword, setFormNewPassword] = useState("");
-  const [formConfirmPassword, setFormConfirmPassword] = useState("");
+  const [resendingAccess, setResendingAccess] = useState(false);
 
   // ---- Recuperar acesso ----
   const [showRecover, setShowRecover] = useState(false);
@@ -325,10 +324,6 @@ export default function Dashboard() {
         return;
       }
     }
-    if (formNewPassword && formNewPassword !== formConfirmPassword) {
-      toast({ title: "As senhas não conferem", variant: "destructive" });
-      return;
-    }
     setSavingProfile(true);
     try {
       const data = await invokeWithTimeout("hub-api", {
@@ -339,7 +334,6 @@ export default function Dashboard() {
         new_email: email,
         new_name: formName.trim(),
         new_whatsapp: formWhats,
-        new_password: formNewPassword || undefined,
       });
       if (!data?.success) {
         if (data?.conflict) {
@@ -367,8 +361,6 @@ export default function Dashboard() {
           ? { ...prev, email: next.email || "", name: next.name || "", whatsapp: formWhats, has_email: !!next.email }
           : prev,
       );
-      setFormNewPassword("");
-      setFormConfirmPassword("");
       setNeedsEmail(false);
       setShowConfig(false);
       toast({ title: "Dados salvos com sucesso" });
@@ -455,6 +447,30 @@ export default function Dashboard() {
       toast({ title: "Erro ao recuperar acesso", variant: "destructive" });
     } finally {
       setRecovering(false);
+    }
+  };
+
+  /**
+   * Reenvia o acesso atual para o e-mail cadastrado, SEM alterar a senha.
+   */
+  const resendAccess = async () => {
+    const email = (profile?.email || session?.email || formEmail).trim().toLowerCase();
+    if (!email.includes("@")) {
+      toast({ title: "Salve seu e-mail antes de pedir o reenvio", variant: "destructive" });
+      return;
+    }
+    setResendingAccess(true);
+    try {
+      const data = await invokeWithTimeout("hub-api", { action: "recover_access", email });
+      if (data?.success) {
+        toast({ title: "Enviamos seu acesso", description: `Confira a caixa de entrada de ${email}.` });
+      } else {
+        toast({ title: data?.error || "Não foi possível recuperar", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro ao reenviar seu acesso", variant: "destructive" });
+    } finally {
+      setResendingAccess(false);
     }
   };
 
@@ -1069,7 +1085,8 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle>Configurações da conta</DialogTitle>
             <DialogDescription>
-              Atualize seus dados de acesso. O nome de acesso não pode ser alterado.
+              Atualize seus dados. O nome de acesso e a senha não podem ser alterados — use
+              "Lembrar minha senha" para receber o mesmo acesso por e-mail.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -1089,27 +1106,14 @@ export default function Dashboard() {
               <Label htmlFor="cfg-whats">WhatsApp (opcional)</Label>
               <Input id="cfg-whats" value={formWhats} onChange={(e) => setFormWhats(e.target.value)} placeholder="11999999999" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="cfg-pass">Nova senha</Label>
-                <Input
-                  id="cfg-pass"
-                  type="password"
-                  value={formNewPassword}
-                  onChange={(e) => setFormNewPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cfg-pass2">Confirmar senha</Label>
-                <Input
-                  id="cfg-pass2"
-                  type="password"
-                  value={formConfirmPassword}
-                  onChange={(e) => setFormConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
+            <div className="rounded-xl border border-zinc-800 bg-black/40 p-3">
+              <p className="text-xs text-muted-foreground">
+                Sua senha não é alterada por aqui. Se precisar, enviamos o mesmo acesso novamente para o seu e-mail.
+              </p>
+              <Button type="button" variant="outline" className="mt-3 w-full" onClick={resendAccess} disabled={resendingAccess}>
+                {resendingAccess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Lembrar minha senha
+              </Button>
             </div>
             <Button className="w-full" onClick={() => saveProfile(false)} disabled={savingProfile}>
               {savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
