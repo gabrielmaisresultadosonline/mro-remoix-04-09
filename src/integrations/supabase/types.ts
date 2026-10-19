@@ -3400,6 +3400,190 @@ export type Database = {
           },
         ]
       }
+      ig_online_events: {
+        Row: {
+          browser: string
+          created_at: string
+          id: string
+          instagram_username: string
+          ip: string | null
+          mro_username: string | null
+          session_id: string | null
+          status: string
+          url: string | null
+          user_agent: string
+        }
+        Insert: {
+          browser?: string
+          created_at?: string
+          id?: string
+          instagram_username: string
+          ip?: string | null
+          mro_username?: string | null
+          session_id?: string | null
+          status?: string
+          url?: string | null
+          user_agent?: string
+        }
+        Update: {
+          browser?: string
+          created_at?: string
+          id?: string
+          instagram_username?: string
+          ip?: string | null
+          mro_username?: string | null
+          session_id?: string | null
+          status?: string
+          url?: string | null
+          user_agent?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_online_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ig_online_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ig_online_message_events: {
+        Row: {
+          created_at: string
+          detail: string | null
+          event: string
+          id: string
+          instagram_username: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          event: string
+          id?: string
+          instagram_username: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          event?: string
+          id?: string
+          instagram_username?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_online_message_events_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ig_online_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ig_online_messages: {
+        Row: {
+          active: boolean
+          blocking: boolean
+          body: string
+          buttons: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string | null
+          lock_seconds: number
+          repeat_daily: boolean
+          target_instagram: string | null
+          target_scope: string
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          blocking?: boolean
+          body?: string
+          buttons?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          lock_seconds?: number
+          repeat_daily?: boolean
+          target_instagram?: string | null
+          target_scope?: string
+          title?: string
+        }
+        Update: {
+          active?: boolean
+          blocking?: boolean
+          body?: string
+          buttons?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          lock_seconds?: number
+          repeat_daily?: boolean
+          target_instagram?: string | null
+          target_scope?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      ig_online_sessions: {
+        Row: {
+          browser: string
+          extension_version: string | null
+          first_seen_at: string
+          flagged: boolean
+          id: string
+          instagram_username: string
+          ip: string | null
+          last_seen_at: string
+          last_url: string | null
+          mro_username: string | null
+          notes: string | null
+          os: string
+          status: string
+          total_pings: number
+          user_agent: string
+        }
+        Insert: {
+          browser?: string
+          extension_version?: string | null
+          first_seen_at?: string
+          flagged?: boolean
+          id?: string
+          instagram_username: string
+          ip?: string | null
+          last_seen_at?: string
+          last_url?: string | null
+          mro_username?: string | null
+          notes?: string | null
+          os?: string
+          status?: string
+          total_pings?: number
+          user_agent?: string
+        }
+        Update: {
+          browser?: string
+          extension_version?: string | null
+          first_seen_at?: string
+          flagged?: boolean
+          id?: string
+          instagram_username?: string
+          ip?: string | null
+          last_seen_at?: string
+          last_url?: string | null
+          mro_username?: string | null
+          notes?: string | null
+          os?: string
+          status?: string
+          total_pings?: number
+          user_agent?: string
+        }
+        Relationships: []
+      }
       ig_plans: {
         Row: {
           created_at: string
