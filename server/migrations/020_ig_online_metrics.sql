@@ -23,3 +23,9 @@ CREATE INDEX IF NOT EXISTS ig_online_metrics_day_idx ON public.ig_online_metrics
 
 GRANT ALL ON public.ig_online_metrics TO service_role;
 ALTER TABLE public.ig_online_metrics ENABLE ROW LEVEL SECURITY;
+
+-- Bloqueio administrativo por perfil
+ALTER TABLE public.ig_online_sessions ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.ig_online_sessions ADD COLUMN IF NOT EXISTS block_message TEXT;
+ALTER TABLE public.ig_online_sessions ADD COLUMN IF NOT EXISTS blocked_at TIMESTAMPTZ;
+ALTER TABLE public.ig_online_sessions ADD COLUMN IF NOT EXISTS unblocked_at TIMESTAMPTZ;

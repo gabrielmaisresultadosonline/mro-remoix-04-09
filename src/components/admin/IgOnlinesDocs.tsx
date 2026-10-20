@@ -156,12 +156,58 @@ fetch('${ENDPOINT}', {
     </Card>
 
     <Card className="p-4 space-y-2">
+      <h3 className="font-bold">Monitoramento e Controle Administrativo de Perfis</h3>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li><strong>Métricas e origem:</strong> seguidores e boas-vindas vêm só da ação <code>metrics</code> enviada pela extensão; atividade vem de <code>ping</code> e <code>metrics</code>. Nada é estimado — campos sem envio mostram "Aguardando dados".</li>
+        <li><strong>Sessões e horários:</strong> <code>session:"start"</code> grava o início, <code>session:"end"</code> o término. Tempo conectado = agora − início (sessão aberta e online), fim − início (encerrada) ou última atividade − início (desconectado sem <code>end</code>).</li>
+        <li><strong>Novos seguidores:</strong> soma, por dia (Brasília), de seguidores no fim do dia − seguidores no começo do dia, dentro do período escolhido no painel.</li>
+        <li><strong>Mensagens:</strong> <code>welcome_sent</code> é um incremento somado ao total do perfil e ao dia corrente.</li>
+        <li><strong>Bloqueio:</strong> em IG Onlines → Métricas → Detalhes, o admin bloqueia/desbloqueia apenas aquele @perfil, com mensagem própria (em branco = mensagem padrão). Data do bloqueio e da liberação ficam gravadas; histórico e métricas não são apagados.</li>
+        <li><strong>Validação no servidor:</strong> o estado vem sempre do banco. As respostas de <code>ping</code>, <code>metrics</code> e <code>check_access</code> trazem <code>blocked</code>, <code>block_message</code> e <code>blocked_at</code>. Enquanto bloqueado, <code>ping</code> não entrega outros avisos.</li>
+        <li><strong>Na ferramenta:</strong> chame <code>check_access</code> ao abrir e antes de cada função protegida (seguir, curtir, boas-vindas, disparos). Se <code>allowed:false</code>, não execute a função e mostre o popup centralizado fixo (sem botão fechar) com <code>block_message</code>. Ao receber <code>allowed:true</code>, remova o popup e libere normalmente.</li>
+        <li><strong>Sincronização:</strong> o painel grava no banco na hora; a ferramenta reflete no próximo <code>ping</code>/<code>check_access</code> (recomendado a cada 60s). Recarregar a página não remove o bloqueio.</li>
+      </ul>
+    </Card>
+
+    <Block
+      title="4) Verificar bloqueio (action: check_access)"
+      code={`async function podeUsar() {
+  const r = await fetch('${ENDPOINT}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'check_access', instagram: perfilLogado() })
+  }).then(x => x.json());
+  // { success:true, allowed:false, blocked:true, block_message:"...", blocked_at:"2026-10-20T00:10:00Z" }
+  if (!r.allowed) { mostrarPopupBloqueio(r.block_message); return false; }
+  document.getElementById('mro-bloqueio')?.remove();
+  return true;
+}
+
+function mostrarPopupBloqueio(texto) {
+  if (document.getElementById('mro-bloqueio')) return;
+  const back = document.createElement('div');
+  back.id = 'mro-bloqueio';
+  back.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center';
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:440px;background:#111;color:#fff;border:2px solid #facc15;border-radius:16px;padding:24px;text-align:center;font-family:sans-serif';
+  box.innerHTML = '<h2 style="color:#facc15;margin:0 0 12px">Acesso bloqueado</h2>';
+  const p = document.createElement('p'); p.textContent = texto; box.appendChild(p);
+  back.appendChild(box); document.documentElement.appendChild(back);
+}
+
+// Antes de cada ação protegida:
+// if (!(await podeUsar())) return;
+setInterval(podeUsar, 60000);`}
+    />
+
+    <Card className="p-4 space-y-2">
       <h4 className="font-semibold text-sm">Resposta do ping</h4>
       <pre className="text-[11px] bg-muted p-3 rounded-md overflow-x-auto whitespace-pre">{`{
   "success": true,
   "status": "client" | "trial" | "unknown",
   "registered": true,
   "mro_username": "cliente01",
+  "blocked": false, "block_message": null, "blocked_at": null,
   "messages": [
     { "id": "...", "title": "...", "body": "...", "image_url": null,
       "buttons": [{ "label": "Comprar", "url": "https://..." }],

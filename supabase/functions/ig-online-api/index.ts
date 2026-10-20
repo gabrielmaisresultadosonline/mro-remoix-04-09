@@ -101,6 +101,22 @@ serve(async (req) => {
       return { status: "unknown", mro_username: null };
     }
 
+    /** Bloqueio administrativo: sempre lido do banco, nunca confiado ao cliente. */
+    const DEFAULT_BLOCK_MSG = "Seu acesso à ferramenta MRO foi bloqueado pelo administrador. Fale com o suporte para regularizar.";
+    async function getBlock(ig: string): Promise<{ blocked: boolean; block_message: string | null; blocked_at: string | null }> {
+      const { data } = await db
+        .from("ig_online_sessions")
+        .select("blocked, block_message, blocked_at")
+        .ilike("instagram_username", ig)
+        .maybeSingle();
+      if (!data?.blocked) return { blocked: false, block_message: null, blocked_at: null };
+      return {
+        blocked: true,
+        block_message: (data.block_message as string) || DEFAULT_BLOCK_MSG,
+        blocked_at: (data.blocked_at as string) ?? null,
+      };
+    }
+
     // ───────────────────────── Extensão ─────────────────────────
 
     if (action === "ping") {
@@ -214,7 +230,8 @@ serve(async (req) => {
           .insert({ message_id: m.id, instagram_username: ig, event: "delivered" });
       }
 
-      return json({ success: true, status, mro_username, registered: status !== "unknown", messages: pending });
+      const block = await getBlock(ig);
+      return json({ success: true, status, mro_username, registered: status !== "unknown", ...block, messages: block.blocked ? [] : pending });
     }
 
     /**
@@ -290,7 +307,15 @@ serve(async (req) => {
           welcome_sent: welcome,
         });
       }
-      return json({ success: true, day });
+      return json({ success: true, day, ...(await getBlock(ig)) });
+    }
+
+    /** Consulta rápida de acesso: chamar antes de cada função protegida. */
+    if (action === "check_access") {
+      const ig = normalizeIG(body.instagram ?? body.instagram_username);
+      if (!ig || !/^[a-z0-9._]{1,60}$/.test(ig)) return json({ success: false, error: "Instagram inválido" }, 400);
+      const block = await getBlock(ig);
+      return json({ success: true, allowed: !block.blocked, ...block });
     }
 
     if (action === "message_event") {
@@ -399,6 +424,9 @@ serve(async (req) => {
           last_seen_at: s.last_seen_at,
           session_started_at: s.session_started_at,
           session_ended_at: s.session_ended_at,
+          blocked: Boolean(s.blocked),
+          block_message: s.block_message ?? null,
+          blocked_at: s.blocked_at ?? null,
           metrics_updated_at: s.metrics_updated_at,
           online: new Date(s.last_seen_at as string).getTime() >= onlineLimit,
         };
@@ -428,6 +456,44 @@ serve(async (req) => {
           const s = series.get(d)!;
           return { day: d, followers: s.hasF ? s.followers : null, growth: s.growth, welcome: s.welcome };
         }),
+      });
+    }
+
+    if (action === "admin_set_block") {
+      const ig = normalizeIG(body.instagram);
+      if (!ig) return json({ success: false, error: "Informe o perfil" }, 400);
+      const blocked = Boolean(body.blocked);
+      const message = clean(body.block_message, 1000) || null;
+      const nowIso = new Date().toISOString();
+      const patch: Record<string, unknown> = blocked
+        ? { blocked: true, block_message: message, blocked_at: nowIso }
+        : { blocked: false, unblocked_at: nowIso };
+      const { data, error } = await db
+        .from("ig_online_sessions")
+        .update(patch)
+        .ilike("instagram_username", ig)
+        .select("instagram_username, blocked, block_message, blocked_at, unblocked_at");
+      if (error) return json({ success: false, error: error.message }, 400);
+      if (!data?.length) return json({ success: false, error: "Perfil não encontrado" }, 404);
+      return json({ success: true, profile: data[0] });
+    }
+
+    if (action === "admin_profile_detail") {
+      const ig = normalizeIG(body.instagram);
+      const [{ data: session }, { data: metrics }, { data: events }] = await Promise.all([
+        db.from("ig_online_sessions").select("*").ilike("instagram_username", ig).maybeSingle(),
+        db.from("ig_online_metrics").select("day, followers_start, followers_end, welcome_sent, updated_at")
+          .ilike("instagram_username", ig).order("day", { ascending: false }).limit(365),
+        db.from("ig_online_events").select("created_at, browser, ip, url")
+          .ilike("instagram_username", ig).order("created_at", { ascending: false }).limit(100),
+      ]);
+      if (!session) return json({ success: false, error: "Perfil não encontrado" }, 404);
+      return json({
+        success: true,
+        session: { ...session, online: Date.now() - new Date(session.last_seen_at as string).getTime() < 300000 },
+        metrics: metrics ?? [],
+        events: events ?? [],
+        default_block_message: DEFAULT_BLOCK_MSG,
       });
     }
 

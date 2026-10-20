@@ -3530,57 +3530,108 @@ export type Database = {
         }
         Relationships: []
       }
+      ig_online_metrics: {
+        Row: {
+          created_at: string
+          day: string
+          followers_end: number | null
+          followers_start: number | null
+          id: string
+          instagram_username: string
+          updated_at: string
+          welcome_sent: number
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          followers_end?: number | null
+          followers_start?: number | null
+          id?: string
+          instagram_username: string
+          updated_at?: string
+          welcome_sent?: number
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          followers_end?: number | null
+          followers_start?: number | null
+          id?: string
+          instagram_username?: string
+          updated_at?: string
+          welcome_sent?: number
+        }
+        Relationships: []
+      }
       ig_online_sessions: {
         Row: {
           browser: string
           extension_version: string | null
           first_seen_at: string
           flagged: boolean
+          followers_current: number | null
+          followers_initial: number | null
           id: string
           instagram_username: string
           ip: string | null
           last_seen_at: string
           last_url: string | null
+          metrics_updated_at: string | null
           mro_username: string | null
           notes: string | null
           os: string
+          session_ended_at: string | null
+          session_started_at: string | null
           status: string
           total_pings: number
           user_agent: string
+          welcome_total: number
         }
         Insert: {
           browser?: string
           extension_version?: string | null
           first_seen_at?: string
           flagged?: boolean
+          followers_current?: number | null
+          followers_initial?: number | null
           id?: string
           instagram_username: string
           ip?: string | null
           last_seen_at?: string
           last_url?: string | null
+          metrics_updated_at?: string | null
           mro_username?: string | null
           notes?: string | null
           os?: string
+          session_ended_at?: string | null
+          session_started_at?: string | null
           status?: string
           total_pings?: number
           user_agent?: string
+          welcome_total?: number
         }
         Update: {
           browser?: string
           extension_version?: string | null
           first_seen_at?: string
           flagged?: boolean
+          followers_current?: number | null
+          followers_initial?: number | null
           id?: string
           instagram_username?: string
           ip?: string | null
           last_seen_at?: string
           last_url?: string | null
+          metrics_updated_at?: string | null
           mro_username?: string | null
           notes?: string | null
           os?: string
+          session_ended_at?: string | null
+          session_started_at?: string | null
           status?: string
           total_pings?: number
           user_agent?: string
+          welcome_total?: number
         }
         Relationships: []
       }
