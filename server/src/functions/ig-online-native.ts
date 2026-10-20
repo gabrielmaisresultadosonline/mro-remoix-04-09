@@ -276,8 +276,13 @@ async function actionMessageEvent(body: Body) {
 
 // ───────────────────────── ações do painel ─────────────────────────
 
+/** BIGINT chega como string no driver pg; o painel espera números. */
 const withOnline = (s: Row): Row & { online: boolean } => ({
   ...s,
+  total_pings: Number(s.total_pings ?? 0),
+  welcome_total: Number(s.welcome_total ?? 0),
+  followers_initial: numOrNull(s.followers_initial),
+  followers_current: numOrNull(s.followers_current),
   online: Date.now() - new Date(s.last_seen_at as string).getTime() < ONLINE_WINDOW_MS,
 });
 
