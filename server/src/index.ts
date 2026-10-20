@@ -43,6 +43,8 @@ app.set("trust proxy", true);
  */
 const PUBLIC_READ_PREFIXES = ["/storage/v1/object/public/", "/storage/v1/object/info/public/"];
 const MRO_TOOL_API_PATH = "/functions/v1/mro-tool-api";
+/** IG Online roda nativo no Express (PostgreSQL local) e usa o mesmo CORS da extensão. */
+const IG_ONLINE_API_PATH = "/functions/v1/ig-online-api";
 
 function isPublicStorageRead(req: Request): boolean {
   return (
@@ -52,7 +54,10 @@ function isPublicStorageRead(req: Request): boolean {
 }
 
 function isMroToolApiRequest(req: Request): boolean {
-  return req.path === MRO_TOOL_API_PATH || req.path.startsWith(`${MRO_TOOL_API_PATH}/`);
+  return (
+    req.path === MRO_TOOL_API_PATH || req.path.startsWith(`${MRO_TOOL_API_PATH}/`) ||
+    req.path === IG_ONLINE_API_PATH
+  );
 }
 
 /**
