@@ -276,7 +276,7 @@ async function actionMessageEvent(body: Body) {
 
 // ───────────────────────── ações do painel ─────────────────────────
 
-const withOnline = (s: Row) => ({
+const withOnline = (s: Row): Row & { online: boolean } => ({
   ...s,
   online: Date.now() - new Date(s.last_seen_at as string).getTime() < ONLINE_WINDOW_MS,
 });
