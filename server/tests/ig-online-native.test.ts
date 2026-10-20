@@ -25,6 +25,7 @@ const call = async (body: object, token?: string) => {
   return { status: r.status, json: (await r.json()) as Record<string, any> };
 };
 
+const RID = `t-${Date.now()}`;
 try {
   await pool.query("DELETE FROM ig_online_sessions WHERE instagram_username IN ('perfilcliente','perfilfora')");
   await pool.query("DELETE FROM ig_online_metrics WHERE instagram_username IN ('perfilcliente','perfilfora')");
@@ -36,8 +37,8 @@ try {
   assert.equal(p2.json.status, "unknown"); assert.equal(p2.json.registered, false);
 
   // Métricas: seguidores iniciais/atuais e boas-vindas somadas como incremento
-  await call({ action: "metrics", instagram: "perfilcliente", followers: 100, welcome_sent: 3, session: "start", request_id: "r1" });
-  const dup = await call({ action: "metrics", instagram: "perfilcliente", welcome_sent: 3, request_id: "r1" });
+  await call({ action: "metrics", instagram: "perfilcliente", followers: 100, welcome_sent: 3, session: "start", request_id: RID });
+  const dup = await call({ action: "metrics", instagram: "perfilcliente", welcome_sent: 3, request_id: RID });
   assert.equal(dup.json.duplicate, true, "request_id repetido não soma de novo");
   await call({ action: "metrics", instagram: "perfilcliente", followers: 112, welcome_sent: 2 });
   const bad = await call({ action: "metrics", instagram: "perfilcliente", followers: -5 });
