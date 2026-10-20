@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { RefreshCw, Radio } from 'lucide-react';
+import IgOnlinesProfileDetail from './IgOnlinesProfileDetail';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
@@ -26,6 +27,8 @@ interface MetricRow {
   session_ended_at: string | null;
   metrics_updated_at: string | null;
   online: boolean;
+  blocked: boolean;
+  blocked_at: string | null;
 }
 interface Summary {
   profiles: number;
@@ -56,6 +59,7 @@ const IgOnlinesMetrics: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('last_seen_at');
+  const [detail, setDetail] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -180,14 +184,14 @@ const IgOnlinesMetrics: React.FC = () => {
         <table className="w-full text-xs">
           <thead className="bg-muted text-left">
             <tr>
-              {['Perfil', 'Inicial', 'Atual', 'Diferença', 'Cresc./dia', 'Boas-vindas', 'Última atividade', 'Início sessão', 'Fim sessão', 'Conexão'].map((h) => (
+              {['Perfil', 'Inicial', 'Atual', 'Diferença', 'Cresc./dia', 'Boas-vindas', 'Última atividade', 'Início sessão', 'Fim sessão', 'Conexão', ''].map((h) => (
                 <th key={h} className="p-2 font-semibold whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 && (
-              <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">Nenhum perfil encontrado.</td></tr>
+              <tr><td colSpan={11} className="p-6 text-center text-muted-foreground">Nenhum perfil encontrado.</td></tr>
             )}
             {visible.map((r) => (
               <tr key={r.id} className="border-t">
@@ -204,12 +208,17 @@ const IgOnlinesMetrics: React.FC = () => {
                 </td>
                 <td className="p-2">
                   {r.online ? <Badge className="gap-1"><Radio className="w-3 h-3" /> Online</Badge> : <Badge variant="secondary">Offline</Badge>}
+                  {r.blocked && <Badge variant="destructive" className="ml-1">Bloqueado</Badge>}
+                </td>
+                <td className="p-2">
+                  <Button size="sm" variant="outline" onClick={() => setDetail(r.instagram_username)}>Detalhes</Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
+      <IgOnlinesProfileDetail instagram={detail} days={days} onClose={() => setDetail(null)} onChanged={() => void load()} />
     </div>
   );
 };
