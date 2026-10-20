@@ -20,3 +20,4 @@
 - Large video uploads to the video-server must use the chunked upload routes (parts under 100MB), because the Cloudflare proxy rejects larger request bodies before they reach Nginx.
 
 - Ao Vivo streaming runs natively in the VPS Express server (ffmpeg loop to RTMPS, files on local disk), because long-lived processes cannot run in edge functions.
+- IG Online (`ig-online-api`) is served natively by the VPS Express server against the server's own PostgreSQL (server/src/functions/ig-online-native.ts), with the Deno function kept only as a fallback with the same JSON contract, because frequent extension pings must not depend on cold starts or external infrastructure.
