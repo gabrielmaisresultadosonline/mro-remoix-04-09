@@ -3565,6 +3565,9 @@ export type Database = {
       }
       ig_online_sessions: {
         Row: {
+          block_message: string | null
+          blocked: boolean
+          blocked_at: string | null
           browser: string
           extension_version: string | null
           first_seen_at: string
@@ -3584,10 +3587,14 @@ export type Database = {
           session_started_at: string | null
           status: string
           total_pings: number
+          unblocked_at: string | null
           user_agent: string
           welcome_total: number
         }
         Insert: {
+          block_message?: string | null
+          blocked?: boolean
+          blocked_at?: string | null
           browser?: string
           extension_version?: string | null
           first_seen_at?: string
@@ -3607,10 +3614,14 @@ export type Database = {
           session_started_at?: string | null
           status?: string
           total_pings?: number
+          unblocked_at?: string | null
           user_agent?: string
           welcome_total?: number
         }
         Update: {
+          block_message?: string | null
+          blocked?: boolean
+          blocked_at?: string | null
           browser?: string
           extension_version?: string | null
           first_seen_at?: string
@@ -3630,6 +3641,7 @@ export type Database = {
           session_started_at?: string | null
           status?: string
           total_pings?: number
+          unblocked_at?: string | null
           user_agent?: string
           welcome_total?: number
         }

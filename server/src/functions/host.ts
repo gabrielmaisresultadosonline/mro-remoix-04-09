@@ -24,6 +24,7 @@ import { RestError } from "../rest/identifiers.js";
 import { handleNativeUserCloudStorage } from "./user-cloud-storage-native.js";
 import { handleNativeLovablackAdminLogin } from "./lovablack-admin-native.js";
 import { handleNativeMroToolLogin } from "./mro-tool-login-native.js";
+import { handleNativeIgOnline } from "./ig-online-native.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const functionsDir = path.resolve(here, "../../", env.functions.dir);
@@ -266,6 +267,10 @@ functionsRouter.all("/:name", async (req, res) => {
   }
 
   if (name === "mro-tool-api" && await handleNativeMroToolLogin(req, res)) {
+    return;
+  }
+
+  if (name === "ig-online-api" && await handleNativeIgOnline(req, res)) {
     return;
   }
 

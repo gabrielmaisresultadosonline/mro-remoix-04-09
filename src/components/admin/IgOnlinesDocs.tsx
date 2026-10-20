@@ -1,7 +1,8 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 
-const ENDPOINT = 'https://ubdphcaymnztuduxwden.supabase.co/functions/v1/ig-online-api';
+/** Backend próprio na VPS (Express + PostgreSQL do servidor). */
+const ENDPOINT = 'https://api.maisresultadosonline.com.br/functions/v1/ig-online-api';
 
 const Block: React.FC<{ title: string; code: string }> = ({ title, code }) => (
   <Card className="p-4 space-y-2">
@@ -22,7 +23,7 @@ const IgOnlinesDocs: React.FC = () => (
         mesmo endpoint já traz os avisos pendentes para mostrar na tela do usuário.
       </p>
       <p className="text-sm text-muted-foreground">
-        Endpoint único (POST JSON, CORS liberado para extensões): <code className="break-all">{ENDPOINT}</code>
+        Endpoint único no servidor MRO (POST JSON, gravado no PostgreSQL da VPS, CORS liberado para extensões): <code className="break-all">{ENDPOINT}</code>
       </p>
     </Card>
 
@@ -137,7 +138,8 @@ fetch('${ENDPOINT}', {
     instagram: perfilLogado(),
     followers: 1520,
     welcome_sent: 3,
-    session: 'start'
+    session: 'start',
+    request_id: crypto.randomUUID() // evita somar duas vezes se o envio for repetido
   })
 });
 // Resposta: { "success": true, "day": "2026-10-19" }`}
@@ -148,7 +150,8 @@ fetch('${ENDPOINT}', {
       <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
         <li>O primeiro valor de <code>followers</code> recebido vira o <strong>inicial</strong> do perfil; os seguintes atualizam o <strong>atual</strong>.</li>
         <li>Um registro por perfil por dia (horário de Brasília): seguidores no começo e no fim do dia e total de boas-vindas do dia. O crescimento diário é fim − começo.</li>
-        <li><code>welcome_sent</code> é somado; envie apenas o que foi enviado desde o último envio para não contar em dobro.</li>
+        <li><code>welcome_sent</code> é somado; envie apenas o que foi enviado desde o último envio. Mande um <code>request_id</code> único por envio: se a mesma requisição chegar de novo, ela é ignorada (<code>duplicate: true</code>).</li>
+        <li>Limite: 120 requisições por minuto por perfil/IP (acima disso, resposta 429).</li>
         <li>Sessão: <code>start</code> marca o início e limpa o fim; <code>end</code> marca o término. Sem <code>end</code>, o painel mostra "Em andamento"; o perfil é considerado online se houver envio nos últimos 5 minutos (ping ou metrics).</li>
         <li>Requisitos: POST JSON, sem token, CORS liberado (<code>*</code>). Na extensão, inclua o domínio da API em <code>host_permissions</code> e faça o fetch pelo service worker/background para não ser bloqueado pela política do Instagram (connect-src).</li>
         <li>Validação: <code>followers</code> inteiro ≥ 0; <code>welcome_sent</code> 0–10000 por envio. Dados ausentes aparecem como "Aguardando dados" no painel.</li>
