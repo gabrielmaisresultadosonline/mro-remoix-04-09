@@ -17,6 +17,8 @@ interface Session {
   browser: string; os: string;
 }
 interface Metric { day: string; followers_start: number | null; followers_end: number | null; welcome_sent: number }
+interface BlockLog { action: 'blocked' | 'unblocked' | 'message_updated'; block_message: string | null; created_at: string }
+const BLOCK_LABEL: Record<BlockLog['action'], string> = { blocked: 'Bloqueado', unblocked: 'Desbloqueado', message_updated: 'Mensagem alterada' };
 interface Ev { created_at: string; browser: string; ip: string | null; url: string | null }
 
 const WAIT = 'Aguardando dados';
@@ -32,6 +34,7 @@ const IgOnlinesProfileDetail: React.FC<Props> = ({ instagram, days, onClose, onC
   const [session, setSession] = useState<Session | null>(null);
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [events, setEvents] = useState<Ev[]>([]);
+  const [blockLog, setBlockLog] = useState<BlockLog[]>([]);
   const [msg, setMsg] = useState('');
   const [defMsg, setDefMsg] = useState('');
   const [saving, setSaving] = useState(false);
@@ -39,12 +42,12 @@ const IgOnlinesProfileDetail: React.FC<Props> = ({ instagram, days, onClose, onC
   const load = useCallback(async () => {
     if (!instagram) return;
     const { data, error } = await adminSupabase.functions.invoke('ig-online-api', { body: { action: 'admin_profile_detail', instagram } });
-    const r = data as { success?: boolean; error?: string; session?: Session; metrics?: Metric[]; events?: Ev[]; default_block_message?: string } | null;
+    const r = data as { success?: boolean; error?: string; session?: Session; metrics?: Metric[]; events?: Ev[]; block_history?: BlockLog[]; default_block_message?: string } | null;
     if (error || !r?.success || !r.session) {
       toast({ title: 'Não foi possível carregar', description: r?.error || error?.message, variant: 'destructive' });
       return;
     }
-    setSession(r.session); setMetrics(r.metrics ?? []); setEvents(r.events ?? []);
+    setSession(r.session); setMetrics(r.metrics ?? []); setEvents(r.events ?? []); setBlockLog(r.block_history ?? []);
     setDefMsg(r.default_block_message ?? '');
     setMsg(r.session.block_message ?? '');
   }, [instagram, toast]);
@@ -135,6 +138,13 @@ const IgOnlinesProfileDetail: React.FC<Props> = ({ instagram, days, onClose, onC
                   <Button size="sm" variant="destructive" disabled={saving} onClick={() => void setBlock(true)} className="gap-1"><Lock className="w-3 h-3" /> Bloquear perfil</Button>
                 )}
               </div>
+              {blockLog.length > 0 && (
+                <ul className="text-xs space-y-1 border-t pt-2">
+                  {blockLog.map((h) => (
+                    <li key={h.created_at}>{fmt(h.created_at)} · <strong>{BLOCK_LABEL[h.action]}</strong>{h.block_message ? ` — ${h.block_message}` : ''}</li>
+                  ))}
+                </ul>
+              )}
             </Card>
 
             <Card className="p-3 overflow-x-auto">
