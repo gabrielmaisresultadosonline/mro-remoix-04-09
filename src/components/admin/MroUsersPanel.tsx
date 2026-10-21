@@ -429,11 +429,20 @@ const MroUsersPanel: React.FC = () => {
                   <Badge variant={u.is_active ? 'default' : 'destructive'}>{u.is_active ? 'Ativo' : 'Inativo'}</Badge>
                 )}
                 {u.source && <Badge variant="outline" className="uppercase">{u.source}</Badge>}
-                {u.expires_at && u.expiration_days < LIFETIME && (
-                  <Badge variant="secondary" className="text-[11px]">
-                    até {new Date(u.expires_at).toLocaleDateString('pt-BR')}
-                  </Badge>
-                )}
+                {u.expiration_days < LIFETIME && (() => {
+                  // Usa expires_at salvo; senão calcula pela data de criação + dias do plano.
+                  const base = u.expires_at
+                    ? new Date(u.expires_at)
+                    : u.created_at
+                      ? new Date(new Date(u.created_at).getTime() + Number(u.expiration_days || 0) * 86400000)
+                      : null;
+                  if (!base || isNaN(base.getTime())) return null;
+                  return (
+                    <Badge variant="secondary" className="text-[11px]">
+                      até {base.toLocaleDateString('pt-BR')}
+                    </Badge>
+                  );
+                })()}
                 <Badge variant="outline" className="gap-1">
                   {u.expiration_days >= LIFETIME ? <><InfinityIcon className="w-3 h-3" /> Vitalício</> : `${u.expiration_days} dias`}
                 </Badge>
