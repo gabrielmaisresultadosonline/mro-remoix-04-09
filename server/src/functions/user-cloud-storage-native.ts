@@ -175,8 +175,37 @@ export async function handleNativeUserCloudStorage(
       [username],
     );
     const screenshots = new Map(
-      screenshotRows.map((row) => [row.instagram_username.toLowerCase().replace(/^@/, ""), row.profile_screenshot_url]),
+      screenshotRows.map((row) => [row.instagram_username.trim().toLowerCase().replace(/^@/, ""), row.profile_screenshot_url]),
     );
+    // Fallback (mesma lógica do /admin): print salvo sob outro registro de dono,
+    // mas o Instagram pertence a este usuário em mro_tool_accounts.
+    const sessionIgs = [...sessionsFrom(current.profile_sessions), ...sessionsFrom(current.archived_profiles)]
+      .map(instagramUsernameFrom)
+      .filter((ig) => ig && !screenshots.has(ig));
+    if (sessionIgs.length > 0) {
+      try {
+        const fallbackRows = await adminQuery<{ instagram_username: string; profile_screenshot_url: string }>(
+          `SELECT DISTINCT ON (lower(regexp_replace(btrim(p.instagram_username), '^@', '')))
+                  p.instagram_username, p.profile_screenshot_url
+             FROM public.squarecloud_user_profiles p
+             JOIN public.mro_tool_accounts a
+               ON lower(regexp_replace(btrim(a.instagram_username), '^@', '')) = lower(regexp_replace(btrim(p.instagram_username), '^@', ''))
+             JOIN public.mro_tool_users u ON u.id = a.user_id
+            WHERE lower(btrim(u.username)) = $1
+              AND lower(regexp_replace(btrim(p.instagram_username), '^@', '')) = ANY($2::text[])
+              AND p.profile_screenshot_url IS NOT NULL
+              AND btrim(p.profile_screenshot_url) <> ''
+            ORDER BY lower(regexp_replace(btrim(p.instagram_username), '^@', '')), p.updated_at DESC`,
+          [username, sessionIgs],
+        );
+        fallbackRows.forEach((row) => {
+          const key = row.instagram_username.trim().toLowerCase().replace(/^@/, "");
+          if (!screenshots.has(key)) screenshots.set(key, row.profile_screenshot_url);
+        });
+      } catch (err) {
+        console.warn(`[USER-CLOUD-STORAGE-NATIVE] screenshot fallback failed user=${username}`, err);
+      }
+    }
     const profileSessions = hydrateScreenshots(sessionsFrom(current.profile_sessions), screenshots);
     const archivedProfiles = hydrateScreenshots(sessionsFrom(current.archived_profiles), screenshots);
     await adminQuery(`UPDATE public.user_sessions SET last_access = now() WHERE id = $1`, [current.id]);
