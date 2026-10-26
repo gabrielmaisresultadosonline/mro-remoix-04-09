@@ -197,10 +197,14 @@ async function actionPing(body: Body, ip: string | null, uaHeader: string, verHe
 async function actionMetrics(body: Body) {
   const ig = normalizeIG(body.instagram ?? body.instagram_username);
   if (!ig || !IG_RE.test(ig)) return [400, { success: false, error: "Instagram inválido" }] as const;
-  const rawF = body.followers;
-  const followers = rawF === undefined || rawF === null || rawF === "" ? null : Number(rawF);
-  if (followers !== null && (!Number.isInteger(followers) || followers < 0 || followers > 1e10))
-    return [400, { success: false, error: "followers deve ser inteiro >= 0" }] as const;
+  // Aceita nomes alternativos e textos como "1.520", "1,5 mil", "12.3K" enviados pela extensão.
+  const rawF = body.followers ?? body.followers_count ?? body.follower_count ?? body.seguidores;
+  const followers = parseFollowers(rawF);
+  if (followers === undefined) {
+    console.warn(`[ig-online] metrics @${ig}: valor de seguidores ilegível (${String(rawF).slice(0, 40)}) — ignorado`);
+  } else if (followers === null && rawF === undefined) {
+    console.info(`[ig-online] metrics @${ig}: recebido sem campo de seguidores (welcome_sent=${String(body.welcome_sent ?? 0)})`);
+  }
   const rawW = body.welcome_sent ?? 0;
   const welcome = Number(rawW);
   if (!Number.isInteger(welcome) || welcome < 0 || welcome > 10000)
