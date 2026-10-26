@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  Radio, RefreshCw, Send, Trash2, FileCode, Users, AlertTriangle, History, Power,
+  Radio, RefreshCw, Send, Trash2, FileCode, Users, AlertTriangle, History, Power, Lock, Unlock, Network,
 } from 'lucide-react';
 import IgOnlinesDocs from './IgOnlinesDocs';
 import IgOnlinesMetrics from './IgOnlinesMetrics';
@@ -34,6 +34,7 @@ interface IgSession {
   first_seen_at: string;
   last_seen_at: string;
   online: boolean;
+  blocked?: boolean;
 }
 
 interface IgMessage {
@@ -83,6 +84,8 @@ const IgOnlinesPanel: React.FC = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [onlyFlagged, setOnlyFlagged] = useState(false);
+  const [groupByIp, setGroupByIp] = useState(false);
+  const [blockingIg, setBlockingIg] = useState<string | null>(null);
   const [history, setHistory] = useState<{ ig: string; events: IgEvent[] } | null>(null);
 
   // Formulário de aviso
@@ -142,6 +145,85 @@ const IgOnlinesPanel: React.FC = () => {
   }), [sessions]);
 
   const visible = onlyFlagged ? sessions.filter((s) => s.status === 'unknown') : sessions;
+
+  // Agrupa por IP (todos os perfis, para mostrar cadastrados e fora do banco juntos).
+  const ipGroups = useMemo(() => {
+    const map = new Map<string, IgSession[]>();
+    for (const s of sessions) {
+      const key = s.ip || 'sem IP';
+      map.set(key, [...(map.get(key) ?? []), s]);
+    }
+    const groups = [...map.entries()].map(([ip, list]) => ({
+      ip,
+      list: [...list].sort((a, b) => b.last_seen_at.localeCompare(a.last_seen_at)),
+    }));
+    const filtered = onlyFlagged ? groups.filter((g) => g.list.some((s) => s.status === 'unknown')) : groups;
+    return filtered.sort((a, b) => (b.list.length - a.list.length) || a.ip.localeCompare(b.ip));
+  }, [sessions, onlyFlagged]);
+
+  const toggleBlock = async (s: IgSession) => {
+    const willBlock = !s.blocked;
+    if (willBlock && !confirm(`Bloquear @${s.instagram_username}? Ele verá a mensagem padrão de bloqueio na ferramenta.`)) return;
+    setBlockingIg(s.instagram_username);
+    const ok = await call('admin_set_block', { instagram: s.instagram_username, blocked: willBlock });
+    setBlockingIg(null);
+    if (ok) {
+      setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, blocked: willBlock } : x)));
+      toast({ title: willBlock ? 'Perfil bloqueado' : 'Perfil desbloqueado', description: `@${s.instagram_username}` });
+      void loadSessions();
+    }
+  };
+
+  const renderRow = (s: IgSession, compact = false) => (
+    <Card key={s.id} className={cn('p-4 flex flex-col md:flex-row md:items-center gap-3', compact && 'p-3', s.blocked && 'border-destructive')}>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold">@{s.instagram_username}</span>
+          {s.online && (
+            <Badge className="gap-1"><Radio className="w-3 h-3" /> Online</Badge>
+          )}
+          <Badge variant={s.status === 'unknown' ? 'destructive' : 'secondary'}>{STATUS_LABEL[s.status]}</Badge>
+          {s.blocked && <Badge variant="destructive" className="gap-1"><Lock className="w-3 h-3" /> Bloqueado</Badge>}
+          {s.mro_username && <span className="text-xs text-muted-foreground">usuário: {s.mro_username}</span>}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {s.browser} · {s.os} · {s.ip ?? 'sem IP'} · versão {s.extension_version || '—'}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Último acesso: {fmt(s.last_seen_at)} · Primeiro: {fmt(s.first_seen_at)} · {s.total_pings} registros
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" className="gap-1" onClick={() => void openHistory(s.instagram_username)}>
+          <History className="w-3 h-3" /> Histórico
+        </Button>
+        <Button
+          size="sm"
+          variant={s.blocked ? 'outline' : 'destructive'}
+          className="gap-1"
+          disabled={blockingIg === s.instagram_username}
+          onClick={() => void toggleBlock(s)}
+        >
+          {s.blocked ? <><Unlock className="w-3 h-3" /> Desbloquear</> : <><Lock className="w-3 h-3" /> Bloquear</>}
+        </Button>
+        <Button size="sm" className="gap-1" onClick={() => openMessageFor(s.instagram_username)}>
+          <Send className="w-3 h-3" /> Enviar aviso
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1"
+          onClick={async () => {
+            if (!confirm(`Remover o registro de @${s.instagram_username}?`)) return;
+            const ok = await call('admin_delete_session', { id: s.id });
+            if (ok) void loadSessions();
+          }}
+        >
+          <Trash2 className="w-3 h-3" />
+        </Button>
+      </div>
+    </Card>
+  );
 
   const openMessageFor = (ig?: string) => {
     setScope(ig ? 'one' : 'all');
@@ -230,56 +312,53 @@ const IgOnlinesPanel: React.FC = () => {
             <Button size="sm" variant={onlyFlagged ? 'default' : 'outline'} onClick={() => setOnlyFlagged((v) => !v)} className="gap-2">
               <AlertTriangle className="w-4 h-4" /> Só fora do banco
             </Button>
+            <Button size="sm" variant={groupByIp ? 'default' : 'outline'} onClick={() => setGroupByIp((v) => !v)} className="gap-2">
+              <Network className="w-4 h-4" /> Ligação por IP
+            </Button>
             <Button size="sm" onClick={() => openMessageFor()} className="gap-2">
               <Send className="w-4 h-4" /> Aviso para todos
             </Button>
           </div>
 
-          <div className="space-y-2">
-            {visible.length === 0 && (
-              <p className="text-sm text-muted-foreground py-8 text-center">Nenhum perfil registrado ainda.</p>
-            )}
-            {visible.map((s) => (
-              <Card key={s.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold">@{s.instagram_username}</span>
-                    {s.online && (
-                      <Badge className="gap-1"><Radio className="w-3 h-3" /> Online</Badge>
-                    )}
-                    <Badge variant={s.status === 'unknown' ? 'destructive' : 'secondary'}>{STATUS_LABEL[s.status]}</Badge>
-                    {s.mro_username && <span className="text-xs text-muted-foreground">usuário: {s.mro_username}</span>}
+          {groupByIp ? (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Perfis que usaram o mesmo IP aparecem ligados. Mesmo IP não prova que é a mesma pessoa (redes compartilhadas, operadoras, VPN e IP dinâmico podem coincidir).
+              </p>
+              {ipGroups.map((g) => {
+                const hasClient = g.list.some((s) => s.status !== 'unknown');
+                const hasUnknown = g.list.some((s) => s.status === 'unknown');
+                return (
+                  <div key={g.ip} className={cn('rounded-lg border p-3', g.list.length > 1 && hasClient && hasUnknown && 'border-destructive')}>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <Network className="w-4 h-4 text-primary" />
+                      <span className="font-mono text-xs break-all">{g.ip}</span>
+                      <Badge variant="outline">{g.list.length} perfil(is)</Badge>
+                      {g.list.length > 1 && hasClient && hasUnknown && (
+                        <Badge variant="destructive">Cadastrado + fora do banco no mesmo IP</Badge>
+                      )}
+                    </div>
+                    <div className="relative pl-6 space-y-2">
+                      {g.list.length > 1 && <span className="absolute left-2 top-4 bottom-4 w-px bg-primary" aria-hidden />}
+                      {g.list.map((s) => (
+                        <div key={s.id} className="relative">
+                          {g.list.length > 1 && <span className="absolute -left-4 top-1/2 w-4 h-px bg-primary" aria-hidden />}
+                          {renderRow(s, true)}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {s.browser} · {s.os} · {s.ip ?? 'sem IP'} · versão {s.extension_version || '—'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Último acesso: {fmt(s.last_seen_at)} · Primeiro: {fmt(s.first_seen_at)} · {s.total_pings} registros
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" className="gap-1" onClick={() => void openHistory(s.instagram_username)}>
-                    <History className="w-3 h-3" /> Histórico
-                  </Button>
-                  <Button size="sm" className="gap-1" onClick={() => openMessageFor(s.instagram_username)}>
-                    <Send className="w-3 h-3" /> Enviar aviso
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1"
-                    onClick={async () => {
-                      if (!confirm(`Remover o registro de @${s.instagram_username}?`)) return;
-                      const ok = await call('admin_delete_session', { id: s.id });
-                      if (ok) void loadSessions();
-                    }}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visible.length === 0 && (
+                <p className="text-sm text-muted-foreground py-8 text-center">Nenhum perfil registrado ainda.</p>
+              )}
+              {visible.map((s) => renderRow(s))}
+            </div>
+          )}
         </div>
       )}
 
