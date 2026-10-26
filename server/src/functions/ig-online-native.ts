@@ -194,15 +194,36 @@ async function actionPing(body: Body, ip: string | null, uaHeader: string, verHe
   return [200, { success: true, status, mro_username, registered: status !== "unknown", ...block, messages: pending }] as const;
 }
 
+/** null = ausente; undefined = ilegível. */
+export function parseFollowers(raw: unknown): number | null | undefined {
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw === "number") return Number.isFinite(raw) && raw >= 0 && raw <= 1e10 ? Math.round(raw) : undefined;
+  let t = String(raw).trim().toLowerCase().replace(/seguidores|followers/g, "").replace(/\s+/g, " ").trim();
+  let mult = 1;
+  const m = t.match(/(k|mil|m|mi|milh(?:ão|ões|ao|oes)?|b)$/);
+  if (m) {
+    const u = m[1];
+    mult = u === "k" || u === "mil" ? 1e3 : u === "b" ? 1e9 : 1e6;
+    t = t.slice(0, -u.length).trim();
+    t = t.replace(",", ".");
+  } else {
+    t = t.replace(/[.,\s]/g, "");
+  }
+  if (!/^\d+(\.\d+)?$/.test(t)) return undefined;
+  const n = Math.round(Number(t) * mult);
+  return n >= 0 && n <= 1e10 ? n : undefined;
+}
+
 async function actionMetrics(body: Body) {
   const ig = normalizeIG(body.instagram ?? body.instagram_username);
   if (!ig || !IG_RE.test(ig)) return [400, { success: false, error: "Instagram inválido" }] as const;
   // Aceita nomes alternativos e textos como "1.520", "1,5 mil", "12.3K" enviados pela extensão.
   const rawF = body.followers ?? body.followers_count ?? body.follower_count ?? body.seguidores;
-  const followers = parseFollowers(rawF);
-  if (followers === undefined) {
+  const parsedF = parseFollowers(rawF);
+  const followers = parsedF ?? null;
+  if (parsedF === undefined) {
     console.warn(`[ig-online] metrics @${ig}: valor de seguidores ilegível (${String(rawF).slice(0, 40)}) — ignorado`);
-  } else if (followers === null && rawF === undefined) {
+  } else if (rawF === undefined) {
     console.info(`[ig-online] metrics @${ig}: recebido sem campo de seguidores (welcome_sent=${String(body.welcome_sent ?? 0)})`);
   }
   const rawW = body.welcome_sent ?? 0;
