@@ -84,7 +84,7 @@ const IgOnlinesPanel: React.FC = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [onlyFlagged, setOnlyFlagged] = useState(false);
-  const [groupByIp, setGroupByIp] = useState(false);
+  const [groupByIp, setGroupByIp] = useState(true);
   const [blockingIg, setBlockingIg] = useState<string | null>(null);
   const [history, setHistory] = useState<{ ig: string; events: IgEvent[] } | null>(null);
 
@@ -150,7 +150,9 @@ const IgOnlinesPanel: React.FC = () => {
   const ipGroups = useMemo(() => {
     const map = new Map<string, IgSession[]>();
     for (const s of sessions) {
-      const key = s.ip || 'sem IP';
+      // IPv6 muda o final a cada conexão: agrupa pela rede (/64, 4 primeiros blocos).
+      const raw = s.ip || 'sem IP';
+      const key = raw.includes(':') ? raw.split(':').slice(0, 4).join(':') + '::/64' : raw;
       map.set(key, [...(map.get(key) ?? []), s]);
     }
     const groups = [...map.entries()].map(([ip, list]) => ({
@@ -175,7 +177,7 @@ const IgOnlinesPanel: React.FC = () => {
   };
 
   const renderRow = (s: IgSession, compact = false) => (
-    <Card key={s.id} className={cn('p-4 flex flex-col md:flex-row md:items-center gap-3', compact && 'p-3', s.blocked && 'border-destructive')}>
+    <Card key={s.id} className={cn('p-4 flex flex-col xl:flex-row xl:items-center gap-3 w-full max-w-full overflow-hidden', compact && 'p-3', s.blocked && 'border-destructive')}>
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">@{s.instagram_username}</span>
@@ -193,10 +195,7 @@ const IgOnlinesPanel: React.FC = () => {
           Último acesso: {fmt(s.last_seen_at)} · Primeiro: {fmt(s.first_seen_at)} · {s.total_pings} registros
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" className="gap-1" onClick={() => void openHistory(s.instagram_username)}>
-          <History className="w-3 h-3" /> Histórico
-        </Button>
+      <div className="flex flex-wrap gap-2 shrink-0">
         <Button
           size="sm"
           variant={s.blocked ? 'outline' : 'destructive'}
@@ -205,6 +204,9 @@ const IgOnlinesPanel: React.FC = () => {
           onClick={() => void toggleBlock(s)}
         >
           {s.blocked ? <><Unlock className="w-3 h-3" /> Desbloquear</> : <><Lock className="w-3 h-3" /> Bloquear</>}
+        </Button>
+        <Button size="sm" variant="outline" className="gap-1" onClick={() => void openHistory(s.instagram_username)}>
+          <History className="w-3 h-3" /> Histórico
         </Button>
         <Button size="sm" className="gap-1" onClick={() => openMessageFor(s.instagram_username)}>
           <Send className="w-3 h-3" /> Enviar aviso
