@@ -494,7 +494,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
         <div className="max-w-5xl mx-auto text-center">
 
           
-          <MroIntelligentIntro />
+          <MroIntelligentIntro lang={lang} />
 
           {/* Main Video */}
           <div className="mt-8 sm:mt-10 max-w-4xl mx-auto">
@@ -511,14 +511,14 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
             onClick={scrollToPricing}
             className="mt-8 sm:mt-10 bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-sm sm:text-lg px-6 sm:px-10 py-5 sm:py-6 rounded-full shadow-lg shadow-primary/30"
           >
-            {promotionalOffer ? 'GARANTIR MEU DESCONTO AGORA' : 'GARANTIR MEU ACESSO AGORA'} <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
+            {promotionalOffer ? t.heroCtaPromo : t.heroCta} <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
       </section>
 
 
 
-      <MroIntelligentFeatures />
+      <MroIntelligentFeatures lang={lang} />
 
       {/* Guarantee Section */}
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
@@ -531,15 +531,15 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
                 <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
               </div>
             </div>
-            <span className="text-primary font-bold text-[10px] sm:text-xs tracking-[0.3em] uppercase">GARANTIA TOTAL</span>
+            <span className="text-primary font-bold text-[10px] sm:text-xs tracking-[0.3em] uppercase">{t.guaranteeEyebrow}</span>
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-black mt-3 mb-4 sm:mb-6 leading-tight">
-              30 Dias de Resultados <span className="text-primary">Garantidos</span>
+              {t.guaranteeTitle1} <span className="text-primary">{t.guaranteeTitle2}</span>
             </h2>
             <div className="bg-primary/10 border border-border/30 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-4 sm:py-5 max-w-2xl mx-auto mb-6 sm:mb-8">
               <p className="text-foreground text-base sm:text-lg md:text-xl leading-relaxed">
-                Se em <strong className="text-primary">30 dias</strong> não tiver os resultados prometidos, <strong className="text-foreground">devolvemos o seu dinheiro.</strong>
+                {t.guaranteeA}<strong className="text-primary">{t.guaranteeStrong1}</strong>{t.guaranteeB}<strong className="text-foreground">{t.guaranteeStrong2}</strong>
               </p>
-              <p className="text-primary font-bold text-sm sm:text-lg mt-2">Nós garantimos resultados. Sem risco para você.</p>
+              <p className="text-primary font-bold text-sm sm:text-lg mt-2">{t.guaranteeAssurance}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-2xl mx-auto mb-6 sm:mb-8">
               {[
