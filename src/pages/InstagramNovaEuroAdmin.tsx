@@ -188,10 +188,11 @@ export default function InstagramNovaEuroAdmin() {
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("mro_euro_orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data: res, error: fnErr } = await supabase.functions.invoke("euro-page-admin", {
+        body: { action: "list_orders", email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+      });
+      const error = fnErr || (res?.success ? null : new Error(res?.error || "Erro"));
+      const data = (res?.orders || []) as EuroOrder[];
 
       if (error) {
         console.error("Error loading orders:", error);
@@ -467,10 +468,10 @@ ${GROUP_LINK}`;
     }
     
     try {
-      const { error } = await supabase
-        .from("mro_euro_orders")
-        .delete()
-        .eq("id", order.id);
+      const { data: delRes, error: delErr } = await supabase.functions.invoke("euro-page-admin", {
+        body: { action: "delete_order", email: ADMIN_EMAIL, password: ADMIN_PASSWORD, id: order.id },
+      });
+      const error = delErr || (delRes?.success ? null : new Error(delRes?.error || "Erro"));
 
       if (error) {
         console.error("Error deleting order:", error);

@@ -74,6 +74,23 @@ serve(async (req) => {
       return json({ success: true, visits: data || [] });
     }
 
+    if (action === "list_orders") {
+      if (!isAdmin()) return json({ success: false, error: "Não autorizado" }, 401);
+      const { data, error } = await supabase.from("mro_euro_orders")
+        .select("*").order("created_at", { ascending: false }).limit(2000);
+      if (error) return json({ success: false, error: error.message }, 500);
+      return json({ success: true, orders: data || [] });
+    }
+
+    if (action === "delete_order") {
+      if (!isAdmin()) return json({ success: false, error: "Não autorizado" }, 401);
+      const id = clip(body.id, 64);
+      if (!id) return json({ success: false, error: "ID inválido" }, 400);
+      const { error } = await supabase.from("mro_euro_orders").delete().eq("id", id);
+      if (error) return json({ success: false, error: error.message }, 500);
+      return json({ success: true });
+    }
+
     return json({ success: false, error: "Ação inválida" }, 400);
   } catch (e) {
     return json({ success: false, error: e instanceof Error ? e.message : "Erro" }, 500);

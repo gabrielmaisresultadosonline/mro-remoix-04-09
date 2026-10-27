@@ -7,9 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Euro price ID from Stripe
-const STRIPE_PRICE_ID = "price_1SlBAmCFJxkRbtbVibg2xaOQ";
-const AMOUNT_EUR = 300;
+// Valores oficiais da página Euro (GBP), definidos no servidor.
+const PLAN_PRICES = {
+  annual: { amount: 397, name: "MRO Plan Pro Anual" },
+  agencia_vitalicio: { amount: 997, name: "MRO Plan Agencia Vitalicio" },
+} as const;
 
 const log = (step: string, details?: unknown) => {
   const timestamp = new Date().toISOString();
@@ -45,7 +47,7 @@ serve(async (req) => {
     const body = await req.json();
     const { email, username, phone, checkUserExists } = body;
     // Agencia = vitalício; Pro = anual.
-    const planTypeValue = String(body.planType || "").toLowerCase() === "agencia" ? "agencia_vitalicio" : "annual";
+    const planTypeValue: keyof typeof PLAN_PRICES = String(body.planType || "").toLowerCase() === "agencia" ? "agencia_vitalicio" : "annual";
 
     if (!email || !email.includes("@")) {
       return new Response(
@@ -99,7 +101,11 @@ serve(async (req) => {
       customer_email: customerId ? undefined : cleanEmail,
       line_items: [
         {
-          price: STRIPE_PRICE_ID,
+          price_data: {
+            currency: "gbp",
+            unit_amount: PLAN_PRICES[planTypeValue].amount * 100,
+            product_data: { name: PLAN_PRICES[planTypeValue].name },
+          },
           quantity: 1,
         },
       ],
@@ -125,7 +131,7 @@ serve(async (req) => {
         username: cleanUsername,
         phone: cleanPhone || null,
         plan_type: planTypeValue,
-        amount: AMOUNT_EUR,
+        amount: PLAN_PRICES[planTypeValue].amount,
         status: "pending",
         stripe_session_id: session.id,
       })
