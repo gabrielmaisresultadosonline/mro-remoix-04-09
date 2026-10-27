@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { describeJobState } from "./videoJobStatus";
+import { describeJobState } from "../src/lib/videoJobStatus";
 
 describe("describeJobState", () => {
   it("usa a porcentagem real do servidor", () => {
