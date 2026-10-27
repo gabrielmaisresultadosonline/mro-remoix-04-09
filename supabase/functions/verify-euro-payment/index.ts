@@ -170,14 +170,14 @@ serve(async (req) => {
         })
         .eq("id", order.id);
       
-      // Create user access in SquareCloud
+      // Create user access in API interna MRO
       try {
-        log("Creating user access in SquareCloud (manual)", { username: order.username });
+        log("Creating user access in API interna MRO (manual)", { username: order.username });
         
         const created = await provisionMroToolUser(supabase, order.username, order.email);
 
         if (created) {
-          log("User created successfully in SquareCloud (manual)");
+          log("User created successfully in API interna MRO (manual)");
           
           await supabase
             .from("mro_euro_orders")
@@ -216,8 +216,8 @@ serve(async (req) => {
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
           );
         } else {
-          const errorText = await createResponse.text();
-          log("Error creating user in SquareCloud (manual)", { error: errorText });
+          const errorText = "Falha ao criar acesso na API interna (mro_tool_users)";
+          log("Error creating user in API interna MRO (manual)", { error: errorText });
           
           return new Response(
             JSON.stringify({
@@ -230,7 +230,7 @@ serve(async (req) => {
           );
         }
       } catch (apiError) {
-        log("Error calling SquareCloud API (manual)", apiError);
+        log("Error calling API interna MRO API (manual)", apiError);
         
         return new Response(
           JSON.stringify({
@@ -293,14 +293,14 @@ serve(async (req) => {
 
       log("Order marked as paid", { orderId: order.id });
 
-      // Create user access in SquareCloud
+      // Create user access in API interna MRO
       try {
-        log("Creating user access in SquareCloud", { username: order.username });
+        log("Creating user access in API interna MRO", { username: order.username });
         
         const created = await provisionMroToolUser(supabase, order.username, order.email);
 
         if (created) {
-          log("User created successfully in SquareCloud");
+          log("User created successfully in API interna MRO");
           
           await supabase
             .from("mro_euro_orders")
@@ -339,8 +339,8 @@ serve(async (req) => {
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
           );
         } else {
-          const errorText = await createResponse.text();
-          log("Error creating user in SquareCloud", { error: errorText });
+          const errorText = "Falha ao criar acesso na API interna (mro_tool_users)";
+          log("Error creating user in API interna MRO", { error: errorText });
           
           return new Response(
             JSON.stringify({
@@ -353,7 +353,7 @@ serve(async (req) => {
           );
         }
       } catch (apiError) {
-        log("Error calling SquareCloud API", apiError);
+        log("Error calling API interna MRO API", apiError);
         
         return new Response(
           JSON.stringify({
