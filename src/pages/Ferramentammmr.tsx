@@ -57,6 +57,7 @@ import {
 import logoMro from "@/assets/logo-mro.png";
 import { PromoHlsVideo } from "@/components/sales/PromoHlsVideo";
 import ActiveClientsSection from "@/components/ActiveClientsSection";
+import { pageCopy, type SalesLang } from "@/lib/salesCopy";
 
 function getVisitorId(): string {
   try {
@@ -95,9 +96,12 @@ export interface FerramentammmrProps {
   pricingContent?: React.ReactNode;
   /** Elementos extras (ex.: modal de checkout próprio). */
   children?: React.ReactNode;
+  /** Idioma dos textos da página. Padrão "pt". */
+  lang?: SalesLang;
 }
 
-const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, children }: FerramentammmrProps) => {
+const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, children, lang = "pt" }: FerramentammmrProps) => {
+  const t = pageCopy[lang];
   const annualAmount = promotionalOffer ? 300 : 397;
   const annualInstallments = promotionalOffer ? '12x de R$30' : '12x de R$ 40,00';
   const annualOneTime = promotionalOffer ? 'R$300 à vista' : 'R$ 397,00 à vista';
@@ -494,7 +498,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
         <div className="max-w-5xl mx-auto text-center">
 
           
-          <MroIntelligentIntro />
+          <MroIntelligentIntro lang={lang} />
 
           {/* Main Video */}
           <div className="mt-8 sm:mt-10 max-w-4xl mx-auto">
@@ -511,14 +515,14 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
             onClick={scrollToPricing}
             className="mt-8 sm:mt-10 bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-sm sm:text-lg px-6 sm:px-10 py-5 sm:py-6 rounded-full shadow-lg shadow-primary/30"
           >
-            {promotionalOffer ? 'GARANTIR MEU DESCONTO AGORA' : 'GARANTIR MEU ACESSO AGORA'} <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
+            {promotionalOffer ? t.heroCtaPromo : t.heroCta} <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
       </section>
 
 
 
-      <MroIntelligentFeatures />
+      <MroIntelligentFeatures lang={lang} />
 
       {/* Guarantee Section */}
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
@@ -531,21 +535,21 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
                 <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
               </div>
             </div>
-            <span className="text-primary font-bold text-[10px] sm:text-xs tracking-[0.3em] uppercase">GARANTIA TOTAL</span>
+            <span className="text-primary font-bold text-[10px] sm:text-xs tracking-[0.3em] uppercase">{t.guaranteeEyebrow}</span>
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-black mt-3 mb-4 sm:mb-6 leading-tight">
-              30 Dias de Resultados <span className="text-primary">Garantidos</span>
+              {t.guaranteeTitle1} <span className="text-primary">{t.guaranteeTitle2}</span>
             </h2>
             <div className="bg-primary/10 border border-border/30 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-4 sm:py-5 max-w-2xl mx-auto mb-6 sm:mb-8">
               <p className="text-foreground text-base sm:text-lg md:text-xl leading-relaxed">
-                Se em <strong className="text-primary">30 dias</strong> não tiver os resultados prometidos, <strong className="text-foreground">devolvemos o seu dinheiro.</strong>
+                {t.guaranteeA}<strong className="text-primary">{t.guaranteeStrong1}</strong>{t.guaranteeB}<strong className="text-foreground">{t.guaranteeStrong2}</strong>
               </p>
-              <p className="text-primary font-bold text-sm sm:text-lg mt-2">Nós garantimos resultados. Sem risco para você.</p>
+              <p className="text-primary font-bold text-sm sm:text-lg mt-2">{t.guaranteeAssurance}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-2xl mx-auto mb-6 sm:mb-8">
               {[
-                { emoji: "🔒", label: "Compra 100% Segura" },
-                { emoji: "💰", label: "Reembolso Garantido" },
-                { emoji: "✅", label: "Satisfação ou Dinheiro de Volta" }
+                { emoji: "🔒", label: t.guaranteeBadges[0] },
+                { emoji: "💰", label: t.guaranteeBadges[1] },
+                { emoji: "✅", label: t.guaranteeBadges[2] }
               ].map((item, i) => (
                 <div key={i} className="bg-primary/10 border border-border/20 rounded-xl px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 justify-center">
                   <span className="text-lg sm:text-xl">{item.emoji}</span>
@@ -553,7 +557,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
                 </div>
               ))}
             </div>
-            <p className="text-muted-foreground text-xs sm:text-sm">Garantia válida por 30 dias após a data da compra.</p>
+            <p className="text-muted-foreground text-xs sm:text-sm">{t.guaranteeFine}</p>
           </div>
         </div>
       </section>
@@ -704,14 +708,14 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       <section className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-xl sm:text-2xl md:text-4xl font-bold mb-4 sm:mb-6">
-            Não perca essa <span className="text-primary">oportunidade única!</span>
+            {t.finalTitle1} <span className="text-primary">{t.finalTitle2}</span>
           </h2>
           
           <Button
             onClick={scrollToPricing}
             className="bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-sm sm:text-xl px-6 sm:px-12 py-5 sm:py-7 rounded-full shadow-lg shadow-primary/30"
           >
-            VER OS PLANOS
+            {t.finalCta}
           </Button>
         </div>
       </section>
@@ -843,15 +847,15 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       {/* Floating WhatsApp contact */}
       <FloatingWhatsAppCta
         phone="555192835863"
-        message="Vim pela página da ferramenta MRO, gostaria de tirar uma dúvida."
-        ariaLabel="Falar no WhatsApp com a MRO"
-        hoverLabel="Tirar uma dúvida"
+        message={t.waMessage}
+        ariaLabel={t.waAria}
+        hoverLabel={t.waHover}
       />
 
       {/* Footer */}
       <footer className="py-6 sm:py-8 px-3 sm:px-4 border-t border-border">
         <div className="max-w-7xl mx-auto text-center text-muted-foreground text-xs sm:text-sm">
-          <p>© 2025 MRO - Mais Resultados Online. Todos os direitos reservados.</p>
+          <p>{t.footer}</p>
         </div>
       </footer>
     </div>
