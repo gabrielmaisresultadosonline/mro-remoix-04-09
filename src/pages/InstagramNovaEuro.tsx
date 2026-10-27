@@ -7,6 +7,7 @@ import { trackPageView, trackLead, trackInitiateCheckout } from "@/lib/facebookT
 import { toast } from "sonner";
 import { CheckCircle2, Shield, X, Mail, User, CreditCard, Loader2, Phone, ShoppingCart, Sparkles } from "lucide-react";
 import Ferramentammmr from "./Ferramentammmr";
+import { PromoHlsVideo } from "@/components/sales/PromoHlsVideo";
 
 // Planos em Libras Esterlinas (£) — valores e pagamento Stripe próprios desta página.
 const PLANS = {
@@ -121,7 +122,7 @@ const InstagramNovaEuro = () => {
     trackInitiateCheckout(`Plano ${PLANS[key].name} GBP`, PLANS[key].price);
   };
 
-  const heroVideo = (
+  const youtubeFallback = (
     <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border">
       <iframe
         src="https://www.youtube.com/embed/lecSwt54sa0?rel=0&modestbranding=1"
@@ -132,6 +133,13 @@ const InstagramNovaEuro = () => {
       />
     </div>
   );
+
+  // Vídeo enviado pelo /instagram-nova-euro/admin (HLS); sem vídeo configurado, mantém o vídeo atual.
+  const heroVideo = <PromoHlsVideo source="euro" trackPageView={false} fallback={youtubeFallback} />;
+
+  useEffect(() => {
+    supabase.functions.invoke("euro-page-admin", { body: { action: "track_visit", path: window.location.pathname } }).catch(() => {});
+  }, []);
 
   const pricingContent = (
     <div className="max-w-6xl mx-auto">
