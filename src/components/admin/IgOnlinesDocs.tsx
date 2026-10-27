@@ -203,6 +203,93 @@ function mostrarPopupBloqueio(texto) {
 setInterval(podeUsar, 60000);`}
     />
 
+
+    <Card className="p-4 space-y-2 border-primary">
+      <h3 className="font-bold">Seguidores: por que ainda não aparecem e como conectar</h3>
+      <p className="text-sm text-muted-foreground">
+        As boas-vindas já chegam porque a extensão manda <code>welcome_sent</code>. Os seguidores só aparecem se a extensão mandar um destes
+        campos na mesma ação <code>metrics</code> — hoje ela não manda nenhum, por isso o painel fica em "Aguardando dados" mesmo com
+        "7 seguidores" na extensão. Use um (ou os dois):
+      </p>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li><code>followers_gained</code> (recomendado, é o número que a extensão já mostra): quantos seguidores foram <strong>ganhos desde o último envio</strong>. É somado, igual às boas-vindas. Ex.: ganhou 7 → envie 7 uma vez; depois envie só os novos. Também aceitamos <code>new_followers</code> ou <code>seguidores_ganhos</code>.</li>
+        <li><code>followers</code>: o <strong>total atual</strong> do perfil (ex.: 1520 ou "1,5 mil"). O primeiro valor vira o inicial; o crescimento é atual − inicial.</li>
+        <li>Se mandar os dois, o total tem prioridade quando muda; senão vale o contador de ganhos.</li>
+        <li>Para conferir: no terminal da VPS rode <code>pm2 logs mro-api | grep "ig-online] metrics"</code>. Cada envio mostra <code>campos=...</code> com exatamente o que chegou. Se não aparecer <code>followers_gained</code> ou <code>followers</code>, o problema está na extensão.</li>
+      </ul>
+    </Card>
+
+    <Block
+      title="5) Enviar seguidores ganhos junto com as boas-vindas"
+      code={`// guarde quanto já foi enviado para mandar só a diferença
+let jaEnviados = Number(localStorage.getItem('mro_followers_sent') || 0);
+
+async function enviarMetricas(totalGanhosNaExtensao, boasVindasNovas) {
+  const novos = Math.max(0, totalGanhosNaExtensao - jaEnviados);
+  const r = await fetch('${ENDPOINT}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'metrics',
+      instagram: perfilLogado(),
+      followers_gained: novos,          // ex.: 7 na primeira vez
+      welcome_sent: boasVindasNovas,    // como já funciona hoje
+      // followers: 1520,               // opcional: total atual do perfil
+      request_id: crypto.randomUUID()
+    })
+  }).then(x => x.json());
+  if (r.success) { jaEnviados += novos; localStorage.setItem('mro_followers_sent', String(jaEnviados)); }
+}`}
+    />
+
+    <Card className="p-4 space-y-2">
+      <h3 className="font-bold">Imagens geradas e aprovadas (galeria)</h3>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li>Quando o cliente <strong>aprova e processa</strong> uma publicação, a extensão envia cada imagem para o servidor com a legenda da publicação (ação <code>gallery_upload</code>).</li>
+        <li>O arquivo fica no disco da VPS e o registro no PostgreSQL. Depois de <strong>30 dias</strong> imagem e registro são apagados automaticamente (limpeza a cada hora).</li>
+        <li>Formatos: JPG, PNG ou WEBP, até 8 MB por imagem (o servidor confere o tipo real do arquivo).</li>
+        <li><code>publication_id</code> + <code>image_index</code> evitam duplicar: se a mesma imagem for reenviada, a resposta traz <code>duplicate: true</code> e nada é gravado de novo.</li>
+        <li>No admin, aba <strong>Dashboard e imagens</strong>: resumo das métricas, todas as imagens com o cliente que enviou, filtro por cliente, baixar todas (ZIP com imagem + legenda em .txt), ver maior e excluir.</li>
+        <li>Galeria pública: <code>/galeria-ig</code> — tela cheia, rolagem infinita, funciona em celular e qualquer navegador. Mostra <strong>só as imagens</strong>; a legenda aparece ao clicar para ver maior. Nenhum @perfil ou dado de cliente é exibido.</li>
+        <li>Envie apenas imagens que o cliente aprovou e que ele concorda em ter exibidas na vitrine pública.</li>
+      </ul>
+    </Card>
+
+    <Block
+      title="6) Enviar imagem aprovada + legenda (action: gallery_upload)"
+      code={`// Rode no service worker/background (não no content script) para não ser bloqueado.
+async function blobParaBase64(blob) {
+  return await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
+}
+
+// chamar uma vez por imagem, depois que o cliente aprovar e processar
+async function enviarImagemAprovada({ instagram, publicacaoId, indice, imagemBlob, legenda }) {
+  const r = await fetch('${ENDPOINT}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'gallery_upload',
+      instagram,                         // @ do cliente
+      publication_id: publicacaoId,      // id da publicação na extensão
+      image_index: indice,               // 0, 1, 2... para carrossel
+      image_base64: await blobParaBase64(imagemBlob), // "data:image/jpeg;base64,..."
+      caption: legenda                   // legenda da publicação (até 2200 caracteres)
+    })
+  }).then(x => x.json());
+  // { success:true, id:"...", expires_at:"...", duplicate:false }
+  return r;
+}`}
+    />
+
+    <Card className="p-4 space-y-2">
+      <h4 className="font-semibold text-sm">Leitura pública (sem login)</h4>
+      <pre className="text-[11px] bg-muted p-3 rounded-md overflow-x-auto whitespace-pre">{`GET ${ENDPOINT}?public_gallery=1&limit=60
+→ { "images": [{ "id", "url", "caption", "created_at" }], "next_before": "..." }
+   próxima página: &before=<next_before>
+
+GET ${ENDPOINT}?file=<id>   → a imagem (some depois de 30 dias)`}</pre>
+    </Card>
+
     <Card className="p-4 space-y-2">
       <h4 className="font-semibold text-sm">Resposta do ping</h4>
       <pre className="text-[11px] bg-muted p-3 rounded-md overflow-x-auto whitespace-pre">{`{

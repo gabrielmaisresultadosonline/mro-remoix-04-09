@@ -75,7 +75,7 @@ const STATUS_LABEL: Record<Status, string> = {
 const fmt = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—';
 
-type SubTab = 'profiles' | 'metrics' | 'messages' | 'docs';
+type SubTab = 'gallery' | 'profiles' | 'metrics' | 'messages' | 'docs';
 
 const IgOnlinesPanel: React.FC = () => {
   const { toast } = useToast();
