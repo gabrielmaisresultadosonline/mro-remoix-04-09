@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.ig_online_gallery (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   instagram_username TEXT NOT NULL,
   publication_id TEXT,
+  image_index INTEGER NOT NULL DEFAULT 0,
   caption TEXT,
   file_path TEXT NOT NULL,
   mime TEXT NOT NULL,
@@ -23,4 +24,5 @@ CREATE INDEX IF NOT EXISTS ig_online_gallery_created_idx ON public.ig_online_gal
 CREATE INDEX IF NOT EXISTS ig_online_gallery_ig_idx ON public.ig_online_gallery (lower(instagram_username));
 CREATE INDEX IF NOT EXISTS ig_online_gallery_expires_idx ON public.ig_online_gallery (expires_at);
 CREATE UNIQUE INDEX IF NOT EXISTS ig_online_gallery_pub_uq
-  ON public.ig_online_gallery (lower(instagram_username), publication_id, file_path);
+  ON public.ig_online_gallery (lower(instagram_username), publication_id, image_index)
+  WHERE publication_id IS NOT NULL;
