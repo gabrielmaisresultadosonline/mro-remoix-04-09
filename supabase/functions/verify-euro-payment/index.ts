@@ -35,6 +35,35 @@ async function sendAffiliateEmail(supabase: any, order: any, supabaseUrl: string
   }
 }
 
+
+async function sha256Hex(value: string): Promise<string> {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Cria/atualiza o acesso na API interna MRO (mro_tool_users) — mesmo fluxo da /ferramentamropromo. */
+async function provisionMroToolUser(supabase: any, username: string, email: string | null): Promise<boolean> {
+  const u = username.trim().toLowerCase();
+  const { data: existing } = await supabase.from("mro_tool_users").select("id, plan_accounts").eq("username", u).maybeSingle();
+  const payload: Record<string, unknown> = {
+    username: u,
+    email: email ? email.trim().toLowerCase() : null,
+    password_hash: await sha256Hex(u),
+    password_plain: u,
+    plan_accounts: Math.max(4, Number(existing?.plan_accounts) || 0),
+    expiration_days: 365,
+    expires_at: new Date(Date.now() + 365 * 86400000).toISOString(),
+    expired_email_sent_at: null,
+    is_active: true,
+    source: "instagram_nova_euro",
+  };
+  const { error } = existing
+    ? await supabase.from("mro_tool_users").update(payload).eq("id", existing.id)
+    : await supabase.from("mro_tool_users").insert(payload);
+  if (error) { console.error("[verify-euro-payment] mro_tool_users error", error.message); return false; }
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -145,24 +174,9 @@ serve(async (req) => {
       try {
         log("Creating user access in SquareCloud (manual)", { username: order.username });
         
-        const createUserUrl = `https://dashboardmroinstagramvini-online.squareweb.app/admin/criar-usuario-plano`;
-        const createResponse = await fetch(createUserUrl, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "x-admin-name": "MRO",
-            "x-admin-pass": "Ga145523@"
-          },
-          body: JSON.stringify({
-            username: order.username,
-            password: order.username,
-            plano: "solo", // Padrão Euro como solo
-            dias: 365,
-            email: order.email,
-          }),
-        });
+        const created = await provisionMroToolUser(supabase, order.username, order.email);
 
-        if (createResponse.ok || (await createResponse.clone().json().catch(() => ({}))).success) {
+        if (created) {
           log("User created successfully in SquareCloud (manual)");
           
           await supabase
@@ -283,24 +297,9 @@ serve(async (req) => {
       try {
         log("Creating user access in SquareCloud", { username: order.username });
         
-        const createUserUrl = `https://dashboardmroinstagramvini-online.squareweb.app/admin/criar-usuario-plano`;
-        const createResponse = await fetch(createUserUrl, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "x-admin-name": "MRO",
-            "x-admin-pass": "Ga145523@"
-          },
-          body: JSON.stringify({
-            username: order.username,
-            password: order.username,
-            plano: "solo", // Padrão Euro como solo
-            dias: 365,
-            email: order.email,
-          }),
-        });
+        const created = await provisionMroToolUser(supabase, order.username, order.email);
 
-        if (createResponse.ok || (await createResponse.clone().json().catch(() => ({}))).success) {
+        if (created) {
           log("User created successfully in SquareCloud");
           
           await supabase
