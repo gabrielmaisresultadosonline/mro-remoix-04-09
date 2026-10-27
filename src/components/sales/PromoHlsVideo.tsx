@@ -36,6 +36,7 @@ function getVisitorId(): string {
   }
 }
 
+export const trackPromoVideoEvent = trackPromoVideo;
 export function trackPromoVideo(event_type: string, extra?: Record<string, unknown>) {
   supabase.functions
     .invoke("ferramentamropromo-video", {
@@ -58,6 +59,8 @@ export interface PromoHlsVideoProps {
   onWatched?: () => void;
   /** Exibido se nenhum vídeo estiver configurado. */
   fallback?: React.ReactNode;
+  /** "euro" usa o vídeo próprio de /instagram-nova-euro e não grava métricas da promo. */
+  source?: "promo" | "euro";
 }
 
 const fmt = (s: number) => {
@@ -67,7 +70,11 @@ const fmt = (s: number) => {
 };
 
 /** Player HLS adaptativo (várias qualidades) compartilhado por /ferramentamropromo e /promo/:afiliado. */
-export function PromoHlsVideo({ trackPageView = true, onWatched, fallback }: PromoHlsVideoProps) {
+export function PromoHlsVideo({ trackPageView = true, onWatched, fallback, source = "promo" }: PromoHlsVideoProps) {
+  const isEuro = source === "euro";
+  const trackPromoVideo = (event_type: string, extra?: Record<string, unknown>) => {
+    if (!isEuro) trackPromoVideoEvent(event_type, extra);
+  };
   const ref = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const maxTimeRef = useRef(0);
@@ -83,13 +90,13 @@ export function PromoHlsVideo({ trackPageView = true, onWatched, fallback }: Pro
   useEffect(() => {
     if (trackPageView) trackPromoVideo("page_view");
     supabase.functions
-      .invoke("ferramentamropromo-video", { body: { action: "get_video" } })
+      .invoke(isEuro ? "euro-page-admin" : "ferramentamropromo-video", { body: { action: "get_video" } })
       .then(({ data }) => {
         setCfg({ video_url: data?.video_url ?? null, hls_url: data?.hls_url ?? null });
         setPs({ ...DEFAULT_PLAYER_SETTINGS, ...(data?.player_settings || {}) });
       })
       .catch(() => setCfg({ video_url: null, hls_url: null }));
-  }, [trackPageView]);
+  }, [trackPageView, isEuro]);
 
   useEffect(() => {
     const video = ref.current;
