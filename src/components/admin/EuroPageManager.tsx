@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { uploadVideoInChunks } from "@/lib/chunkedVideoUpload";
 import { Globe, Loader2, RefreshCw, Save, Upload, Video } from "lucide-react";
 import { format } from "date-fns";
+import { EuroVideoJobTracker } from "./EuroVideoJobTracker";
 
 const VIDEO_SERVER = "https://video.maisresultadosonline.com.br";
 
@@ -24,7 +25,7 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
-  const [transcode, setTranscode] = useState<{ progress: number; status: string } | null>(null);
+  const [trackedJob, setTrackedJob] = useState<string | null>(null);
   const [serverVideos, setServerVideos] = useState<ServerVideo[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -44,25 +45,17 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
     try { const r = await fetch(`${VIDEO_SERVER}/api/video/list`); const d = await r.json(); if (d?.success) setServerVideos(d.files || []); } catch { /* sem lista */ }
   };
   useEffect(() => { loadVisits(); loadVideo(); loadServerVideos(); }, []);
+  // Se o vídeo salvo ainda não terminou de processar, acompanha automaticamente.
+  useEffect(() => {
+    if (trackedJob || !hlsUrl) return;
+    const id = hlsUrl.match(/\/videos\/hls\/(.+?)\/master\.m3u8/)?.[1];
+    const v = id && serverVideos.find((x) => x.name === decodeURIComponent(id));
+    if (v && v.ready === false) setTrackedJob(v.name);
+  }, [hlsUrl, serverVideos, trackedJob]);
 
   const save = async (o?: { hls_url?: string; video_url?: string }) => {
     const { data } = await call({ action: "set_video", hls_url: o?.hls_url ?? hlsUrl, video_url: o?.video_url ?? videoUrl, video_title: title });
     if (data?.success) toast.success("Vídeo da página Euro salvo"); else toast.error("Erro ao salvar vídeo");
-  };
-
-  const poll = (jobId: string) => {
-    const tick = async () => {
-      try {
-        const r = await fetch(`${VIDEO_SERVER}/api/video/status/${encodeURIComponent(jobId)}`);
-        const d = await r.json();
-        const p = Number(d?.progress ?? 0);
-        setTranscode({ progress: p, status: d?.status || "" });
-        if (d?.status === "done" || d?.status === "completed" || p >= 100) { toast.success("Transcodificação concluída"); loadServerVideos(); return; }
-        if (d?.status === "error") { toast.error("Erro na transcodificação"); return; }
-      } catch { /* tenta de novo */ }
-      window.setTimeout(tick, 4000);
-    };
-    tick();
   };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +68,7 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
         setHlsUrl(result.hls_url); setVideoUrl(result.video_url || "");
         await save({ hls_url: result.hls_url, video_url: result.video_url || "" });
         const jobId = result.job_id || result.hls_url.match(/\/videos\/hls\/(.+?)\/master\.m3u8/)?.[1];
-        if (jobId) { setTranscode({ progress: 0, status: "queued" }); poll(jobId); }
+        if (jobId) setTrackedJob(jobId);
       } else toast.error(result.error || "Servidor recusou o envio");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro no envio");
@@ -85,7 +78,7 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
   };
 
   const select = (v: ServerVideo) => {
-    if (v.ready === false || v.status === "processing" || v.status === "queued") { toast.info("Aguarde a transcodificação concluir"); return; }
+    if (v.ready === false || v.status === "processing" || v.status === "queued" || v.status === "error") { setTrackedJob(v.name); toast.info("Acompanhe o processamento abaixo"); return; }
     const base = v.name.replace(/\.[^.]+$/, "");
     setHlsUrl(v.hls_url || v.url || `/videos/hls/${base}/master.m3u8`); setVideoUrl("");
     toast.success("Selecionado — clique em Salvar");
@@ -110,13 +103,13 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
             <Button onClick={() => { setHlsUrl(""); setVideoUrl(""); }} variant="outline" size="sm" className="border-zinc-600 text-zinc-400">Limpar</Button>
           </div>
           {uploading && <div className="space-y-1"><Progress value={progress} /><p className="text-xs text-zinc-400">{progress.toFixed(0)}% {status}</p></div>}
-          {transcode && <p className="text-xs text-zinc-400">Transcodificação: {transcode.progress.toFixed(0)}% ({transcode.status})</p>}
+          {trackedJob && <EuroVideoJobTracker key={trackedJob} serverUrl={VIDEO_SERVER} jobId={trackedJob} onDone={loadServerVideos} />}
           {serverVideos.length > 0 && (
             <div className="max-h-48 overflow-y-auto space-y-1 border-t border-zinc-700 pt-2">
               <p className="text-xs text-zinc-500">Vídeos já no servidor:</p>
               {serverVideos.map((v) => (
                 <button key={v.name} onClick={() => select(v)} className="block w-full text-left text-xs text-zinc-300 hover:text-white truncate">
-                  {v.name} {v.ready === false ? "(processando)" : ""}
+                  {v.name} {v.ready === false ? (v.status === "error" ? "(erro — clique para ver)" : "(processando — clique para acompanhar)") : ""}
                 </button>
               ))}
             </div>

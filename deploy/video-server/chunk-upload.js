@@ -187,9 +187,109 @@ module.exports = function registerChunkUpload(app, deps) {
     writeJob(fileName, { status: 'queued', progress: 0 });
     log('completo', id, '->', fileName, (meta.size / 1048576).toFixed(1) + 'MB');
 
+    rememberSource(fileName, assembledPath);
     res.json({ success: true, job_id: fileName, video_url: '', hls_url: publicHlsUrl(fileName) });
-    setImmediate(() => startTranscoding(fileName, assembledPath, outputDir));
+    setImmediate(() => trackedStart(fileName, assembledPath, outputDir));
+  });
+
+  // ---------- Acompanhamento detalhado e reprocessamento ----------
+  // Lê o job.json/transcode.log reais gravados pelo startTranscoding; nada é simulado.
+  const STALL_MS = 3 * 60 * 1000; // sem nenhuma atualização do ffmpeg por 3 min = possível travamento
+  const running = new Set();
+  const isValidJob = (id) => typeof id === 'string' && /^[A-Za-z0-9._-]{1,200}$/.test(id) && !id.includes('..');
+  const jobDir = (id) => path.join(HLS_ROOT, id);
+  const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
+
+  function rememberSource(id, src) {
+    try { fs.writeFileSync(path.join(jobDir(id), 'source.json'), JSON.stringify({ path: src })); } catch (e) { log('source.json', e.message); }
+  }
+  function trackedStart(id, src, out) {
+    running.add(id);
+    try { startTranscoding(id, src, out); } catch (e) {
+      running.delete(id);
+      writeJob(id, { status: 'error', error: 'Falha ao iniciar: ' + e.message });
+    }
+  }
+  const findSource = (id) => {
+    const saved = readJson(path.join(jobDir(id), 'source.json'));
+    if (saved?.path && fs.existsSync(saved.path)) return saved.path;
+    // Envio simples antigo: arquivo em uploads/ com o mesmo nome base do job.
+    const base = id.replace(/^\d+-/, '');
+    try {
+      const hit = fs.readdirSync(UPLOAD_ROOT)
+        .filter((f) => path.parse(f).name.replace(/^\d+-/, '') === base || sanitizeBaseName(path.parse(f).name.replace(/^\d+-/, '')) === base)
+        .map((f) => path.join(UPLOAD_ROOT, f))
+        .filter((f) => fs.statSync(f).isFile())
+        .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+      return hit || null;
+    } catch { return null; }
+  };
+  const readStage = (id) => {
+    try {
+      const lines = fs.readFileSync(path.join(jobDir(id), 'transcode.log'), 'utf8').trim().split('\n').slice(-60).reverse();
+      for (const l of lines) {
+        let m;
+        if ((m = l.match(/PROGRESS [\d.]+% \| (\w+)=([\d.]+)%/))) return { stage: `Convertendo ${m[1]}`, stage_progress: Number(m[2]) };
+        if ((m = l.match(/RENDITION START (\w+) \((\d+)\/(\d+)\)/))) return { stage: `Convertendo ${m[1]} (${m[2]}/${m[3]})`, stage_progress: null };
+        if ((m = l.match(/RENDITION END (\w+)/))) return { stage: `Qualidade ${m[1]} concluída`, stage_progress: 100 };
+        if (/END ok/.test(l)) return { stage: 'Finalizado', stage_progress: 100 };
+        if (/FATAL ERROR/.test(l)) return { stage: 'Erro no ffmpeg', stage_progress: null, log_error: l.replace(/^\[[^\]]+\]\s*/, '').slice(0, 400) };
+        if (/PROBE ok|RENDITIONS:/.test(l)) return { stage: 'Analisando o vídeo', stage_progress: null };
+        if (/START transcoding/.test(l)) return { stage: 'Iniciando', stage_progress: null };
+      }
+    } catch {}
+    return { stage: null, stage_progress: null };
+  };
+  const describe = (id) => {
+    const dir = jobDir(id);
+    if (!fs.existsSync(dir)) return null;
+    const ready = fs.existsSync(path.join(dir, 'master.m3u8'));
+    const job = readJson(path.join(dir, 'job.json')) || {};
+    const status = ready ? 'completed' : (job.status || 'unknown');
+    const updated = Date.parse(job.updated_at || '') || fs.statSync(dir).mtimeMs;
+    const idleMs = Date.now() - updated;
+    const active = status === 'processing' || status === 'queued';
+    const stalled = active && idleMs > STALL_MS;
+    const st = readStage(id);
+    return {
+      id, status, ready,
+      progress: ready ? 100 : Math.max(0, Math.min(100, Math.round(job.progress || 0))),
+      error: job.error || st.log_error || null,
+      stage: st.stage, stage_progress: st.stage_progress,
+      updated_at: new Date(updated).toISOString(), idle_seconds: Math.round(idleMs / 1000),
+      stalled, running_here: running.has(id),
+      can_retry: !ready && (status === 'error' || stalled || status === 'unknown') && !!findSource(id),
+      hls_url: publicHlsUrl(id),
+    };
+  };
+
+  app.get('/api/video/job/:id', (req, res) => {
+    if (!isValidJob(req.params.id)) return res.status(400).json({ success: false, error: 'ID inválido' });
+    const d = describe(req.params.id);
+    if (!d) return res.status(404).json({ success: false, error: 'Vídeo não encontrado' });
+    if (running.has(d.id) && (d.status === 'completed' || d.status === 'error')) running.delete(d.id);
+    res.json({ success: true, ...d });
+  });
+
+  app.post('/api/video/job/:id/retry', (req, res) => {
+    const id = req.params.id;
+    if (!isValidJob(id)) return res.status(400).json({ success: false, error: 'ID inválido' });
+    const d = describe(id);
+    if (!d) return res.status(404).json({ success: false, error: 'Vídeo não encontrado' });
+    if (d.ready) return res.status(409).json({ success: false, error: 'Este vídeo já está pronto' });
+    if ((d.status === 'processing' || d.status === 'queued') && !d.stalled) {
+      return res.status(409).json({ success: false, error: 'O processamento ainda está ativo' });
+    }
+    const src = findSource(id);
+    if (!src) return res.status(410).json({ success: false, error: 'Arquivo original não está mais no servidor; envie o MP4 de novo' });
+    rememberSource(id, src);
+    writeJob(id, { status: 'queued', progress: 0, error: null });
+    log('reprocessando', id, src);
+    try { fs.appendFileSync(path.join(jobDir(id), 'transcode.log'), `[${new Date().toISOString()}] RETRY requested\n`); } catch {}
+    setImmediate(() => trackedStart(id, src, jobDir(id)));
+    res.json({ success: true, job_id: id });
   });
 
   log('rotas de envio em partes ativas');
 };
+
