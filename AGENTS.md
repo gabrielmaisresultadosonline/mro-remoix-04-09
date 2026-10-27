@@ -22,3 +22,4 @@
 - Ao Vivo streaming runs natively in the VPS Express server (ffmpeg loop to RTMPS, files on local disk), because long-lived processes cannot run in edge functions.
 - IG Online (`ig-online-api`) is served natively by the VPS Express server against the server's own PostgreSQL (server/src/functions/ig-online-native.ts), with the Deno function kept only as a fallback with the same JSON contract, because frequent extension pings must not depend on cold starts or external infrastructure.
 - Shared sales wording lives in one language-keyed copy module whose default is the original language; a route opts into another language only through its own prop, because localizing one sales page must never reword the other sales routes.
+- The Euro sales page keeps its own video settings and visit log behind a dedicated admin function, reusing the shared HLS player and video server, because Euro changes must not alter the promo video or its metrics.

@@ -97,4 +97,4 @@
 ## Página Euro (/instagram-nova-euro)
 - [x] Deixar todos os textos dessa página em espanhol, sem alterar as demais
 - [x] Remover o botão flutuante de WhatsApp somente nessa página
-- [ ] Painel `/instagram-nova-euro/admin` com tentativas de compra, IPs/região conectados e envio do vídeo mp4 com transcodificação, além da tarja "euro" no `/instagram-nova-admin` (aguardando confirmação do escopo)
+- [x] Painel `/instagram-nova-euro/admin` com tentativas de compra, IPs/região conectados e envio do vídeo mp4 com transcodificação, além da tarja "euro" no `/instagram-nova-admin` (aguardando confirmação do escopo)
