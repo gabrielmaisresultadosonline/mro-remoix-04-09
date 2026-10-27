@@ -44,6 +44,8 @@ serve(async (req) => {
 
     const body = await req.json();
     const { email, username, phone, checkUserExists } = body;
+    // Agencia = vitalício; Pro = anual.
+    const planTypeValue = String(body.planType || "").toLowerCase() === "agencia" ? "agencia_vitalicio" : "annual";
 
     if (!email || !email.includes("@")) {
       return new Response(
@@ -108,7 +110,7 @@ serve(async (req) => {
         email: cleanEmail,
         username: cleanUsername,
         phone: cleanPhone,
-        plan_type: "annual",
+        plan_type: planTypeValue,
         product: "mro_instagram_euro",
       },
     });
@@ -122,7 +124,7 @@ serve(async (req) => {
         email: cleanEmail,
         username: cleanUsername,
         phone: cleanPhone || null,
-        plan_type: "annual",
+        plan_type: planTypeValue,
         amount: AMOUNT_EUR,
         status: "pending",
         stripe_session_id: session.id,

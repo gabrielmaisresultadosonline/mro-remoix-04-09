@@ -2241,6 +2241,63 @@ export type Database = {
         }
         Relationships: []
       }
+      euro_page_settings: {
+        Row: {
+          hls_url: string | null
+          id: string
+          updated_at: string
+          video_title: string | null
+          video_url: string | null
+        }
+        Insert: {
+          hls_url?: string | null
+          id?: string
+          updated_at?: string
+          video_title?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          hls_url?: string | null
+          id?: string
+          updated_at?: string
+          video_title?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      euro_page_visits: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          ip: string | null
+          path: string | null
+          region: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          path?: string | null
+          region?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          path?: string | null
+          region?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       ferramentamropromo_analytics: {
         Row: {
           created_at: string

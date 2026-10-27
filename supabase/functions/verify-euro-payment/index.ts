@@ -42,7 +42,10 @@ async function sha256Hex(value: string): Promise<string> {
 }
 
 /** Cria/atualiza o acesso na API interna MRO (mro_tool_users) — mesmo fluxo da /ferramentamropromo. */
-async function provisionMroToolUser(supabase: any, username: string, email: string | null): Promise<boolean> {
+async function provisionMroToolUser(supabase: any, username: string, email: string | null, planType?: string | null): Promise<boolean> {
+  // Plano Agencia é vitalício; Pro continua anual.
+  const lifetime = String(planType || "").toLowerCase().startsWith("agenc");
+  const days = lifetime ? 999999 : 365;
   const u = username.trim().toLowerCase();
   const { data: existing } = await supabase.from("mro_tool_users").select("id, plan_accounts").eq("username", u).maybeSingle();
   const payload: Record<string, unknown> = {
@@ -50,9 +53,9 @@ async function provisionMroToolUser(supabase: any, username: string, email: stri
     email: email ? email.trim().toLowerCase() : null,
     password_hash: await sha256Hex(u),
     password_plain: u,
-    plan_accounts: Math.max(4, Number(existing?.plan_accounts) || 0),
-    expiration_days: 365,
-    expires_at: new Date(Date.now() + 365 * 86400000).toISOString(),
+    plan_accounts: Math.max(lifetime ? 10 : 4, Number(existing?.plan_accounts) || 0),
+    expiration_days: days,
+    expires_at: lifetime ? null : new Date(Date.now() + 365 * 86400000).toISOString(),
     expired_email_sent_at: null,
     is_active: true,
     source: "instagram_nova_euro",
@@ -174,7 +177,7 @@ serve(async (req) => {
       try {
         log("Creating user access in API interna MRO (manual)", { username: order.username });
         
-        const created = await provisionMroToolUser(supabase, order.username, order.email);
+        const created = await provisionMroToolUser(supabase, order.username, order.email, order.plan_type);
 
         if (created) {
           log("User created successfully in API interna MRO (manual)");
@@ -297,7 +300,7 @@ serve(async (req) => {
       try {
         log("Creating user access in API interna MRO", { username: order.username });
         
-        const created = await provisionMroToolUser(supabase, order.username, order.email);
+        const created = await provisionMroToolUser(supabase, order.username, order.email, order.plan_type);
 
         if (created) {
           log("User created successfully in API interna MRO");

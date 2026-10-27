@@ -143,6 +143,10 @@ const InstagramNovaEuro = () => {
 
   const pricingContent = (
     <div className="max-w-6xl mx-auto">
+      <div className="mb-10 sm:mb-12 rounded-2xl border border-primary/40 bg-primary/10 px-4 py-4 sm:py-5 text-center">
+        <p className="text-base sm:text-xl font-bold text-foreground">🇧🇷 Herramienta brasileña con más de <span className="text-primary">1.800 empresas</span> usándola</p>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">Garantía de 30 días · Soporte en portugués</p>
+      </div>
       <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center mb-3 sm:mb-4">
         ELIGE TU <span className="text-primary">PLAN</span>
       </h2>
@@ -158,11 +162,15 @@ const InstagramNovaEuro = () => {
                 </div>
               )}
               <div className="text-center mt-6 mb-6 sm:mb-8">
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Plan {plan.name} Anual</h3>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Plan {plan.name} {key === "agencia" ? "Vitalicio" : "Anual"}</h3>
                 <p className="text-muted-foreground text-sm mb-4">{plan.accounts} cuentas simultáneas</p>
                 <div className="text-primary text-5xl sm:text-6xl md:text-7xl font-black">£{plan.price}</div>
                 <p className="text-muted-foreground mt-2 font-bold">Pago único vía Stripe</p>
-                <p className="text-muted-foreground text-xs sm:text-sm">Acceso por 1 año</p>
+                <p className="text-muted-foreground text-xs sm:text-sm">{key === "agencia" ? "Acceso de por vida" : "Acceso por 1 año"}</p>
+                <div className="mt-4 flex flex-col items-center gap-1.5 text-xs sm:text-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-primary font-semibold"><Shield className="w-4 h-4" /> Garantía de 30 días</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-muted-foreground">Soporte en portugués</span>
+                </div>
               </div>
               <div className="space-y-3 mb-6 sm:mb-8 flex-1">
                 {FEATURES(plan.accounts).map((f) => (
