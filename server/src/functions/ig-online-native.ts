@@ -15,6 +15,9 @@ import type { Request, Response } from "express";
 import type { PoolClient } from "pg";
 import { pool, adminQuery } from "../db.js";
 import { hasValidAdminSession } from "../admin-session.js";
+import { adminGallery, adminGalleryDelete, galleryUpload, handleGalleryGet } from "./ig-online-gallery.js";
+
+const PUBLIC_BASE = (process.env.PUBLIC_API_URL || "https://api.maisresultadosonline.com.br").replace(/\/$/, "") + "/functions/v1/ig-online-api";
 
 type Status = "client" | "trial" | "unknown";
 type Body = Record<string, unknown>;
@@ -226,6 +229,13 @@ async function actionMetrics(body: Body) {
   } else if (rawF === undefined) {
     console.info(`[ig-online] metrics @${ig}: recebido sem campo de seguidores (welcome_sent=${String(body.welcome_sent ?? 0)})`);
   }
+  // Seguidores GANHOS desde o último envio (incremento), como o contador da extensão.
+  const rawG = body.followers_gained ?? body.new_followers ?? body.seguidores_ganhos ?? 0;
+  const gained = Number(rawG);
+  if (!Number.isInteger(gained) || gained < 0 || gained > 100000)
+    return [400, { success: false, error: "followers_gained deve ser inteiro entre 0 e 100000" }] as const;
+  const fields = Object.keys(body).filter((k) => k !== "action").sort().join(",").slice(0, 300);
+  console.info(`[ig-online] metrics @${ig}: campos=${fields} followers=${followers ?? "-"} gained=${gained} welcome=${String(body.welcome_sent ?? 0)}`);
   const rawW = body.welcome_sent ?? 0;
   const welcome = Number(rawW);
   if (!Number.isInteger(welcome) || welcome < 0 || welcome > 10000)
@@ -250,25 +260,29 @@ async function actionMetrics(body: Body) {
          followers_current = COALESCE($3, followers_current),
          followers_initial = COALESCE(followers_initial, $3),
          session_started_at = CASE WHEN $4 = 'start' THEN now() ELSE session_started_at END,
-         session_ended_at = CASE WHEN $4 = 'start' THEN NULL WHEN $4 = 'end' THEN now() ELSE session_ended_at END
+         session_ended_at = CASE WHEN $4 = 'start' THEN NULL WHEN $4 = 'end' THEN now() ELSE session_ended_at END,
+         followers_gained_total = followers_gained_total + $5,
+         last_metrics_fields = $6
        WHERE id = $1`,
-      [s.id, welcome, followers, sessionEvent],
+      [s.id, welcome, followers, sessionEvent, gained, fields],
     );
     const upd = await c.query(
       `UPDATE public.ig_online_metrics SET updated_at = now(), welcome_sent = welcome_sent + $3,
-         followers_end = COALESCE($4, followers_end), followers_start = COALESCE(followers_start, $4)
+         followers_end = COALESCE($4, followers_end), followers_start = COALESCE(followers_start, $4),
+         followers_gained = followers_gained + $5
        WHERE lower(instagram_username) = $1 AND day = $2`,
-      [ig, day, welcome, followers],
+      [ig, day, welcome, followers, gained],
     );
     if (upd.rowCount === 0) {
       await c.query(
-        `INSERT INTO public.ig_online_metrics (instagram_username, day, followers_start, followers_end, welcome_sent)
-         VALUES ($1,$2,$3,$3,$4)
+        `INSERT INTO public.ig_online_metrics (instagram_username, day, followers_start, followers_end, welcome_sent, followers_gained)
+         VALUES ($1,$2,$3,$3,$4,$5)
          ON CONFLICT (lower(instagram_username), day) DO UPDATE SET
            welcome_sent = public.ig_online_metrics.welcome_sent + EXCLUDED.welcome_sent,
+           followers_gained = public.ig_online_metrics.followers_gained + EXCLUDED.followers_gained,
            followers_end = COALESCE(EXCLUDED.followers_end, public.ig_online_metrics.followers_end),
            updated_at = now()`,
-        [ig, day, followers, welcome],
+        [ig, day, followers, welcome, gained],
       );
     }
     return false;
@@ -334,7 +348,7 @@ async function adminMetrics(body: Body) {
   const sinceDay = spDay(new Date(Date.now() - (days - 1) * 86_400_000));
   const sessions = await adminQuery<Row>("SELECT * FROM public.ig_online_sessions ORDER BY last_seen_at DESC LIMIT 1000");
   const metrics = await adminQuery<Row>(
-    "SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_start, followers_end, welcome_sent FROM public.ig_online_metrics WHERE day >= $1 ORDER BY day ASC LIMIT 20000",
+    "SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_start, followers_end, welcome_sent, followers_gained FROM public.ig_online_metrics WHERE day >= $1 ORDER BY day ASC LIMIT 20000",
     [sinceDay],
   );
   const byIg = new Map<string, { growth: number | null; welcome: number; days: number }>();
@@ -344,7 +358,10 @@ async function adminMetrics(body: Body) {
     const key = String(m.instagram_username).toLowerCase();
     const day = String(m.day);
     const fs = numOrNull(m.followers_start), fe = numOrNull(m.followers_end);
-    const g = fs !== null && fe !== null ? fe - fs : null;
+    const gainedDay = Number(m.followers_gained ?? 0);
+    const diff = fs !== null && fe !== null ? fe - fs : null;
+    // Total enviado tem prioridade; sem total, usa o contador de ganhos da extensão.
+    const g = diff !== null && diff !== 0 ? diff : gainedDay > 0 ? gainedDay : diff;
     const cur = byIg.get(key) ?? { growth: null, welcome: 0, days: 0 };
     if (g !== null) cur.growth = (cur.growth ?? 0) + g;
     cur.welcome += Number(m.welcome_sent ?? 0);
@@ -368,7 +385,10 @@ async function adminMetrics(body: Body) {
     const fi = numOrNull(s.followers_initial), fc = numOrNull(s.followers_current);
     return {
       id: s.id, instagram_username: s.instagram_username, status: s.status,
-      followers_initial: fi, followers_current: fc, followers_diff: fi !== null && fc !== null ? fc - fi : null,
+      followers_initial: fi, followers_current: fc,
+      followers_gained_total: Number(s.followers_gained_total ?? 0),
+      last_metrics_fields: s.last_metrics_fields ?? null,
+      followers_diff: fi !== null && fc !== null && fc !== fi ? fc - fi : Number(s.followers_gained_total ?? 0) > 0 ? Number(s.followers_gained_total) : fi !== null && fc !== null ? 0 : null,
       period_growth: agg?.growth ?? null,
       daily_growth: agg && agg.growth !== null && agg.days ? Math.round((agg.growth / agg.days) * 10) / 10 : null,
       welcome_total: Number(s.welcome_total ?? 0), welcome_period: agg?.welcome ?? 0,
@@ -479,9 +499,15 @@ async function adminMessages() {
 
 // ───────────────────────── roteamento ─────────────────────────
 
-const EXTENSION_ACTIONS = new Set(["ping", "metrics", "check_access", "message_event"]);
+const EXTENSION_ACTIONS = new Set(["ping", "metrics", "check_access", "message_event", "gallery_upload"]);
 
 export async function handleNativeIgOnline(req: Request, res: Response): Promise<boolean> {
+  if (req.method === "GET") {
+    try { return await handleGalleryGet(req, res, PUBLIC_BASE); } catch (e) {
+      console.error("[ig-gallery] GET falhou:", e instanceof Error ? e.message : e);
+      res.status(500).json({ success: false, error: "Erro interno" }); return true;
+    }
+  }
   if (req.method !== "POST") return false;
   const requestId = req.header("cf-ray") ?? crypto.randomUUID();
   const body = parseBody(req.body);
@@ -503,6 +529,7 @@ export async function handleNativeIgOnline(req: Request, res: Response): Promise
       result = action === "ping" ? await actionPing(body, ip, ua, ver)
         : action === "metrics" ? await actionMetrics(body)
         : action === "check_access" ? await actionCheckAccess(body)
+        : action === "gallery_upload" ? (IG_RE.test(igKey) ? await galleryUpload(igKey, body) : [400, { success: false, error: "Instagram inválido" }] as const)
         : await actionMessageEvent(body);
     } else {
       if (!hasValidAdminSession(req)) {
@@ -526,6 +553,8 @@ export async function handleNativeIgOnline(req: Request, res: Response): Promise
           break;
         case "admin_send_message": result = await adminSendMessage(body); break;
         case "admin_messages": result = await adminMessages(); break;
+        case "admin_gallery": result = await adminGallery(body, PUBLIC_BASE); break;
+        case "admin_gallery_delete": result = await adminGalleryDelete(body); break;
         case "admin_toggle_message":
           await adminQuery("UPDATE public.ig_online_messages SET active = $2 WHERE id = $1::uuid", [clean(body.id, 60), Boolean(body.active)]);
           result = [200, { success: true }];
