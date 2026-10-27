@@ -89,9 +89,15 @@ function track(event_type: string, extra?: Record<string, unknown>) {
 
 export interface FerramentammmrProps {
   promotionalOffer?: boolean;
+  /** Substitui o vídeo principal (ex.: /instagram-nova-euro mantém o próprio vídeo). */
+  heroVideo?: React.ReactNode;
+  /** Substitui o conteúdo da seção de planos (preços/checkout próprios). */
+  pricingContent?: React.ReactNode;
+  /** Elementos extras (ex.: modal de checkout próprio). */
+  children?: React.ReactNode;
 }
 
-const Ferramentammmr = ({ promotionalOffer = false }: FerramentammmrProps) => {
+const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, children }: FerramentammmrProps) => {
   const annualAmount = promotionalOffer ? 300 : 397;
   const annualInstallments = promotionalOffer ? '12x de R$30' : '12x de R$ 40,00';
   const annualOneTime = promotionalOffer ? 'R$300 à vista' : 'R$ 397,00 à vista';
@@ -110,7 +116,7 @@ const Ferramentammmr = ({ promotionalOffer = false }: FerramentammmrProps) => {
   const milestonesRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
-    track("page_view");
+    if (!heroVideo) track("page_view");
     supabase.functions
       .invoke("ferramentamropromo-video", { body: { action: "get_video" } })
       .then(({ data }) => {
@@ -378,7 +384,7 @@ const Ferramentammmr = ({ promotionalOffer = false }: FerramentammmrProps) => {
 
   // Track PageView on mount
   useEffect(() => {
-    trackPageView('Sales Page - Instagram MRO Promo 2');
+    if (!pricingContent) trackPageView('Sales Page - Instagram MRO Promo 2');
   }, []);
 
   // Countdown de 7 horas - SEMPRE reinicia quando entra na página (NUNCA expira)
@@ -492,10 +498,12 @@ const Ferramentammmr = ({ promotionalOffer = false }: FerramentammmrProps) => {
 
           {/* Main Video */}
           <div className="mt-8 sm:mt-10 max-w-4xl mx-auto">
+            {heroVideo ?? (
             <PromoHlsVideo
               trackPageView={false}
               onWatched={() => { setVideoWatched(true); localStorage.setItem("ferramentamropromo:unlocked", "1"); }}
             />
+            )}
           </div>
 
           {/* CTA Button */}
@@ -552,7 +560,7 @@ const Ferramentammmr = ({ promotionalOffer = false }: FerramentammmrProps) => {
 
       {/* O que está incluso */}
       <section ref={pricingRef} className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
-        <div className="max-w-6xl mx-auto">
+        {pricingContent ?? <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center mb-3 sm:mb-4">
             {promotionalOffer ? <span className="text-primary">OFERTA ESPECIAL</span> : <>ESCOLHA SEU <span className="text-primary">PLANO</span></>}
           </h2>
@@ -688,7 +696,7 @@ const Ferramentammmr = ({ promotionalOffer = false }: FerramentammmrProps) => {
             </div>
             )}
           </div>
-        </div>
+        </div>}
       </section>
 
 
@@ -829,6 +837,8 @@ const Ferramentammmr = ({ promotionalOffer = false }: FerramentammmrProps) => {
           </div>
         </div>
       )}
+
+      {children}
 
       {/* Floating WhatsApp contact */}
       <FloatingWhatsAppCta

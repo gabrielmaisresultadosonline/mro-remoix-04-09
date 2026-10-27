@@ -63,22 +63,17 @@ serve(async (req) => {
     const cleanUsername = username.toLowerCase().trim();
     const cleanPhone = phone ? phone.replace(/\D/g, "").trim() : "";
 
-    // Check if user already exists in SquareCloud
+    // Verifica na API interna MRO (mro_tool_users), mesma base da /ferramentamropromo
     if (checkUserExists) {
       try {
-        log("Checking if user exists in SquareCloud", { username: cleanUsername });
-        const checkUrl = `https://dashboardmroinstagramvini-online.squareweb.app/api/users/${cleanUsername}`;
-        const checkResponse = await fetch(checkUrl);
-        
-        if (checkResponse.ok) {
-          const userData = await checkResponse.json();
-          if (userData && userData.username) {
-            log("User already exists in SquareCloud", { username: cleanUsername });
-            return new Response(
-              JSON.stringify({ error: "Este nome de usuário já está em uso. Escolha outro.", userExists: true }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-            );
-          }
+        const { data: existingUser } = await supabase
+          .from("mro_tool_users").select("id").eq("username", cleanUsername).maybeSingle();
+        if (existingUser) {
+          log("User already exists in mro_tool_users", { username: cleanUsername });
+          return new Response(
+            JSON.stringify({ success: false, error: "Este nome de usuário já está em uso. Escolha outro.", userExists: true }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
         }
       } catch (e) {
         log("Error checking user existence (continuing)", e);
