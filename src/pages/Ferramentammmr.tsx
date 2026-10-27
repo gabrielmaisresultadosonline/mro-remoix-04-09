@@ -116,7 +116,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
   const milestonesRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
-    track("page_view");
+    if (!heroVideo) track("page_view");
     supabase.functions
       .invoke("ferramentamropromo-video", { body: { action: "get_video" } })
       .then(({ data }) => {
