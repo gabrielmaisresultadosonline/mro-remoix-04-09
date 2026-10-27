@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { EuroPageManager } from "@/components/admin/EuroPageManager";
 import { 
   Loader2, 
   Lock, 
@@ -798,6 +799,8 @@ ${GROUP_LINK}`;
             </Button>
           </div>
         </div>
+
+        <EuroPageManager creds={{ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }} />
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
