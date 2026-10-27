@@ -98,9 +98,11 @@ export interface FerramentammmrProps {
   children?: React.ReactNode;
   /** Idioma dos textos da página. Padrão "pt". */
   lang?: SalesLang;
+  /** Mostra o botão flutuante de WhatsApp. Padrão true. */
+  showWhatsApp?: boolean;
 }
 
-const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, children, lang = "pt" }: FerramentammmrProps) => {
+const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, children, lang = "pt", showWhatsApp = true }: FerramentammmrProps) => {
   const t = pageCopy[lang];
   const annualAmount = promotionalOffer ? 300 : 397;
   const annualInstallments = promotionalOffer ? '12x de R$30' : '12x de R$ 40,00';
@@ -845,12 +847,14 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       {children}
 
       {/* Floating WhatsApp contact */}
-      <FloatingWhatsAppCta
-        phone="555192835863"
-        message={t.waMessage}
-        ariaLabel={t.waAria}
-        hoverLabel={t.waHover}
-      />
+      {showWhatsApp && (
+        <FloatingWhatsAppCta
+          phone="555192835863"
+          message={t.waMessage}
+          ariaLabel={t.waAria}
+          hoverLabel={t.waHover}
+        />
+      )}
 
       {/* Footer */}
       <footer className="py-6 sm:py-8 px-3 sm:px-4 border-t border-border">

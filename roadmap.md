@@ -93,3 +93,8 @@
 
 ## Preços /mktcompleto
 - [x] Trocar o plano único de R$ 2000 por três opções: mensal R$ 1500, 3 meses R$ 3.000 e 6 meses R$ 5.000, com verificação visual
+
+## Página Euro (/instagram-nova-euro)
+- [x] Deixar todos os textos dessa página em espanhol, sem alterar as demais
+- [x] Remover o botão flutuante de WhatsApp somente nessa página
+- [ ] Painel `/instagram-nova-euro/admin` com tentativas de compra, IPs/região conectados e envio do vídeo mp4 com transcodificação, além da tarja "euro" no `/instagram-nova-admin` (aguardando confirmação do escopo)

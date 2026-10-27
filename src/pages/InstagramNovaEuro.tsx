@@ -181,7 +181,7 @@ const InstagramNovaEuro = () => {
   const plan = PLANS[selectedPlan];
 
   return (
-    <Ferramentammmr lang="es" heroVideo={heroVideo} pricingContent={pricingContent}>
+    <Ferramentammmr lang="es" showWhatsApp={false} heroVideo={heroVideo} pricingContent={pricingContent}>
       {showCheckoutModal && (
         <div className="fixed inset-0 z-[100] bg-background/90 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" onClick={() => setShowCheckoutModal(false)}>
           <div className="bg-card border border-border/30 rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 relative my-4" onClick={(e) => e.stopPropagation()}>
