@@ -1353,15 +1353,7 @@ const EstruturaRendaExtra = () => {
                 </button>
               </div>
               <div className="p-4">
-                <div className="aspect-video w-full rounded-xl overflow-hidden bg-black">
-                  <iframe
-                    src="https://www.youtube.com/embed/WQwnAHNvSMU?autoplay=1"
-                    title="Entenda sobre a Renda Extra"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="w-full h-full"
-                  />
-                </div>
+                <YouTubePopupPlayer videoId="WQwnAHNvSMU" title="Entenda sobre a Renda Extra" />
               </div>
             </div>
           </div>
