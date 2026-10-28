@@ -287,6 +287,77 @@ function drawFloatingShapes(ctx: CanvasRenderingContext2D, W: number, H: number,
   ctx.restore();
 }
 
+/**
+ * Player do vídeo "Entenda a Estratégia".
+ *
+ * O pôster aparece primeiro e o YouTube só é carregado depois do clique:
+ * celular bloqueia reprodução automática sem um gesto do usuário, e extensões
+ * que bloqueiam rastreadores costumam derrubar o iframe assim que o popup
+ * abre. O link direto garante que o vídeo sempre possa ser assistido.
+ */
+const YouTubePopupPlayer = ({ videoId, title }: { videoId: string; title: string }) => {
+  const [playing, setPlaying] = useState(false);
+  const [posterFailed, setPosterFailed] = useState(false);
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+
+  const fallbackLink = (
+    <a
+      href={watchUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 font-bold text-xs transition-colors"
+    >
+      <ExternalLink className="h-4 w-4" />
+      {playing ? 'Não abriu? Assistir direto no YouTube' : 'Prefiro assistir no YouTube'}
+    </a>
+  );
+
+  if (playing) {
+    return (
+      <div className="space-y-3">
+        <div className="aspect-video w-full rounded-xl overflow-hidden bg-black">
+          <iframe
+            src={embedUrl}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+        {fallbackLink}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setPlaying(true)}
+        className="relative block w-full aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-[#1a1a2e] to-black group"
+      >
+        {!posterFailed && (
+          <img
+            src={`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`}
+            alt={title}
+            onError={() => setPosterFailed(true)}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        <span className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
+        <span className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <span className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+            <Play className="h-9 w-9 text-white ml-1" fill="currentColor" />
+          </span>
+          <span className="text-white font-bold text-sm tracking-wide">Assistir o vídeo</span>
+        </span>
+      </button>
+      {fallbackLink}
+    </div>
+  );
+};
+
 // ─── Component ───
 
 type ViewMode = 'menu' | 'posts-creator' | 'materiais' | 'contrato' | 'proposta-empresa' | 'tutoriais' | 'testes' | 'relatorios' | 'gerenciador-windows' | 'estrutura-links' | 'fechar-contratos-links' | 'explore-options';
@@ -1353,15 +1424,7 @@ const EstruturaRendaExtra = () => {
                 </button>
               </div>
               <div className="p-4">
-                <div className="aspect-video w-full rounded-xl overflow-hidden bg-black">
-                  <iframe
-                    src="https://www.youtube.com/embed/WQwnAHNvSMU?autoplay=1"
-                    title="Entenda sobre a Renda Extra"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="w-full h-full"
-                  />
-                </div>
+                <YouTubePopupPlayer videoId="WQwnAHNvSMU" title="Entenda sobre a Renda Extra" />
               </div>
             </div>
           </div>
