@@ -2,6 +2,13 @@ import type { Request, Response } from "express";
 import { hasValidAdminSession } from "../admin-session.js";
 import { adminQuery } from "../db.js";
 import { RestError } from "../rest/identifiers.js";
+import {
+  applyBaselineToSession,
+  loadBaselines,
+  ownedInstagrams,
+  printBaselineCandidate,
+  recordProfileReading,
+} from "./ig-profile-baseline.js";
 
 interface UserSessionRow {
   id: string;
@@ -82,6 +89,47 @@ function hydrateScreenshots(
         : [...history, { url: screenshotUrl, uploadedAt: new Date().toISOString() }],
     };
   });
+}
+
+/**
+ * Sincroniza a referência inicial central (ig_profile_baselines) com os perfis
+ * do painel: o print analisado só cria a referência se ainda não existir, e o
+ * initialSnapshot salvo sempre passa a ser a referência central. Com
+ * `withCurrent`, a última leitura da extensão MRO preenche os números atuais.
+ */
+async function withBaselines(
+  username: string,
+  active: Array<Record<string, unknown>>,
+  archived: Array<Record<string, unknown>>,
+  withCurrent: boolean,
+): Promise<[Array<Record<string, unknown>>, Array<Record<string, unknown>>]> {
+  try {
+    const all = [...active, ...archived];
+    const owned = await ownedInstagrams(username, all.map(instagramUsernameFrom));
+    if (owned.size === 0) return [active, archived];
+    let baselines = await loadBaselines([...owned]);
+    let created = 0;
+    for (const session of all) {
+      const ig = instagramUsernameFrom(session);
+      if (!owned.has(ig) || baselines.get(ig)?.initial_followers != null) continue;
+      const candidate = printBaselineCandidate(session);
+      if (!candidate) continue;
+      await recordProfileReading(ig, candidate, null, "print");
+      created += 1;
+    }
+    if (created) baselines = await loadBaselines([...owned]);
+    const apply = (session: Record<string, unknown>) => {
+      const ig = instagramUsernameFrom(session);
+      return owned.has(ig) ? applyBaselineToSession(session, baselines.get(ig), withCurrent) : session;
+    };
+    if (created || baselines.size) {
+      console.log(`[USER-CLOUD-STORAGE-NATIVE] baselines user=${username} perfis=${baselines.size} novos_por_print=${created}`);
+    }
+    return [active.map(apply), archived.map(apply)];
+  } catch (err) {
+    console.warn(`[USER-CLOUD-STORAGE-NATIVE] baseline sync failed user=${username}`, err);
+    return [active, archived];
+  }
 }
 
 function isProtectedUserAction(action: string): boolean {
@@ -206,8 +254,12 @@ export async function handleNativeUserCloudStorage(
         console.warn(`[USER-CLOUD-STORAGE-NATIVE] screenshot fallback failed user=${username}`, err);
       }
     }
-    const profileSessions = hydrateScreenshots(sessionsFrom(current.profile_sessions), screenshots);
-    const archivedProfiles = hydrateScreenshots(sessionsFrom(current.archived_profiles), screenshots);
+    const [profileSessions, archivedProfiles] = await withBaselines(
+      username,
+      hydrateScreenshots(sessionsFrom(current.profile_sessions), screenshots),
+      hydrateScreenshots(sessionsFrom(current.archived_profiles), screenshots),
+      true,
+    );
     await adminQuery(`UPDATE public.user_sessions SET last_access = now() WHERE id = $1`, [current.id]);
     console.log(`[USER-CLOUD-STORAGE-NATIVE] load user=${username} profiles=${profileSessions.length} screenshots=${screenshots.size}`);
     res.json({
@@ -237,14 +289,18 @@ export async function handleNativeUserCloudStorage(
       const id = typeof session.id === "string" ? session.id : "";
       return unlockedById.has(id) ? { ...session, creativesUnlocked: unlockedById.get(id) } : session;
     });
-    const activeProfiles = finalProfiles.filter((profile) => profile.isHistorical !== true);
+    const rawActiveProfiles = finalProfiles.filter((profile) => profile.isHistorical !== true);
     const archivedByUsername = new Map<string, Record<string, unknown>>();
     [...sessionsFrom(current?.archived_profiles), ...incomingArchived, ...finalProfiles.filter((profile) => profile.isHistorical === true)]
       .forEach((profile) => {
         const key = instagramUsernameFrom(profile);
         if (key) archivedByUsername.set(key, profile);
       });
-    activeProfiles.forEach((profile) => archivedByUsername.delete(instagramUsernameFrom(profile)));
+    rawActiveProfiles.forEach((profile) => archivedByUsername.delete(instagramUsernameFrom(profile)));
+    // A referência inicial central nunca é trocada pelo que o navegador enviar.
+    const [activeProfiles, archivedToSave] = await withBaselines(
+      username, rawActiveProfiles, [...archivedByUsername.values()], false,
+    );
 
     const providedEmail = textFrom(body.email);
     if (current?.email && providedEmail && current.email.toLowerCase() !== providedEmail.toLowerCase()) {
@@ -264,14 +320,14 @@ export async function handleNativeUserCloudStorage(
                 profile_sessions = $3::jsonb, archived_profiles = $4::jsonb,
                 lifetime_creative_used_at = $5, updated_at = now()
           WHERE id = $6`,
-        [providedEmail, daysRemaining, JSON.stringify(activeProfiles), JSON.stringify([...archivedByUsername.values()]), lifetimeValue, current.id],
+        [providedEmail, daysRemaining, JSON.stringify(activeProfiles), JSON.stringify(archivedToSave), lifetimeValue, current.id],
       );
     } else {
       await adminQuery(
         `INSERT INTO public.user_sessions
            (squarecloud_username, email, days_remaining, profile_sessions, archived_profiles, lifetime_creative_used_at)
          VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6)`,
-        [username, providedEmail, daysRemaining, JSON.stringify(activeProfiles), JSON.stringify([...archivedByUsername.values()]), lifetimeValue],
+        [username, providedEmail, daysRemaining, JSON.stringify(activeProfiles), JSON.stringify(archivedToSave), lifetimeValue],
       );
     }
     console.log(`[USER-CLOUD-STORAGE-NATIVE] save user=${username} profiles=${activeProfiles.length}`);
