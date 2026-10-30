@@ -15,6 +15,7 @@ import type { Request, Response } from "express";
 import type { PoolClient } from "pg";
 import { pool, adminQuery } from "../db.js";
 import { hasValidAdminSession } from "../admin-session.js";
+import { loadBaselines, recordProfileReading } from "./ig-profile-baseline.js";
 import { adminGallery, adminGalleryDelete, galleryUpload, handleGalleryGet } from "./ig-online-gallery.js";
 
 const PUBLIC_BASE = (process.env.PUBLIC_API_URL || "https://api.maisresultadosonline.com.br").replace(/\/$/, "") + "/functions/v1/ig-online-api";
@@ -229,6 +230,9 @@ async function actionMetrics(body: Body) {
   } else if (rawF === undefined) {
     console.info(`[ig-online] metrics @${ig}: recebido sem campo de seguidores (welcome_sent=${String(body.welcome_sent ?? 0)})`);
   }
+  // Seguindo e publicações (opcionais) — completam a referência inicial do perfil.
+  const following = parseFollowers(body.following ?? body.following_count ?? body.seguindo) ?? null;
+  const posts = parseFollowers(body.posts ?? body.posts_count ?? body.media_count ?? body.publicacoes) ?? null;
   // Seguidores GANHOS desde o último envio (incremento), como o contador da extensão.
   const rawG = body.followers_gained ?? body.new_followers ?? body.seguidores_ganhos ?? 0;
   const gained = Number(rawG);
@@ -287,6 +291,15 @@ async function actionMetrics(body: Body) {
     }
     return false;
   });
+  // Referência central compartilhada com /instagram/painel: a primeira leitura
+  // cria a referência inicial (nunca sobrescrita); as demais viram "atual".
+  if (!duplicate && followers !== null) {
+    try {
+      await recordProfileReading(ig, null, { followers, following, posts }, "extensao");
+    } catch (err) {
+      console.warn(`[ig-online] baseline @${ig} não gravada`, (err as Error).message);
+    }
+  }
   // Limpeza leve dos ids antigos (7 dias) sem bloquear a resposta.
   if (Math.random() < 0.01)
     void adminQuery("DELETE FROM public.ig_online_metric_requests WHERE created_at < now() - interval '7 days'").catch(() => undefined);
@@ -380,12 +393,24 @@ async function adminMetrics(body: Body) {
     const s = series.get(d)!;
     return { day: d, followers: known.size ? [...known.values()].reduce((a, b) => a + b, 0) : null, growth: s.growth, welcome: s.welcome };
   });
+  // Mesma referência inicial usada em /instagram/painel (print ou 1ª leitura da extensão).
+  const baselines = await loadBaselines(sessions.map((s) => String(s.instagram_username))).catch((err) => {
+    console.warn("[ig-online] baselines indisponíveis", (err as Error).message);
+    return new Map();
+  });
   const rows = sessions.map((s) => {
-    const agg = byIg.get(String(s.instagram_username).toLowerCase());
-    const fi = numOrNull(s.followers_initial), fc = numOrNull(s.followers_current);
+    const key = String(s.instagram_username).toLowerCase();
+    const agg = byIg.get(key);
+    const b = baselines.get(key);
+    const fi = b?.initial_followers ?? numOrNull(s.followers_initial);
+    const fc = numOrNull(s.followers_current) ?? b?.current_followers ?? null;
     return {
       id: s.id, instagram_username: s.instagram_username, status: s.status,
       followers_initial: fi, followers_current: fc,
+      initial_source: b?.initial_source ?? (fi !== null ? "extensao" : null),
+      initial_captured_at: b?.initial_captured_at ?? null,
+      following_initial: b?.initial_following ?? null, following_current: b?.current_following ?? null,
+      posts_initial: b?.initial_posts ?? null, posts_current: b?.current_posts ?? null,
       followers_gained_total: Number(s.followers_gained_total ?? 0),
       last_metrics_fields: s.last_metrics_fields ?? null,
       followers_diff: fi !== null && fc !== null && fc !== fi ? fc - fi : Number(s.followers_gained_total ?? 0) > 0 ? Number(s.followers_gained_total) : fi !== null && fc !== null ? 0 : null,
