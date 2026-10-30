@@ -17,6 +17,9 @@ interface MetricRow {
   status: string;
   followers_initial: number | null;
   followers_current: number | null;
+  /** Origem da referência inicial compartilhada com /instagram/painel. */
+  initial_source?: 'print' | 'extensao' | null;
+  initial_captured_at?: string | null;
   followers_diff: number | null;
   period_growth: number | null;
   daily_growth: number | null;
@@ -196,7 +199,17 @@ const IgOnlinesMetrics: React.FC = () => {
             {visible.map((r) => (
               <tr key={r.id} className="border-t">
                 <td className="p-2 font-semibold whitespace-nowrap">@{r.instagram_username}</td>
-                <td className="p-2">{num(r.followers_initial)}</td>
+                <td className="p-2 whitespace-nowrap">
+                  {num(r.followers_initial)}
+                  {r.followers_initial !== null && r.initial_source && (
+                    <span
+                      className="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground"
+                      title={r.initial_captured_at ? `Referência registrada em ${fmt(r.initial_captured_at)}` : undefined}
+                    >
+                      {r.initial_source === 'print' ? 'print' : 'extensão'}
+                    </span>
+                  )}
+                </td>
                 <td className="p-2">{num(r.followers_current)}</td>
                 <td className="p-2">{signed(r.followers_diff)}</td>
                 <td className="p-2">{signed(r.daily_growth)}</td>
