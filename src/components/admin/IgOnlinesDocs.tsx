@@ -242,6 +242,36 @@ async function enviarMetricas(totalGanhosNaExtensao, boasVindasNovas) {
 }`}
     />
 
+    <Card className="p-4 space-y-2 border-primary">
+      <h3 className="font-bold">Dados iniciais do perfil (mesma referência no /instagram/painel e aqui)</h3>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li>Cada perfil tem <strong>uma única referência inicial</strong> (seguidores, seguindo e posts), usada tanto no <code>/instagram/painel</code> do cliente quanto nesta aba de Métricas. Não existem duas contagens diferentes.</li>
+        <li>Quem cria a referência é a <strong>primeira leitura válida</strong>: o print já analisado no painel, ou o primeiro envio <code>metrics</code> da extensão com <code>followers</code>. O que chegar primeiro vale.</li>
+        <li>Depois de criada, a referência <strong>nunca muda</strong> — nem com print novo. Ex.: extensão leu 2.500 → inicial = 2.500. Se depois o cliente enviar print com 2.700, o inicial continua 2.500 e 2.700 passa a ser o número atual.</li>
+        <li>Cadastrou a conta e não mandou print? Assim que entrar na ferramenta, a extensão envia os números e o perfil no <code>/instagram/painel</code> é preenchido sozinho (inicial e atual), no próximo acesso do cliente ao painel.</li>
+        <li>Para completar a referência, envie junto em <code>metrics</code>: <code>followers</code> (total), <code>following</code> (seguindo) e <code>posts</code> (publicações). Também aceitamos <code>seguindo</code>, <code>following_count</code>, <code>posts_count</code>, <code>media_count</code> e <code>publicacoes</code>. Textos como "1,5 mil" funcionam.</li>
+        <li>O painel do cliente só recebe os dados de perfis que estão cadastrados na conta dele. A coluna "Inicial" desta aba mostra a origem: <em>print</em> ou <em>extensão</em>.</li>
+        <li>Para conferir no terminal: <code>pm2 logs mro-api | grep -E "ig-online\] metrics|baselines"</code>.</li>
+      </ul>
+    </Card>
+
+    <Block
+      title="7) Enviar os números do perfil ao entrar na ferramenta"
+      code={`// chame ao abrir o perfil logado (e depois de tempos em tempos)
+await fetch('${ENDPOINT}', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    action: 'metrics',
+    instagram: perfilLogado(),
+    followers: 2500,   // total de seguidores
+    following: 310,    // seguindo
+    posts: 42,         // publicações
+    request_id: crypto.randomUUID()
+  })
+});`}
+    />
+
     <Card className="p-4 space-y-2">
       <h3 className="font-bold">Imagens geradas e aprovadas (galeria)</h3>
       <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
