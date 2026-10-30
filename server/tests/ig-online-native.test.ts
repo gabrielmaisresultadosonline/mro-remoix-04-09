@@ -41,8 +41,9 @@ try {
   const dup = await call({ action: "metrics", instagram: "perfilcliente", welcome_sent: 3, request_id: RID });
   assert.equal(dup.json.duplicate, true, "request_id repetido não soma de novo");
   await call({ action: "metrics", instagram: "perfilcliente", followers: 112, welcome_sent: 2 });
+  // Valor ilegível de seguidores é ignorado (não derruba o envio nem altera o total).
   const bad = await call({ action: "metrics", instagram: "perfilcliente", followers: -5 });
-  assert.equal(bad.status, 400);
+  assert.equal(bad.status, 200);
   const m = await call({ action: "admin_metrics", days: 7 }, admin);
   const row = m.json.rows.find((r: any) => r.instagram_username === "perfilcliente");
   assert.equal(row.followers_initial, 100); assert.equal(row.followers_current, 112);
