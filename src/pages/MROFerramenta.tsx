@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { Play, Download, X, ChevronLeft, ChevronRight, Type, Loader2, ExternalLink, Link2, Gift, LayoutList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { fetchMroExtensionFile, MRO_EXTENSION_DOWNLOAD_URL } from '@/lib/mroExtensionFile';
 import { cn } from '@/lib/utils';
 import MroNetflixView from '@/components/members/MroNetflixView';
 import MroThemeChooser, { MRO_THEME_KEY, readMroTheme, type MroTrainingTheme } from '@/components/members/MroThemeChooser';
@@ -48,6 +49,10 @@ const MROFerramenta = () => {
   const [trainingTheme, setTrainingTheme] = useState<MroTrainingTheme | null>(readMroTheme);
   const [choosingTheme, setChoosingTheme] = useState(false);
   const netflix = trainingTheme === 'netflix';
+  const [zipAvailable, setZipAvailable] = useState(false);
+  useEffect(() => {
+    fetchMroExtensionFile().then((info) => setZipAvailable(info.available)).catch(() => setZipAvailable(false));
+  }, []);
   const selectTheme = (theme: MroTrainingTheme) => {
     try { localStorage.setItem(MRO_THEME_KEY, theme); } catch { /* Storage may be unavailable in embedded browsers. */ }
     setTrainingTheme(theme);
@@ -525,6 +530,16 @@ const MROFerramenta = () => {
               </div>
             </div>
 
+            {(zipAvailable || settings?.downloadLink) && (
+            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+            {zipAvailable && (
+              <Button asChild variant="gradient" size="sm" className="cursor-pointer w-full md:w-auto">
+                <a href={MRO_EXTENSION_DOWNLOAD_URL}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar arquivo ZIP
+                </a>
+              </Button>
+            )}
             {settings?.downloadLink && (
               <Button 
                 type="button"
@@ -536,6 +551,8 @@ const MROFerramenta = () => {
                 <Download className="w-4 h-4 mr-2" />
                 Download MRO
               </Button>
+            )}
+            </div>
             )}
           </div>
         </div>
