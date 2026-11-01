@@ -25,6 +25,7 @@ import { functionsRouter, functionsRuntime, functionsStatus, listAvailableFuncti
 import { attachRealtime, realtimeStatus } from "./realtime.js";
 import { RestError } from "./rest/identifiers.js";
 import { aovivoRouter, resumeAovivoStreams } from "./aovivo/router.js";
+import { extensionFilesRouter } from "./extension-files/router.js";
 
 const app = express();
 
@@ -195,6 +196,8 @@ app.use((req, res, next) => {
 // Webhooks precisam do corpo bruto para validar assinatura (Meta/Stripe/InfiniPay).
 // Ao Vivo MRO: rotas nativas com upload multipart (antes do parser bruto).
 app.use("/functions/v1/aovivo-api", aovivoRouter);
+// ZIP da extensão MRO Ferramenta (upload multipart no /admin, download público).
+app.use("/functions/v1/mro-extension-file", extensionFilesRouter);
 app.use("/functions/v1", express.raw({ type: "*/*", limit: "50mb" }));
 // Storage define parsers por rota: uploads usam corpo binário/multipart, enquanto
 // listagem, assinatura e remoção usam JSON. Um parser global consumia o stream
