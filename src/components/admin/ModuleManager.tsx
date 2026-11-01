@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import CoverUploader from './CoverUploader';
+import MroExtensionZipCard from './MroExtensionZipCard';
 import { 
   Plus, Trash2, Save, Check, X, Play, Video, Type, 
   ChevronDown, ChevronUp, Image as ImageIcon,
@@ -1114,6 +1115,9 @@ const ModuleManager = ({ downloadLink, onDownloadLinkChange, onSaveSettings, pla
           </Button>
         </div>
       </div>
+
+      {/* ZIP da extensão (somente MRO Ferramenta) */}
+      {platform === 'mro' && <MroExtensionZipCard />}
 
       {/* Download Link */}
       <div className="glass-card p-4">
