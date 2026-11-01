@@ -530,20 +530,17 @@ const MROFerramenta = () => {
               </div>
             </div>
 
-            {(zipAvailable || settings?.downloadLink) && (
-            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-            {zipAvailable && (
+            {zipAvailable ? (
               <Button asChild variant="gradient" size="sm" className="cursor-pointer w-full md:w-auto">
                 <a href={MRO_EXTENSION_DOWNLOAD_URL}>
                   <Download className="w-4 h-4 mr-2" />
-                  Baixar arquivo ZIP
+                  Download MRO
                 </a>
               </Button>
-            )}
-            {settings?.downloadLink && (
-              <Button 
+            ) : settings?.downloadLink ? (
+              <Button
                 type="button"
-                variant="gradient" 
+                variant="gradient"
                 size="sm"
                 onClick={() => window.open(settings.downloadLink, '_blank')}
                 className="cursor-pointer w-full md:w-auto"
@@ -551,9 +548,7 @@ const MROFerramenta = () => {
                 <Download className="w-4 h-4 mr-2" />
                 Download MRO
               </Button>
-            )}
-            </div>
-            )}
+            ) : null}
           </div>
         </div>
       </header>
