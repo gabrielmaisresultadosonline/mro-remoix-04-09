@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Download, ExternalLink, RefreshCw, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, ExternalLink, Layers, RefreshCw, Trash2, X } from 'lucide-react';
 import { IG_GALLERY_PUBLIC_PATH } from '@/lib/igGallery';
 
 interface GalleryImage {
-  id: string; instagram_username: string; publication_id: string | null; caption: string | null;
+  id: string; instagram_username: string; publication_id: string | null; image_index?: number | null; caption: string | null;
   size_bytes: number; created_at: string; expires_at: string; url: string;
 }
 interface Summary { profiles: number; online: number; followers_total: number | null; growth_period: number | null; welcome_period: number; welcome_total: number }
@@ -23,7 +23,10 @@ const IgOnlinesGallery: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [zipping, setZipping] = useState(false);
-  const [open, setOpen] = useState<GalleryImage | null>(null);
+  const [openGroup, setOpenGroup] = useState<GalleryImage[] | null>(null);
+  const [idx, setIdx] = useState(0);
+  const open = openGroup ? openGroup[Math.min(idx, openGroup.length - 1)] : null;
+  const setOpen = (v: null) => { setOpenGroup(v); setIdx(0); };
 
   const call = async <T,>(action: string, extra: Record<string, unknown> = {}) => {
     const { data, error } = await adminSupabase.functions.invoke('ig-online-api', { body: { action, ...extra } });
@@ -50,6 +53,31 @@ const IgOnlinesGallery: React.FC = () => {
   useEffect(() => { void load(); }, [load]);
 
   const shown = useMemo(() => (filter ? images.filter((i) => i.instagram_username === filter) : images), [images, filter]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, GalleryImage[]>();
+    const order: string[] = [];
+    for (const img of shown) {
+      const key = img.publication_id ? `${img.instagram_username.toLowerCase()}::${img.publication_id}` : `single::${img.id}`;
+      if (!map.has(key)) { map.set(key, []); order.push(key); }
+      map.get(key)!.push(img);
+    }
+    return order.map((k) => map.get(k)!.slice().sort((a, b) => (a.image_index ?? 0) - (b.image_index ?? 0) || a.created_at.localeCompare(b.created_at)));
+  }, [shown]);
+
+  const step = (d: number) => { if (openGroup && openGroup.length > 1) setIdx((i) => (i + d + openGroup.length) % openGroup.length); };
+  useEffect(() => {
+    if (!openGroup) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') step(1);
+      else if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'Escape') setOpen(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openGroup]);
+  const [touchX, setTouchX] = useState<number | null>(null);
 
   const downloadAll = async () => {
     if (!shown.length) return;
@@ -78,7 +106,9 @@ const IgOnlinesGallery: React.FC = () => {
 
   const remove = async (img: GalleryImage) => {
     if (!confirm('Excluir esta imagem?')) return;
-    try { await call('admin_gallery_delete', { id: img.id }); setImages((p) => p.filter((i) => i.id !== img.id)); setOpen(null); }
+    try { await call('admin_gallery_delete', { id: img.id }); setImages((p) => p.filter((i) => i.id !== img.id));
+      const rest = (openGroup ?? []).filter((i) => i.id !== img.id);
+      if (rest.length) { setOpenGroup(rest); setIdx((i) => Math.min(i, rest.length - 1)); } else setOpen(null); }
     catch (e) { toast({ title: 'Erro', description: e instanceof Error ? e.message : '', variant: 'destructive' }); }
   };
 
@@ -119,12 +149,13 @@ const IgOnlinesGallery: React.FC = () => {
         <Card className="p-8 text-center text-sm text-muted-foreground">{loading ? 'Carregando…' : 'Nenhuma imagem recebida ainda. Veja a Documentação para conectar a extensão.'}</Card>
       ) : (
         <div className="columns-2 sm:columns-3 lg:columns-5 gap-2">
-          {shown.map((img) => (
-            <button key={img.id} onClick={() => setOpen(img)} className="relative block w-full mb-2 break-inside-avoid rounded-md overflow-hidden border">
+          {groups.map((g) => { const img = g[0]; return (
+            <button key={img.id} onClick={() => { setOpenGroup(g); setIdx(0); }} className="relative block w-full mb-2 break-inside-avoid rounded-md overflow-hidden border">
               <img src={img.url} alt="" loading="lazy" className="w-full h-auto block" />
+              {g.length > 1 && <span className="absolute top-1 right-1 flex items-center gap-1 rounded bg-background/85 px-1.5 py-0.5 text-[11px] font-semibold"><Layers className="w-3 h-3" />{g.length}</span>}
               <span className="absolute bottom-0 inset-x-0 bg-background/80 text-[11px] px-2 py-1 text-left truncate">@{img.instagram_username}</span>
             </button>
-          ))}
+          ); })}
         </div>
       )}
 
@@ -135,7 +166,25 @@ const IgOnlinesGallery: React.FC = () => {
             <Button size="sm" variant="destructive" onClick={() => void remove(open)}><Trash2 className="w-4 h-4" /></Button>
             <Button size="sm" variant="outline" onClick={() => setOpen(null)}><X className="w-4 h-4" /></Button>
           </div>
-          <img src={open.url} alt="" className="max-h-[75vh] max-w-full object-contain" onClick={(e) => e.stopPropagation()} />
+          <div className="relative flex items-center justify-center w-full" onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => setTouchX(e.touches[0].clientX)}
+            onTouchEnd={(e) => { if (touchX === null) return; const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 40) step(dx < 0 ? 1 : -1); setTouchX(null); }}>
+            {openGroup && openGroup.length > 1 && (
+              <Button size="icon" variant="secondary" aria-label="Imagem anterior" className="absolute left-1 sm:left-4 z-10 h-11 w-11 rounded-full shadow-lg" onClick={() => step(-1)}><ChevronLeft className="w-6 h-6" /></Button>
+            )}
+            <img src={open.url} alt="" className="max-h-[75vh] max-w-full object-contain select-none" draggable={false} />
+            {openGroup && openGroup.length > 1 && (
+              <Button size="icon" variant="secondary" aria-label="Próxima imagem" className="absolute right-1 sm:right-4 z-10 h-11 w-11 rounded-full shadow-lg" onClick={() => step(1)}><ChevronRight className="w-6 h-6" /></Button>
+            )}
+          </div>
+          {openGroup && openGroup.length > 1 && (
+            <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <span className="text-xs text-muted-foreground">{idx + 1}/{openGroup.length}</span>
+              {openGroup.map((g, i) => (
+                <button key={g.id} aria-label={`Imagem ${i + 1}`} onClick={() => setIdx(i)} className={`h-2 rounded-full transition-all ${i === idx ? 'w-5 bg-primary' : 'w-2 bg-muted-foreground/40'}`} />
+              ))}
+            </div>
+          )}
           <div className="mt-3 max-w-2xl text-center space-y-1" onClick={(e) => e.stopPropagation()}>
             <div className="text-xs text-muted-foreground">@{open.instagram_username} · {new Date(open.created_at).toLocaleString('pt-BR')} · expira {new Date(open.expires_at).toLocaleDateString('pt-BR')}</div>
             {open.caption && <p className="whitespace-pre-wrap text-sm">{open.caption}</p>}
