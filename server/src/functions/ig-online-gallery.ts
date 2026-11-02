@@ -137,7 +137,7 @@ export async function handleGalleryGet(req: Request, res: Response, base: string
     const before = String(req.query.before ?? "");
     const limit = Math.max(1, Math.min(120, Number(req.query.limit ?? 60) || 60));
     const rows = await adminQuery<Row>(
-      `SELECT id, caption, created_at FROM public.ig_online_gallery
+      `SELECT id, caption, created_at, publication_id, image_index FROM public.ig_online_gallery
         WHERE expires_at > now() ${before ? "AND created_at < $2::timestamptz" : ""}
         ORDER BY created_at DESC LIMIT $1`,
       before ? [limit, before] : [limit],
@@ -146,7 +146,14 @@ export async function handleGalleryGet(req: Request, res: Response, base: string
     res.setHeader("Cache-Control", "public, max-age=60");
     res.json({
       success: true,
-      images: rows.map((r) => ({ id: r.id, url: fileUrl(base, r.id), caption: r.caption ?? null, created_at: r.created_at })),
+      images: rows.map((r) => ({
+        id: r.id,
+        url: fileUrl(base, r.id),
+        caption: r.caption ?? null,
+        created_at: r.created_at,
+        publication_id: r.publication_id ?? null,
+        image_index: r.image_index ?? null,
+      })),
       next_before: rows.length === limit ? rows[rows.length - 1].created_at : null,
     });
     return true;

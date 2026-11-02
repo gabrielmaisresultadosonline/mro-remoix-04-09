@@ -7,6 +7,8 @@ export interface PublicGalleryImage {
   url: string;
   caption: string | null;
   created_at: string;
+  publication_id: string | null;
+  image_index: number | null;
 }
 
 export async function fetchPublicGallery(before?: string | null) {
