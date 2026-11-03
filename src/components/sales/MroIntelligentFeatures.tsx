@@ -1,12 +1,14 @@
-import { Bot, Brain, CheckCircle2, Heart, Kanban, MessageCircle, ScanSearch, UserPlus, Video } from 'lucide-react';
+import { Bot, Brain, CalendarClock, CheckCircle2, Heart, Image as ImageIcon, Kanban, LayoutGrid, MessageCircle, ScanSearch, Sparkles, Target, UserPlus, UserRound, Video } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { featuresCopy, type SalesLang } from '@/lib/salesCopy';
+import { contentGenerationCopy, featuresCopy, type SalesLang } from '@/lib/salesCopy';
 
-const icons = [ScanSearch, MessageCircle, Bot, Kanban, Video, UserPlus, Heart, Brain];
+const icons = [ScanSearch, MessageCircle, Bot, Kanban, Video, UserPlus, Heart, Brain, Target, LayoutGrid, ImageIcon, UserRound, Sparkles, CalendarClock];
 
 export function MroIntelligentFeatures({ lang = 'pt' }: { lang?: SalesLang } = {}) {
   const t = featuresCopy[lang];
   const reducedMotion = useReducedMotion();
+  // Geração e agendamento de conteúdos entram no mesmo bloco, sem seção separada.
+  const all = [...t.items, ...contentGenerationCopy[lang]];
   return <>
     <section className="py-16 md:py-24 px-4 border-t border-border bg-background">
       <div className="max-w-6xl mx-auto">
@@ -16,11 +18,11 @@ export function MroIntelligentFeatures({ lang = 'pt' }: { lang?: SalesLang } = {
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto mt-5">{t.sub}</p>
         </header>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {t.items.map(({ title, description, detail }, i) => {
-            const Icon = icons[i];
+          {all.map(({ title, description, detail }, i) => {
+            const Icon = icons[i] ?? ScanSearch;
             const id = String(i + 1).padStart(2, '0');
             return <motion.article key={id} initial={reducedMotion ? false : { opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} className="mro-feature border border-border bg-card rounded-lg p-6 md:p-8">
-              <div className="flex items-center justify-between mb-6"><span className="bg-primary text-primary-foreground rounded-lg p-3"><Icon size={26} /></span><span className="text-muted-foreground font-mono text-sm">{id} / 08</span></div>
+              <div className="flex items-center justify-between mb-6"><span className="bg-primary text-primary-foreground rounded-lg p-3"><Icon size={26} /></span>{i < t.items.length ? <span className="text-muted-foreground font-mono text-sm">{id} / 08</span> : null}</div>
               <h3 className="text-xl md:text-2xl font-bold mb-4 text-foreground">{title}</h3>
               <p className="text-muted-foreground leading-relaxed mb-6">{description}</p>
               <p className="text-primary text-sm font-semibold flex items-start gap-2"><CheckCircle2 size={17} className="shrink-0 mt-0.5" />{detail}</p>
