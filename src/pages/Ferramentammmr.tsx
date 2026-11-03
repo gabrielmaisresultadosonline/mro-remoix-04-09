@@ -1,5 +1,6 @@
 import { MroIntelligentIntro } from '@/components/sales/MroIntelligentIntro';
 import { MroIntelligentFeatures } from '@/components/sales/MroIntelligentFeatures';
+import { MroContentAutomation } from '@/components/sales/MroContentAutomation';
 import FloatingWhatsAppCta from '@/components/FloatingWhatsAppCta';
 import { useState, useEffect, useRef } from "react";
 import Hls from "hls.js";
@@ -526,6 +527,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
 
       <MroIntelligentFeatures lang={lang} />
 
+      <MroContentAutomation lang={lang} />
 
       {/* Guarantee Section */}
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
