@@ -176,6 +176,55 @@ export const contentGenerationCopy: Record<SalesLang, readonly SalesFeatureItem[
   es: [],
 };
 
+/**
+ * Seção "Criação de conteúdo automática com I.A", exclusiva da página em
+ * português. Em espanhol é `null`, então a página Euro não exibe a seção.
+ */
+export type ContentAutomationCopy = {
+  eyebrow: string;
+  title1: string;
+  title2: string;
+  description: string;
+  steps: readonly { title: string; description: string }[];
+  videoTitle: string;
+  videoCta: string;
+  videoFallback: string;
+  videoFallbackPlaying: string;
+};
+
+export const contentAutomationCopy: Record<SalesLang, ContentAutomationCopy | null> = {
+  pt: {
+    eyebrow: "Criação de conteúdo automática",
+    title1: "Criação de conteúdo",
+    title2: "automática com I.A",
+    description:
+      "Carrossel, estratégia e os melhores horários: a MRO cria a estratégia, cria a imagem, vê os melhores horários e posta para você.",
+    steps: [
+      {
+        title: "Cria a estratégia",
+        description: "A MRO monta o seu plano de conteúdo com temas, formatos e a sequência certa para o seu perfil.",
+      },
+      {
+        title: "Cria a imagem",
+        description: "As artes e os carrosséis são gerados prontos para publicar, com ou sem a sua foto.",
+      },
+      {
+        title: "Vê os melhores horários",
+        description: "A ferramenta identifica os horários de maior alcance e programa cada publicação.",
+      },
+      {
+        title: "Posta para você",
+        description: "As publicações saem sozinhas nos horários definidos. Você só acompanha os resultados.",
+      },
+    ],
+    videoTitle: "Criando conteúdo automático no Instagram com a MRO",
+    videoCta: "Assistir o vídeo",
+    videoFallback: "Prefiro assistir no YouTube",
+    videoFallbackPlaying: "Não abriu? Assistir direto no YouTube",
+  },
+  es: null,
+};
+
 export const pageCopy = {
   pt: {
     heroCta: "GARANTIR MEU ACESSO AGORA",

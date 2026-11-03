@@ -1,5 +1,6 @@
 import { MroIntelligentIntro } from '@/components/sales/MroIntelligentIntro';
 import { MroIntelligentFeatures } from '@/components/sales/MroIntelligentFeatures';
+import { MroContentAutomation } from '@/components/sales/MroContentAutomation';
 import FloatingWhatsAppCta from '@/components/FloatingWhatsAppCta';
 import { useState, useEffect, useRef } from "react";
 import Hls from "hls.js";
