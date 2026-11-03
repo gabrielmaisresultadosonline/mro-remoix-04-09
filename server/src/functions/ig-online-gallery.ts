@@ -54,22 +54,33 @@ export async function cleanupExpired(force = false): Promise<number> {
   return rows.length;
 }
 
-export async function galleryUpload(ig: string, body: Body) {
-  const buf = decodeImage(body.image_base64 ?? body.image);
-  if (!buf) return [400, { success: false, error: "Envie image_base64 (JPG, PNG ou WEBP)" }] as const;
-  if (buf.length > GALLERY_MAX_BYTES) return [413, { success: false, error: "Imagem acima de 8 MB" }] as const;
+const firstDefined = (body: Body, keys: string[]): unknown => {
+  for (const k of keys) if (body[k] !== undefined && body[k] !== null && body[k] !== "") return body[k];
+  return undefined;
+};
+const toIndex = (v: unknown, fallback: number) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.min(50, Math.trunc(n))) : fallback;
+};
+
+type SaveResult = { status: number; body: Record<string, unknown> };
+
+async function saveOne(ig: string, raw: unknown, publicationId: string | null, imageIndex: number, caption: string | null): Promise<SaveResult> {
+  const buf = decodeImage(raw);
+  if (!buf) return { status: 400, body: { success: false, error: "Envie image_base64 (JPG, PNG ou WEBP)", image_index: imageIndex } };
+  if (buf.length > GALLERY_MAX_BYTES) return { status: 413, body: { success: false, error: "Imagem acima de 8 MB", image_index: imageIndex } };
   const mime = sniffMime(buf);
-  if (!mime) return [415, { success: false, error: "Formato não suportado (use JPG, PNG ou WEBP)" }] as const;
-  const publicationId = clean(body.publication_id, 120) || null;
-  const imageIndex = Math.max(0, Math.min(50, Number(body.image_index ?? 0) || 0));
-  const caption = clean(body.caption, 2200) || null;
+  if (!mime) return { status: 415, body: { success: false, error: "Formato não suportado (use JPG, PNG ou WEBP)", image_index: imageIndex } };
 
   if (publicationId) {
     const [dup] = await adminQuery<Row>(
       "SELECT id FROM public.ig_online_gallery WHERE lower(instagram_username)=$1 AND publication_id=$2 AND image_index=$3",
       [ig, publicationId, imageIndex],
     );
-    if (dup) return [200, { success: true, id: dup.id, duplicate: true }] as const;
+    if (dup) {
+      console.info(`[ig-gallery] @${ig} pub=${publicationId} slide=${imageIndex} já existia (duplicate)`);
+      return { status: 200, body: { success: true, id: dup.id, image_index: imageIndex, duplicate: true } };
+    }
   }
 
   const day = new Date().toISOString().slice(0, 10);
@@ -81,9 +92,45 @@ export async function galleryUpload(ig: string, body: Body) {
      VALUES ($1,$2,$3,$4,$5,$6,$7, now() + make_interval(days => $8)) RETURNING id, expires_at`,
     [ig, publicationId, imageIndex, caption, rel, mime, buf.length, GALLERY_RETENTION_DAYS],
   );
+  console.info(`[ig-gallery] @${ig} pub=${publicationId ?? "-"} slide=${imageIndex} salvo ${row?.id} (${Math.round(buf.length / 1024)} KB)`);
+  return { status: 200, body: { success: true, id: row?.id, image_index: imageIndex, expires_at: row?.expires_at, duplicate: false } };
+}
+
+/**
+ * Aceita dois formatos:
+ *  A) uma imagem por requisição: image_base64 + publication_id + image_index (0,1,2...)
+ *  B) carrossel inteiro numa requisição: images: ["data:...", ...] ou [{ image_base64, image_index }]
+ * No formato B, sem publication_id o servidor cria um para agrupar os slides.
+ */
+export async function galleryUpload(ig: string, body: Body) {
+  const caption = clean(firstDefined(body, ["caption", "legenda"]), 2200) || null;
+  let publicationId = clean(firstDefined(body, ["publication_id", "post_id", "carousel_id", "publicacao_id"]), 120) || null;
+  const list = firstDefined(body, ["images", "slides", "carousel", "imagens"]);
+
+  if (Array.isArray(list) && list.length) {
+    if (list.length > 20) return [400, { success: false, error: "Carrossel com mais de 20 imagens" }] as const;
+    if (!publicationId) publicationId = `srv_${crypto.randomUUID()}`;
+    console.info(`[ig-gallery] @${ig} carrossel recebido: ${list.length} imagem(ns) pub=${publicationId}`);
+    const results: Record<string, unknown>[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+      const isObj = item && typeof item === "object";
+      const raw = isObj ? firstDefined(item as Body, ["image_base64", "image", "base64", "data"]) : item;
+      const idx = isObj ? toIndex(firstDefined(item as Body, ["image_index", "index", "slide_index", "position"]), i) : i;
+      results.push((await saveOne(ig, raw, publicationId, idx, caption)).body);
+    }
+    void cleanupExpired();
+    const saved = results.filter((r) => r.success).length;
+    return [saved ? 200 : 400, {
+      success: saved > 0, publication_id: publicationId, total: list.length, saved, results,
+    }] as const;
+  }
+
+  const imageIndex = toIndex(firstDefined(body, ["image_index", "index", "slide_index", "position"]), 0);
+  if (!publicationId) console.warn(`[ig-gallery] @${ig} enviou imagem sem publication_id — não será agrupada em carrossel`);
+  const r = await saveOne(ig, body.image_base64 ?? body.image, publicationId, imageIndex, caption);
   void cleanupExpired();
-  console.info(`[ig-gallery] @${ig} enviou imagem ${row?.id} (${Math.round(buf.length / 1024)} KB)`);
-  return [200, { success: true, id: row?.id, expires_at: row?.expires_at, duplicate: false }] as const;
+  return [r.status, { ...r.body, publication_id: publicationId }] as const;
 }
 
 const fileUrl = (base: string, id: unknown) => `${base}?file=${id}`;

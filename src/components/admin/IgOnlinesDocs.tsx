@@ -279,6 +279,7 @@ await fetch('${ENDPOINT}', {
         <li>O arquivo fica no disco da VPS e o registro no PostgreSQL. Depois de <strong>30 dias</strong> imagem e registro são apagados automaticamente (limpeza a cada hora).</li>
         <li>Formatos: JPG, PNG ou WEBP, até 8 MB por imagem (o servidor confere o tipo real do arquivo).</li>
         <li><code>publication_id</code> + <code>image_index</code> evitam duplicar: se a mesma imagem for reenviada, a resposta traz <code>duplicate: true</code> e nada é gravado de novo.</li>
+        <li><strong>Carrossel:</strong> todas as imagens do mesmo carrossel precisam do <strong>mesmo</strong> <code>publication_id</code> e de um <code>image_index</code> diferente (0, 1, 2…). É isso que faz a galeria mostrar as setas para passar para o lado. Se cada slide chegar com um <code>publication_id</code> novo, ou só a capa for enviada, cada imagem aparece sozinha.</li>
         <li>No admin, aba <strong>Dashboard e imagens</strong>: resumo das métricas, todas as imagens com o cliente que enviou, filtro por cliente, baixar todas (ZIP com imagem + legenda em .txt), ver maior e excluir.</li>
         <li>Galeria pública: <code>/galeria-ig</code> — tela cheia, rolagem infinita, funciona em celular e qualquer navegador. Mostra <strong>só as imagens</strong>; a legenda aparece ao clicar para ver maior. Nenhum @perfil ou dado de cliente é exibido.</li>
         <li>Envie apenas imagens que o cliente aprovou e que ele concorda em ter exibidas na vitrine pública.</li>
@@ -311,10 +312,66 @@ async function enviarImagemAprovada({ instagram, publicacaoId, indice, imagemBlo
 }`}
     />
 
+    <Card className="p-4 space-y-2 border-primary/40">
+      <h3 className="font-bold">Carrossel — como enviar para aparecer com as setas</h3>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li><strong>Situação atual:</strong> o servidor está recebendo só <strong>1 imagem por publicação</strong>, sempre com <code>image_index: 0</code> e um <code>publication_id</code> diferente a cada envio (ex.: <code>cr1793730843785_3864</code>). Por isso o carrossel chega só com a capa — as outras imagens nunca chegam ao servidor.</li>
+        <li><strong>O ajuste é na extensão:</strong> no momento de enviar, percorrer <strong>todas</strong> as imagens do carrossel, gerando o <code>publication_id</code> <strong>uma vez só</strong> por publicação (fora do loop).</li>
+        <li>Escolha um dos dois formatos abaixo — o servidor aceita os dois.</li>
+        <li>Também são aceitos os nomes alternativos: <code>post_id</code> / <code>carousel_id</code> (no lugar de <code>publication_id</code>) e <code>index</code> / <code>slide_index</code> / <code>position</code> (no lugar de <code>image_index</code>).</li>
+        <li>Limite: até 20 imagens por carrossel, 8 MB por imagem. No formato B a requisição inteira pode ter até 50 MB.</li>
+      </ul>
+    </Card>
+
+    <Block
+      title="7A) Carrossel — uma requisição por imagem (mesmo publication_id)"
+      code={`async function enviarCarrossel({ instagram, imagensBlob, legenda }) {
+  // ⚠️ gerar o id UMA vez, fora do loop
+  const publicacaoId = 'cr' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+  for (let i = 0; i < imagensBlob.length; i++) {
+    await enviarImagemAprovada({
+      instagram,
+      publicacaoId,          // igual para todos os slides
+      indice: i,             // 0, 1, 2, 3...
+      imagemBlob: imagensBlob[i],
+      legenda                // mesma legenda em todos
+    });
+  }
+}`}
+    />
+
+    <Block
+      title="7B) Carrossel — todas as imagens numa requisição só (images: [...])"
+      code={`const r = await fetch('${ENDPOINT}', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    action: 'gallery_upload',
+    instagram,
+    publication_id: publicacaoId,   // opcional: sem ele o servidor cria um
+    caption: legenda,
+    images: await Promise.all(imagensBlob.map(blobParaBase64))
+    // ou: images: [{ image_base64: '...', image_index: 0 }, { image_base64: '...', image_index: 1 }]
+  })
+}).then(x => x.json());
+// { success:true, publication_id:"...", total:5, saved:5, results:[{ image_index:0, id:"...", duplicate:false }, ...] }`}
+    />
+
+    <Card className="p-4 space-y-2">
+      <h4 className="font-semibold text-sm">Como conferir se deu certo</h4>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li>No terminal da VPS: <code>pm2 logs mro-api | grep ig-gallery</code>. Cada slide aparece como <code>pub=... slide=0</code>, <code>slide=1</code>, <code>slide=2</code>… com o <strong>mesmo</strong> <code>pub</code>.</li>
+        <li>Se aparecer <code>enviou imagem sem publication_id</code>, a extensão não está mandando o id da publicação.</li>
+        <li>Se todos os slides aparecerem como <code>slide=0</code> com o mesmo <code>pub</code>, só o primeiro é gravado e os outros voltam como <code>duplicate</code> — falta enviar o <code>image_index</code>.</li>
+        <li>Na galeria (<code>/galeria-ig</code> e admin), o carrossel aparece com um selo de quantidade na capa; ao abrir, setas, bolinhas e contador (ex.: 2/5).</li>
+        <li>Carrosséis já enviados só com a capa não se completam sozinhos: as próximas publicações aparecem certas depois do ajuste na extensão.</li>
+      </ul>
+    </Card>
+
     <Card className="p-4 space-y-2">
       <h4 className="font-semibold text-sm">Leitura pública (sem login)</h4>
       <pre className="text-[11px] bg-muted p-3 rounded-md overflow-x-auto whitespace-pre">{`GET ${ENDPOINT}?public_gallery=1&limit=60
-→ { "images": [{ "id", "url", "caption", "created_at" }], "next_before": "..." }
+→ { "images": [{ "id", "url", "caption", "created_at", "publication_id", "image_index" }], "next_before": "..." }
    próxima página: &before=<next_before>
 
 GET ${ENDPOINT}?file=<id>   → a imagem (some depois de 30 dias)`}</pre>
