@@ -527,6 +527,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
 
       <MroIntelligentFeatures lang={lang} />
 
+      <MroContentAutomation lang={lang} />
 
       {/* Guarantee Section */}
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
