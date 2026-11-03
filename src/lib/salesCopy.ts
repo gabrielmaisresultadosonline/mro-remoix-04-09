@@ -134,6 +134,48 @@ export const featuresCopy = {
   },
 } as const;
 
+/**
+ * Geração e agendamento de conteúdos: entra junto das demais funções da página.
+ * Em espanhol a lista fica vazia, então a página Euro não exibe nada novo.
+ */
+export type SalesFeatureItem = { title: string; description: string; detail: string };
+
+export const contentGenerationCopy: Record<SalesLang, readonly SalesFeatureItem[]> = {
+  pt: [
+    {
+      title: "Gera o conteúdo do mês inteiro",
+      description: "Monte a estratégia de conteúdo do mês a partir do seu nicho e dos seus objetivos. A MRO organiza os temas e as publicações do seu calendário de uma vez só.",
+      detail: "Todo o conteúdo do seu mês gerado automaticamente.",
+    },
+    {
+      title: "Cria carrosséis profissionais",
+      description: "Gere carrosséis prontos para publicar, com sequência de slides, textos e artes alinhados ao seu posicionamento.",
+      detail: "Carrosséis completos em poucos cliques.",
+    },
+    {
+      title: "Cria posts e criativos",
+      description: "Crie posts individuais e criativos para as suas redes sociais a partir de um tema escolhido por você, com variações prontas para usar.",
+      detail: "Posts e criativos prontos para as suas redes.",
+    },
+    {
+      title: "Com a sua foto ou sem ela",
+      description: "Use a sua própria foto nas artes ou gere conteúdos sem utilizar a sua imagem. Você decide como quer aparecer.",
+      detail: "Artes com ou sem a sua imagem.",
+    },
+    {
+      title: "Conteúdo personalizado para o seu perfil",
+      description: "A MRO considera o seu perfil, o seu nicho e o seu público para criar conteúdos estratégicos e personalizados.",
+      detail: "Conteúdo pensado para o seu perfil.",
+    },
+    {
+      title: "Agenda e programa as publicações",
+      description: "Programe as suas publicações para saírem automaticamente nos horários que você definir, ao longo dos dias do mês.",
+      detail: "Publicações programadas sem ação manual.",
+    },
+  ],
+  es: [],
+};
+
 export const pageCopy = {
   pt: {
     heroCta: "GARANTIR MEU ACESSO AGORA",
