@@ -198,7 +198,7 @@ export const contentAutomationCopy: Record<SalesLang, ContentAutomationCopy | nu
     title1: "Criação de conteúdo",
     title2: "automática com I.A",
     description:
-      "Carrossel, estratégia e os melhores horários: a MRO cria a estratégia, cria a imagem, vê os melhores horários e posta para você.",
+      "Post único, carrossel automático, os melhores horários e tudo o que a MRO já faz por você: cria a estratégia, cria a imagem, vê os melhores horários e posta para você.",
     steps: [
       {
         title: "Cria a estratégia",
