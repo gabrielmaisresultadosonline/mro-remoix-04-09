@@ -2,18 +2,24 @@ import { describe, it, expect } from "bun:test";
 import { isPropagandaMroProduct, PROPAGANDA_MRO_LABEL } from "../src/lib/dashboardProducts";
 
 describe("isPropagandaMroProduct", () => {
-  it("marca o card do WhatsApp API Oficial", () => {
+  it("marca o card do WhatsApp com API Oficial (o primeiro da lista)", () => {
     expect(
       isPropagandaMroProduct({
         slug: "whatsapp-api-oficial",
-        title: "WhatsApp API Oficial",
+        title: "WhatsApp com API Oficial: Trabalhe com Segurança e Professionalismo",
         access_source: "zapmro",
       }),
     ).toBe(true);
   });
 
-  it("marca pelo acesso zapmro mesmo com outro título", () => {
-    expect(isPropagandaMroProduct({ slug: "ferramenta", title: "ZAPMRO", access_source: "zapmro" })).toBe(true);
+  it("não marca ZAPMRO — Extensão WhatsApp", () => {
+    expect(
+      isPropagandaMroProduct({
+        slug: "zapmro-extensao",
+        title: "ZAPMRO — Extensão WhatsApp",
+        access_source: "zapmro",
+      }),
+    ).toBe(false);
   });
 
   it("não marca MRO Ferramenta nem Marketing", () => {
@@ -21,8 +27,9 @@ describe("isPropagandaMroProduct", () => {
     expect(isPropagandaMroProduct({ slug: "marketing", title: "Marketing Completo", access_source: "hub" })).toBe(false);
   });
 
-  it("não marca card que fala de WhatsApp sem ser a API", () => {
-    expect(isPropagandaMroProduct({ slug: "grupo-wa", title: "Grupo WhatsApp", access_source: "hub" })).toBe(false);
+  it("reconhece sem acento e em caixa baixa", () => {
+    expect(isPropagandaMroProduct({ slug: "wa", title: "whatsapp com api oficial", access_source: "hub" })).toBe(true);
+    expect(isPropagandaMroProduct({ slug: "whatsapp_api_oficial", title: "Outro nome", access_source: "hub" })).toBe(true);
   });
 
   it("a tarja é exatamente PROPAGANDA MRO", () => {

@@ -1,7 +1,8 @@
 /**
  * Regras de apresentação da dashboard (/dashboard).
  *
- * A tarja "PROPAGANDA MRO" marca o acesso de divulgação (WhatsApp API Oficial).
+ * A tarja "PROPAGANDA MRO" marca apenas o card do WhatsApp com API Oficial
+ * (o primeiro da lista). O card "ZAPMRO — Extensão WhatsApp" NÃO leva a tarja.
  * É só rótulo: não muda desbloqueio, preço, checkout nem ordem dos cards.
  */
 
@@ -13,8 +14,15 @@ export interface DashboardProductLike {
   access_source?: string | null;
 }
 
+/** Tira acentos, caixa alta e troca "-", "_" por espaço: "API-Oficial" vira "api oficial". */
+const normalize = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[-_]+/g, " ");
+
 export function isPropagandaMroProduct(p: DashboardProductLike): boolean {
-  if ((p.access_source || "").toLowerCase() === "zapmro") return true;
-  const haystack = `${p.slug || ""} ${p.title || ""}`.toLowerCase();
-  return haystack.includes("whatsapp") && haystack.includes("api");
+  const haystack = normalize(`${p.slug || ""} ${p.title || ""}`);
+  return haystack.includes("api oficial");
 }
