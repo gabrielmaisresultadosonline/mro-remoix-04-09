@@ -90,18 +90,37 @@ log "4/8 Parando serviços desta VPS nova (para receber a cópia)"
 pm2 kill >/dev/null 2>&1 || true
 
 log "5/8 Copiando arquivos (/var/www, uploads, vídeos, Nginx, certificados)"
-RSYNC="rsync -aHAX --numeric-ids --delete --info=progress2 -e 'ssh -o StrictHostKeyChecking=accept-new'"
-eval $RSYNC --exclude node_modules "$SRC:/var/www/" /var/www/
+# keepalive evita queda em cópias longas; --partial + retry retomam de onde parou
+SSHO="ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes"
+RSYNC="rsync -aHAX --numeric-ids --delete --partial --timeout=120 --info=progress2 -e \"$SSHO\""
+rsync_retry() { # rsync_retry <args...> — até 5 tentativas, retomando
+  local tentativa
+  for tentativa in 1 2 3 4 5; do
+    if eval $RSYNC "$@"; then return 0; fi
+    echo "⚠ conexão caiu na cópia (tentativa $tentativa/5) — retomando em 5s..."
+    sleep 5
+  done
+  echo "ERRO: cópia falhou 5 vezes: $*"; return 1
+}
+rsync_retry --exclude node_modules "$SRC:/var/www/" /var/www/ || exit 1
 for d in /etc/nginx /etc/letsencrypt /etc/ssl /var/cache/mro-deno /var/log/mro /var/backups/mro-nginx; do
-  if $SSH "test -d $d"; then mkdir -p "$d"; eval $RSYNC "$SRC:$d/" "$d/"; fi
+  if $SSH "test -d $d"; then mkdir -p "$d"; rsync_retry "$SRC:$d/" "$d/" || exit 1; fi
 done
-$SSH "test -d /root/.pm2" && { mkdir -p /root/.pm2; eval rsync -a -e "'ssh -o StrictHostKeyChecking=accept-new'" "$SRC:/root/.pm2/dump.pm2" /root/.pm2/ || true; }
+$SSH "test -d /root/.pm2" && { mkdir -p /root/.pm2; eval rsync -a --partial -e "\"$SSHO\"" "$SRC:/root/.pm2/dump.pm2" /root/.pm2/ || true; }
 $SSH "crontab -l 2>/dev/null" | crontab - || true
 
 log "6/8 Banco de dados completo (todos os bancos, usuários e senhas)"
 DBS="$(sudo -u postgres psql -tAc "select datname from pg_database where datname not in ('postgres','template0','template1')")"
 for db in $DBS; do sudo -u postgres dropdb --if-exists "$db"; done
-$SSH "sudo -u postgres pg_dumpall --clean --if-exists" | sudo -u postgres psql -q -v ON_ERROR_STOP=0 -f - 2>/tmp/clone-db-erros.log || true
+# baixa o dump para arquivo local com retry (conexão pode cair em bancos grandes)
+DUMP_OK=0
+for tentativa in 1 2 3; do
+  if $SSH "sudo -u postgres pg_dumpall --clean --if-exists" > /tmp/clone-dump.sql; then DUMP_OK=1; break; fi
+  echo "⚠ conexão caiu no dump do banco (tentativa $tentativa/3) — tentando de novo em 5s..."
+  sleep 5
+done
+[ "$DUMP_OK" = 1 ] || { echo "ERRO: não consegui baixar o dump do banco. Rode o script de novo."; exit 1; }
+sudo -u postgres psql -q -v ON_ERROR_STOP=0 -f /tmp/clone-dump.sql 2>/tmp/clone-db-erros.log || true
 echo "Bancos copiados:"; sudo -u postgres psql -tAc "select datname, pg_size_pretty(pg_database_size(datname)) from pg_database where datname not like 'template%'"
 grep -iE "error" /tmp/clone-db-erros.log | grep -viE "already exists|does not exist" | head -20 || true
 
