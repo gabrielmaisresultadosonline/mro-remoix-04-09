@@ -14,14 +14,15 @@ export interface DashboardProductLike {
   access_source?: string | null;
 }
 
-/** Tira acentos e caixa alta para comparar "API Oficial", "api-oficial" etc. */
+/** Tira acentos, caixa alta e troca "-", "_" por espaço: "API-Oficial" vira "api oficial". */
 const normalize = (s: string) =>
   s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/[-_]+/g, " ");
 
 export function isPropagandaMroProduct(p: DashboardProductLike): boolean {
   const haystack = normalize(`${p.slug || ""} ${p.title || ""}`);
-  return haystack.includes("api oficial") || haystack.includes("api-oficial") || haystack.includes("apioficial");
+  return haystack.includes("api oficial");
 }
