@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { trackLead } from "@/lib/facebookTracking";
-import { Loader2, ArrowRight, Users, Laptop, AlertTriangle } from "lucide-react";
+import { Loader2, ArrowRight, Users, Laptop, AlertTriangle, Instagram } from "lucide-react";
 import logoMro from "@/assets/logo-mro.png";
 
 type Step = "intro" | "nome" | "whatsapp" | "email" | "pc" | "final" | "sem-pc";
@@ -51,6 +51,20 @@ const CadastroRend = () => {
 
   const input = "w-full rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-4 text-xl font-medium text-white outline-none transition placeholder:text-neutral-500 focus:border-yellow-400";
   const btn = "flex w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 px-6 py-4 text-xl font-extrabold text-black transition hover:bg-yellow-300 active:scale-[0.98] disabled:opacity-60";
+
+  // Instagram oficial: clicou, abre o perfil no Instagram.
+  const INSTAGRAM_URL = "https://www.instagram.com/maisresultadosonline/";
+  const instagramLink = (
+    <a
+      href={INSTAGRAM_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mx-auto flex w-fit items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-950 px-4 py-3 text-base font-bold text-white transition hover:border-yellow-400 hover:text-yellow-400"
+    >
+      <Instagram className="h-5 w-5 shrink-0 text-yellow-400" />
+      Siga nosso Instagram <span className="text-yellow-400">@maisresultadosonline</span>
+    </a>
+  );
 
   const campo = (key: "nome" | "email" | "whatsapp", label: string, next: Step, ok: boolean, msg: string, type = "text") => (
     <form onSubmit={(e) => { e.preventDefault(); avancar(next, ok, msg); }} className="space-y-4">
@@ -132,9 +146,13 @@ const CadastroRend = () => {
                 Quando estiver com algum desses, entre em contato conosco novamente para poder aplicar!
               </p>
               <p className="text-lg font-bold text-yellow-400">Obrigado pelo contato.</p>
+              <div className="pt-2">{instagramLink}</div>
             </div>
           )}
         </div>
+
+        {/* Instagram sempre no final da página */}
+        {step !== "sem-pc" && <div className="mt-6 text-center">{instagramLink}</div>}
       </div>
     </main>
   );
