@@ -74,6 +74,19 @@ export interface HubProduct {
 }
 
 
+/**
+ * A tarja "Propaganda MRO" identifica o acesso de divulgação (WhatsApp API Oficial)
+ * na dashboard. É só apresentação: não altera desbloqueio, preço nem checkout.
+ */
+export const PROPAGANDA_MRO_LABEL = "PROPAGANDA MRO";
+
+export function isPropagandaMroProduct(p: HubProduct): boolean {
+  if (p.access_source === "zapmro") return true;
+  const haystack = `${p.slug || ""} ${p.title || ""}`.toLowerCase();
+  return haystack.includes("whatsapp") && haystack.includes("api");
+}
+
+
 export function getDashboardSession(): DashboardSession | null {
   try {
     const raw = localStorage.getItem(DASHBOARD_SESSION_KEY);
@@ -845,6 +858,13 @@ export default function Dashboard() {
                 onClick={() => handleCardClick(product)}
               >
                 <div className="relative aspect-video bg-muted">
+                  {isPropagandaMroProduct(product) && (
+                    <div className="absolute bottom-0 left-0 right-0 z-20 bg-[#facc15] py-1 text-center shadow-md">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-black">
+                        {PROPAGANDA_MRO_LABEL}
+                      </span>
+                    </div>
+                  )}
                   {product.is_pinned && (
                     <div className="absolute top-2 left-2 z-10">
                       <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none px-2 py-0.5 shadow-lg font-black text-[10px] uppercase tracking-tighter">
@@ -891,9 +911,15 @@ export default function Dashboard() {
                 <CardContent className="pt-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="font-semibold text-foreground">{product.title}</h2>
-                    <Badge variant={product.status === 'construction' ? "destructive" : (product.unlocked ? "default" : "secondary")}>
-                      {product.status === 'construction' ? "Em Construção" : (product.unlocked ? "Liberado" : "Bloqueado")}
-                    </Badge>
+                    {isPropagandaMroProduct(product) ? (
+                      <Badge className="shrink-0 bg-[#facc15] text-black hover:bg-[#eab308] border-none px-2 py-0.5 font-black text-[10px] uppercase tracking-tighter">
+                        {PROPAGANDA_MRO_LABEL}
+                      </Badge>
+                    ) : (
+                      <Badge variant={product.status === 'construction' ? "destructive" : (product.unlocked ? "default" : "secondary")}>
+                        {product.status === 'construction' ? "Em Construção" : (product.unlocked ? "Liberado" : "Bloqueado")}
+                      </Badge>
+                    )}
                   </div>
                   {product.description && (
                     <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
