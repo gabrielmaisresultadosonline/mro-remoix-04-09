@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { EuroPageManager } from "@/components/admin/EuroPageManager";
 import {
   Loader2,
   LogIn,
@@ -321,6 +322,8 @@ export default function RenddxAdmin() {
             </CardContent>
           </Card>
         </section>
+
+        <EuroPageManager creds={creds} page="renddx" pageLabel="/renddx" showVisits={false} />
 
         <div className="flex flex-wrap items-center gap-2">
           {tabs.map((t) => (

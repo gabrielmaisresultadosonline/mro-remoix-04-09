@@ -25,11 +25,13 @@ serve(async (req) => {
     const isAdmin = () =>
       String(body.email || "").trim().toLowerCase() === ADMIN_EMAIL && String(body.password || "") === ADMIN_PASSWORD;
 
+    const pageKey = body.page === "renddx" ? "renddx" : "euro";
+
     if (action === "admin_login") return isAdmin() ? json({ success: true }) : json({ success: false }, 401);
 
     if (action === "get_video") {
       const { data } = await supabase.from("euro_page_settings").select("video_url, hls_url, video_title")
-        .order("updated_at", { ascending: false }).limit(1).maybeSingle();
+        .eq("page_key", pageKey).order("updated_at", { ascending: false }).limit(1).maybeSingle();
       return json({ video_url: data?.video_url || null, hls_url: data?.hls_url || null, video_title: data?.video_title || null });
     }
 
@@ -37,10 +39,10 @@ serve(async (req) => {
       if (!isAdmin()) return json({ success: false, error: "Não autorizado" }, 401);
       const row = {
         video_url: clip(body.video_url, 500), hls_url: clip(body.hls_url, 500),
-        video_title: clip(body.video_title, 200), updated_at: new Date().toISOString(),
+        video_title: clip(body.video_title, 200), updated_at: new Date().toISOString(), page_key: pageKey,
       };
       const { data: existing } = await supabase.from("euro_page_settings").select("id")
-        .order("updated_at", { ascending: false }).limit(1).maybeSingle();
+        .eq("page_key", pageKey).order("updated_at", { ascending: false }).limit(1).maybeSingle();
       const { error } = existing
         ? await supabase.from("euro_page_settings").update(row).eq("id", existing.id)
         : await supabase.from("euro_page_settings").insert(row);

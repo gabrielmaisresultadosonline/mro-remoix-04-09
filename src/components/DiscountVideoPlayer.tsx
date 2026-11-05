@@ -8,13 +8,15 @@ const VIDEO_SERVER = "https://video.maisresultadosonline.com.br";
 interface Props {
   email: string;
   nome?: string;
+  /** Página com vídeo próprio configurado no admin (ex.: "renddx"); sem vídeo próprio usa o padrão. */
+  configPage?: "renddx";
 }
 
 /**
  * Reproduz o vídeo hospedado no servidor (mesmo da /renda-extrass)
  * e dispara tracking de acesso + milestones 25/50/75/100% para o backend.
  */
-const DiscountVideoPlayer = ({ email, nome }: Props) => {
+const DiscountVideoPlayer = ({ email, nome, configPage }: Props) => {
   const [cfg, setCfg] = useState<{ video_url: string | null; hls_url: string | null; video_title: string | null }>({
     video_url: null,
     hls_url: null,
@@ -36,13 +38,25 @@ const DiscountVideoPlayer = ({ email, nome }: Props) => {
 
   // Carrega config do vídeo
   useEffect(() => {
+    const loadDefault = () =>
+      supabase.functions
+        .invoke("estrutura4-discount", { body: { action: "get_video" } })
+        .then(({ data }) => {
+          if (data) setCfg(data);
+        })
+        .catch(() => {});
+    if (!configPage) {
+      loadDefault();
+      return;
+    }
     supabase.functions
-      .invoke("estrutura4-discount", { body: { action: "get_video" } })
+      .invoke("euro-page-admin", { body: { action: "get_video", page: configPage } })
       .then(({ data }) => {
-        if (data) setCfg(data);
+        if (data?.hls_url || data?.video_url) setCfg(data);
+        else loadDefault();
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => loadDefault());
+  }, [configPage]);
 
   // Registra acesso assim que o componente monta (uma vez)
   useEffect(() => {

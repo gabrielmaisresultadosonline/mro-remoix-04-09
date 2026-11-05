@@ -16,7 +16,7 @@ interface Visit { id: string; ip: string | null; country: string | null; region:
 interface ServerVideo { name: string; hls_url?: string; url?: string; ready?: boolean; status?: string }
 
 /** Vídeo próprio e acessos da página /instagram-nova-euro (reaproveita o servidor de vídeo e transcodificação existentes). */
-export function EuroPageManager({ creds }: { creds: { email: string; password: string } }) {
+export function EuroPageManager({ creds, page = "euro", pageLabel = "/instagram-nova-euro", showVisits = true }: { creds: { email: string; password: string }; page?: "euro" | "renddx"; pageLabel?: string; showVisits?: boolean }) {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [loadingVisits, setLoadingVisits] = useState(false);
   const [hlsUrl, setHlsUrl] = useState("");
@@ -30,7 +30,7 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
   const fileRef = useRef<HTMLInputElement>(null);
 
   const call = (body: Record<string, unknown>) =>
-    supabase.functions.invoke("euro-page-admin", { body: { ...body, ...creds } });
+    supabase.functions.invoke("euro-page-admin", { body: { ...body, page, ...creds } });
 
   const loadVisits = async () => {
     setLoadingVisits(true);
@@ -44,7 +44,7 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
   const loadServerVideos = async () => {
     try { const r = await fetch(`${VIDEO_SERVER}/api/video/list`); const d = await r.json(); if (d?.success) setServerVideos(d.files || []); } catch { /* sem lista */ }
   };
-  useEffect(() => { loadVisits(); loadVideo(); loadServerVideos(); }, []);
+  useEffect(() => { if (showVisits) loadVisits(); loadVideo(); loadServerVideos(); }, []);
   // Se o vídeo salvo ainda não terminou de processar, acompanha automaticamente.
   useEffect(() => {
     if (trackedJob || !hlsUrl) return;
@@ -55,7 +55,7 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
 
   const save = async (o?: { hls_url?: string; video_url?: string }) => {
     const { data } = await call({ action: "set_video", hls_url: o?.hls_url ?? hlsUrl, video_url: o?.video_url ?? videoUrl, video_title: title });
-    if (data?.success) toast.success("Vídeo da página Euro salvo"); else toast.error("Erro ao salvar vídeo");
+    if (data?.success) toast.success(`Vídeo da página ${pageLabel} salvo`); else toast.error("Erro ao salvar vídeo");
   };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,9 +89,9 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
   return (
     <div className="grid gap-4 lg:grid-cols-2 mb-6">
       <Card className="bg-zinc-800/50 border-zinc-700">
-        <CardHeader><CardTitle className="text-white flex items-center gap-2"><Video className="w-5 h-5" /> Vídeo da página /instagram-nova-euro</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-white flex items-center gap-2"><Video className="w-5 h-5" /> Vídeo da página {pageLabel}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-zinc-400 text-sm break-all">Atual: {hlsUrl || videoUrl || "nenhum (mostra o vídeo do YouTube padrão)"}</p>
+          <p className="text-zinc-400 text-sm break-all">Atual: {hlsUrl || videoUrl || (page === "euro" ? "nenhum (mostra o vídeo do YouTube padrão)" : "nenhum (mostra o vídeo padrão atual)")}</p>
           <Input placeholder="Título (opcional)" value={title} onChange={(e) => setTitle(e.target.value)} className="bg-zinc-900 border-zinc-700 text-white" />
           <Input placeholder="URL HLS (.m3u8)" value={hlsUrl} onChange={(e) => setHlsUrl(e.target.value)} className="bg-zinc-900 border-zinc-700 text-white" />
           <div className="flex flex-wrap gap-2">
@@ -117,7 +117,7 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
         </CardContent>
       </Card>
 
-      <Card className="bg-zinc-800/50 border-zinc-700">
+      {showVisits && <Card className="bg-zinc-800/50 border-zinc-700">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white flex items-center gap-2"><Globe className="w-5 h-5" /> Acessos ({visits.length})</CardTitle>
           <Button onClick={loadVisits} size="sm" variant="outline" className="border-zinc-600 text-zinc-300" disabled={loadingVisits}>
@@ -142,7 +142,7 @@ export function EuroPageManager({ creds }: { creds: { email: string; password: s
             </table>
           </div>
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   );
 }
