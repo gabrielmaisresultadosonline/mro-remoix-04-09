@@ -2245,6 +2245,7 @@ export type Database = {
         Row: {
           hls_url: string | null
           id: string
+          page_key: string
           updated_at: string
           video_title: string | null
           video_url: string | null
@@ -2252,6 +2253,7 @@ export type Database = {
         Insert: {
           hls_url?: string | null
           id?: string
+          page_key?: string
           updated_at?: string
           video_title?: string | null
           video_url?: string | null
@@ -2259,6 +2261,7 @@ export type Database = {
         Update: {
           hls_url?: string | null
           id?: string
+          page_key?: string
           updated_at?: string
           video_title?: string | null
           video_url?: string | null
