@@ -178,9 +178,7 @@ serve(async (req) => {
 
     // Salvar pedido no banco (expira em 30 minutos)
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-    const { data: orderData, error: insertError } = await supabase
-      .from("mro_orders")
-      .insert({
+    const orderRow: Record<string, unknown> = {
         email: cleanEmail,
         partner_id: partner_id || null,
         source: typeof source === "string" && source.trim() ? source.trim().slice(0, 40) : null,
@@ -192,9 +190,16 @@ serve(async (req) => {
         nsu_order: orderNsu,
         infinitepay_link: paymentLink,
         expired_at: expiresAt.toISOString(),
-      })
+    };
+    let { data: orderData, error: insertError } = await supabase
+      .from("mro_orders")
+      .insert(cleanName ? { ...orderRow, customer_name: cleanName.slice(0, 120) } : orderRow)
       .select()
       .single();
+    // Banco sem a coluna customer_name ainda: salva o pedido sem o nome.
+    if (insertError && cleanName && /customer_name/i.test(String(insertError.message))) {
+      ({ data: orderData, error: insertError } = await supabase.from("mro_orders").insert(orderRow).select().single());
+    }
 
     if (insertError) {
       log("Error saving order", insertError);

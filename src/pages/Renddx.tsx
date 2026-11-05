@@ -53,6 +53,7 @@ const Renddx = () => {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
+  const [fullName, setFullName] = useState("");
   const [usernameError, setUsernameError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -153,10 +154,7 @@ const Renddx = () => {
     fetchProducts();
   }, []);
 
-  const totalAmount = planConfig.amount + selectedBumps.reduce((acc, slug) => {
-    const prod = products.find(p => p.slug === slug);
-    return acc + (Number(prod?.price) || 0);
-  }, 0);
+  const totalAmount = planConfig.amount; // sem upsell nesta página
 
   const validateUsername = (value: string) => {
     const cleaned = value.toLowerCase().replace(/[^a-z]/g, "");
@@ -169,6 +167,7 @@ const Renddx = () => {
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (fullName.trim().length < 2) { toast.error("Por favor, insira seu nome"); return; }
     if (!email || !email.includes("@")) { toast.error("Por favor, insira um email válido"); return; }
     if (!phone || phone.replace(/\D/g, "").length < 10) { toast.error("Por favor, insira um celular válido com DDD"); return; }
     if (!username || username.length < 4) { toast.error("Nome de usuário deve ter no mínimo 4 caracteres"); return; }
@@ -181,12 +180,13 @@ const Renddx = () => {
         body: { 
           email: email.toLowerCase().trim(), 
           username: username.toLowerCase().trim(), 
+          name: fullName.trim(),
           phone: phone.replace(/\D/g, "").trim(), 
           planType: planConfig.planType, 
           amount: totalAmount, 
           checkUserExists: true,
           source: "renddx",
-          selectedBumps: selectedBumps 
+          selectedBumps: [] 
         }
       });
       if (checkError) { toast.error("Erro ao criar link de pagamento. Tente novamente."); return; }
@@ -485,62 +485,11 @@ const Renddx = () => {
 
             <form onSubmit={handleCheckout} className="space-y-6">
               <div className="space-y-4">
+                <Input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nome completo" maxLength={120} className="bg-zinc-900 border-zinc-800 h-12" required />
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" className="bg-zinc-900 border-zinc-800 h-12" required />
                 <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="WhatsApp" className="bg-zinc-900 border-zinc-800 h-12" required />
                 <Input type="text" value={username} onChange={(e) => validateUsername(e.target.value)} placeholder="Usuário (login)" className="bg-zinc-900 border-zinc-800 h-12" required />
                 {usernameError && <p className="text-red-400 text-xs">{usernameError}</p>}
-              </div>
-
-              {/* Order Bumps Section */}
-              <div className="space-y-4 pt-4 border-t border-zinc-800">
-                <h4 className="text-xs font-black text-zinc-200 uppercase tracking-widest flex items-center gap-2">
-                  <Zap className="w-3 h-3 text-yellow-400 animate-pulse" />
-                  Aproveite as ofertas
-                </h4>
-                
-                {loadingProducts ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="w-6 h-6 animate-spin text-zinc-700" />
-                  </div>
-                ) : products.map((prod) => (
-                  <div 
-                    key={prod.id}
-                    onClick={() => toggleBump(prod.slug)}
-                    className={`group relative overflow-hidden rounded-xl border-2 transition-all cursor-pointer p-3 ${
-                      selectedBumps.includes(prod.slug) 
-                        ? 'border-green-500 bg-green-500/5' 
-                        : 'border-zinc-800 bg-zinc-900/30 hover:border-zinc-700'
-                    }`}
-                  >
-                    <div className="flex gap-3 items-center">
-                      <div className="flex-1 space-y-1">
-                        <div className="flex justify-between items-start">
-                          <h5 className="font-bold text-sm leading-tight">{prod.title}</h5>
-                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors relative ${
-                            selectedBumps.includes(prod.slug) ? 'bg-green-500 border-green-500' : 'border-zinc-700'
-                          }`}>
-                            {selectedBumps.includes(prod.slug) ? (
-                              <Check className="w-3 h-3 text-black font-bold" />
-                            ) : (
-                              <div className="absolute -left-6 top-1/2 -translate-y-1/2">
-                                <MousePointer2 className="w-4 h-4 text-green-400 animate-pulse opacity-50" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-zinc-400 leading-tight">{prod.description}</p>
-                        <div className="flex items-center gap-2 pt-1">
-                          <p className="text-green-400 font-black text-xs">
-                            + R$ {Number(prod.price).toFixed(2).replace('.', ',')}
-                          </p>
-                          <span className="text-[8px] text-red-500 font-bold uppercase px-1 py-0.5 bg-red-500/10 rounded">
-                            {prod.plan_type === 'anual' ? 'Anual' : prod.plan_type === 'mensal' ? 'Mensal' : 'Vitalício'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
 
               <Button type="submit" disabled={loading} className="w-full bg-green-500 hover:bg-green-600 text-black font-black py-7 text-lg rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.3)] btn-checkout-green">
