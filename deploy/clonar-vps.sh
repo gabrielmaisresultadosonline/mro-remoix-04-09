@@ -31,8 +31,27 @@ SSH="ssh -o StrictHostKeyChecking=accept-new $SRC"
 
 log "2/8 Pacotes (PostgreSQL, Node 20, Deno, Nginx, PM2, ffmpeg)"
 export DEBIAN_FRONTEND=noninteractive
+
+# Ubuntu recém-instalado roda unattended-upgrades e trava o apt; esperar liberar
+apt_wait() {
+  local i
+  for i in $(seq 1 60); do
+    if ! fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; then
+      return 0
+    fi
+    echo "aguardando apt liberar (unattended-upgrades em andamento)... ${i}/60"
+    sleep 5
+  done
+  # última tentativa: mata o processo automático e repara
+  systemctl stop unattended-upgrades apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+  pkill -9 -f unattended-upgrade 2>/dev/null || true
+  dpkg --configure -a || true
+}
+
+apt_wait
 apt-get update -qq
-apt-get install -y -qq curl ca-certificates gnupg lsb-release git rsync ufw nginx ffmpeg cron \
+apt_wait
+apt-get install -y -qq curl ca-certificates gnupg lsb-release git rsync ufw nginx ffmpeg cron unzip \
   postgresql-common >/dev/null
 OLD_PG="$($SSH "psql -V 2>/dev/null | grep -oE '[0-9]+' | head -1" || echo 16)"
 OLD_PG_SERVER="$($SSH "sudo -u postgres psql -tAc 'show server_version_num' 2>/dev/null | cut -c1-2" || echo 16)"
@@ -40,14 +59,20 @@ PGV="${OLD_PG_SERVER:-16}"
 if ! apt-cache show "postgresql-$PGV" >/dev/null 2>&1; then
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
 fi
+apt_wait
 apt-get install -y -qq "postgresql-$PGV" "postgresql-contrib-$PGV" "postgresql-$PGV-cron" >/dev/null || \
   apt-get install -y -qq "postgresql-$PGV" "postgresql-contrib-$PGV" >/dev/null
 if ! command -v node >/dev/null 2>&1; then
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null
+  apt_wait
   apt-get install -y -qq nodejs >/dev/null
 fi
 command -v pm2 >/dev/null || npm i -g pm2 --silent
-command -v deno >/dev/null || (curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh -s -- -y >/dev/null)
+if ! command -v deno >/dev/null 2>&1; then
+  command -v unzip >/dev/null || { apt_wait; apt-get install -y -qq unzip >/dev/null; }
+  curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh -s -- -y >/dev/null
+fi
+command -v deno >/dev/null || { echo "ERRO: Deno não instalou. Rode: apt-get install -y unzip && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh"; exit 1; }
 echo "PostgreSQL $PGV (antiga: servidor $PGV / cliente ${OLD_PG:-?})"
 
 log "3/8 Configuração do PostgreSQL"
