@@ -31,7 +31,6 @@ import {
   MousePointer2
 } from "lucide-react";
 const DiscountVideoPlayer = lazy(() => import("@/components/DiscountVideoPlayer"));
-const PromoToolVideoSection = lazy(() => import("@/components/PromoToolVideoSection"));
 import logoMro from "@/assets/logo-mro.png";
 
 
@@ -372,9 +371,9 @@ const Renddx = () => {
 
           {/* Vídeo Principal e CTA R$300 / Anual */}
           <div className="max-w-4xl mx-auto mb-10 sm:mb-16 space-y-8">
-            <div className="bg-zinc-900/40 border border-green-500/20 rounded-3xl p-4 sm:p-6 backdrop-blur-sm">
+            <div className="bg-gradient-to-b from-zinc-900/60 to-black/60 border border-white/10 ring-1 ring-green-500/20 rounded-[2rem] p-4 sm:p-6 backdrop-blur-xl shadow-[0_30px_80px_-30px_rgba(34,197,94,0.35)]">
               <Suspense fallback={<div className="aspect-video w-full bg-zinc-900 animate-pulse rounded-xl" />}>
-                <DiscountVideoPlayer email="public@renddx.com" nome="Visitante Renddx" />
+                <DiscountVideoPlayer email="public@renddx.com" nome="Visitante Renddx" configPage="renddx" />
               </Suspense>
               
               <div className="mt-8 flex flex-col items-center gap-4">
@@ -411,12 +410,6 @@ const Renddx = () => {
         </div>
       </section>
 
-      {/* Vídeo de Funcionamento */}
-      <div className="py-10">
-        <Suspense fallback={<div className="aspect-video w-full bg-zinc-900 animate-pulse rounded-xl" />}>
-          <PromoToolVideoSection />
-        </Suspense>
-      </div>
 
 
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-gray-950 to-black">
@@ -429,9 +422,9 @@ const Renddx = () => {
           <p className="text-gray-300 text-sm sm:text-lg max-w-3xl mx-auto">Utilize a MRO para empresas: organize atendimentos, automatize tarefas e profissionalize sua operação.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <div className="bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800"><Monitor className="w-10 h-10 text-blue-500 mb-4" /><h3 className="font-bold mb-2">Instale no seu computador</h3><p className="text-gray-400 text-sm">Utilize o MRO no seu notebook ou desktop.</p></div>
-          <div className="bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800"><Zap className="w-10 h-10 text-purple-500 mb-4" /><h3 className="font-bold mb-2">Aprenda a utilizar</h3><p className="text-gray-400 text-sm">Siga o treinamento e conheça os principais recursos da ferramenta.</p></div>
-          <div className="bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800"><Users className="w-10 h-10 text-green-500 mb-4" /><h3 className="font-bold mb-2">Ofereça serviços</h3><p className="text-gray-400 text-sm">Utilize a ferramenta para criar e gerenciar serviços para empresas e clientes.</p></div>
+          <div className="bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur-sm p-6 rounded-3xl border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:border-green-500/40 hover:shadow-[0_10px_40px_-15px_rgba(34,197,94,0.35)]"><Monitor className="w-10 h-10 text-blue-500 mb-4" /><h3 className="font-bold mb-2">Instale no seu computador</h3><p className="text-gray-400 text-sm">Utilize o MRO no seu notebook ou desktop.</p></div>
+          <div className="bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur-sm p-6 rounded-3xl border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:border-green-500/40 hover:shadow-[0_10px_40px_-15px_rgba(34,197,94,0.35)]"><Zap className="w-10 h-10 text-purple-500 mb-4" /><h3 className="font-bold mb-2">Aprenda a utilizar</h3><p className="text-gray-400 text-sm">Siga o treinamento e conheça os principais recursos da ferramenta.</p></div>
+          <div className="bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur-sm p-6 rounded-3xl border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:border-green-500/40 hover:shadow-[0_10px_40px_-15px_rgba(34,197,94,0.35)]"><Users className="w-10 h-10 text-green-500 mb-4" /><h3 className="font-bold mb-2">Ofereça serviços</h3><p className="text-gray-400 text-sm">Utilize a ferramenta para criar e gerenciar serviços para empresas e clientes.</p></div>
         </div>
       </section>
 
@@ -442,7 +435,7 @@ const Renddx = () => {
             Com o MRO, você tem acesso a recursos que podem ajudar na execução de tarefas e no atendimento de empresas.
             Você decide como utilizar a ferramenta, quais serviços oferecer e quanto cobrar pelos seus serviços.
           </p>
-          <div className="bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800 inline-block text-left max-w-md mx-auto">
+          <div className="bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur-sm p-6 rounded-3xl border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:border-green-500/40 hover:shadow-[0_10px_40px_-15px_rgba(34,197,94,0.35)] inline-block text-left max-w-md mx-auto">
             <h3 className="font-bold mb-4 flex items-center gap-2"><Target className="w-5 h-5 text-green-500" /> Construa sua carteira de clientes</h3>
             <p className="text-gray-400 text-sm">Defina seus próprios preços e condições comerciais de acordo com os serviços que oferecer.</p>
           </div>
@@ -479,12 +472,6 @@ const Renddx = () => {
         </div>
       </section>
 
-      {/* CTA Adicional Inferior */}
-      <section className="pb-20 text-center">
-          <Button onClick={() => pricingRef.current?.scrollIntoView({ behavior: 'smooth' })} className="btn-pulse-yellow px-10 py-8 rounded-2xl text-xl">
-            VEJA COMO A FERRAMENTA FUNCIONA NA PRÁTICA <ArrowRight className="ml-2 w-6 h-6" />
-          </Button>
-      </section>
 
       {showCheckoutModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4">
