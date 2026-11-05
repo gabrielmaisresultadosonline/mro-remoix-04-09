@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { markHubReturn } from "@/lib/hubReturn";
+import { PROPAGANDA_MRO_LABEL, isPropagandaMroProduct } from "@/lib/dashboardProducts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -845,6 +846,13 @@ export default function Dashboard() {
                 onClick={() => handleCardClick(product)}
               >
                 <div className="relative aspect-video bg-muted">
+                  {isPropagandaMroProduct(product) && (
+                    <div className="absolute bottom-0 left-0 right-0 z-20 bg-[#facc15] py-1 text-center shadow-md">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-black">
+                        {PROPAGANDA_MRO_LABEL}
+                      </span>
+                    </div>
+                  )}
                   {product.is_pinned && (
                     <div className="absolute top-2 left-2 z-10">
                       <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none px-2 py-0.5 shadow-lg font-black text-[10px] uppercase tracking-tighter">
@@ -891,9 +899,15 @@ export default function Dashboard() {
                 <CardContent className="pt-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="font-semibold text-foreground">{product.title}</h2>
-                    <Badge variant={product.status === 'construction' ? "destructive" : (product.unlocked ? "default" : "secondary")}>
-                      {product.status === 'construction' ? "Em Construção" : (product.unlocked ? "Liberado" : "Bloqueado")}
-                    </Badge>
+                    {isPropagandaMroProduct(product) ? (
+                      <Badge className="shrink-0 bg-[#facc15] text-black hover:bg-[#eab308] border-none px-2 py-0.5 font-black text-[10px] uppercase tracking-tighter">
+                        {PROPAGANDA_MRO_LABEL}
+                      </Badge>
+                    ) : (
+                      <Badge variant={product.status === 'construction' ? "destructive" : (product.unlocked ? "default" : "secondary")}>
+                        {product.status === 'construction' ? "Em Construção" : (product.unlocked ? "Liberado" : "Bloqueado")}
+                      </Badge>
+                    )}
                   </div>
                   {product.description && (
                     <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
