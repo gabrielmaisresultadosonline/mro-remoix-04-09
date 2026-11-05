@@ -29,6 +29,7 @@ interface RenddxOrder {
   email: string;
   username: string | null;
   phone: string | null;
+  customer_name?: string | null;
   amount: number | null;
   status: string;
   nsu_order: string | null;
@@ -362,6 +363,7 @@ export default function RenddxAdmin() {
                   <CardContent className="flex flex-wrap items-center gap-3 p-4">
                     <div className="min-w-[180px] flex-1">
                       <p className="font-semibold text-foreground">{o.username || "sem usuário"}</p>
+                      {o.customer_name && <p className="text-sm text-muted-foreground">{o.customer_name}</p>}
                       <p className="break-all text-xs text-muted-foreground">{o.email}</p>
                     </div>
                     <Badge variant={o.status === "paid" ? "default" : "secondary"} className="uppercase">
