@@ -93,7 +93,7 @@ interface MROOrder {
   created_at: string;
   updated_at: string;
   /** Presente quando a venda veio do link de um revendedor Whitelabel. */
-  source?: "whitelabel";
+  source?: string | null;
   whitelabel_name?: string | null;
   whitelabel_username?: string | null;
   whitelabel_code?: string | null;
@@ -2774,6 +2774,11 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
                 <Badge className="bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40 text-[10px] px-2 py-0.5 font-bold uppercase">
                   WHITELABEL · {order.whitelabel_name}{order.whitelabel_username ? ` (@${order.whitelabel_username})` : ""}
                   {order.whitelabel_link_type ? ` · ${order.whitelabel_link_type === "renda_extra" ? "Renda Extra" : "Cliente Final"}` : ""}
+                </Badge>
+              )}
+              {order.source === "renddx" && (
+                <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px] px-2 py-0.5 font-bold uppercase">
+                  RENDA EXTRA · 3 contas
                 </Badge>
               )}
               {order.nsu_order?.startsWith("LOTARGRUPOS") && (

@@ -99,7 +99,9 @@ async function createInstagramUser(
       monthly: { accounts: 4, dias: 30 },
       lifetime: { accounts: 4, dias: LIFETIME_DAYS },
     };
-    const cfg = planMap[plan] || planMap.annual;
+    const baseCfg = planMap[plan] || planMap.annual;
+    // Compras feitas em /renddx (Renda Extra) iniciam com 3 contas fixas (+5 testes padrão).
+    const cfg = source === "renddx" ? { ...baseCfg, accounts: 3 } : baseCfg;
     const rawDays = Number(daysAccess) || cfg.dias;
     const expiration = rawDays >= 9999 ? LIFETIME_DAYS : Math.max(0, Math.floor(rawDays));
 
