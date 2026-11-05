@@ -31,8 +31,27 @@ SSH="ssh -o StrictHostKeyChecking=accept-new $SRC"
 
 log "2/8 Pacotes (PostgreSQL, Node 20, Deno, Nginx, PM2, ffmpeg)"
 export DEBIAN_FRONTEND=noninteractive
+
+# Ubuntu recém-instalado roda unattended-upgrades e trava o apt; esperar liberar
+apt_wait() {
+  local i
+  for i in $(seq 1 60); do
+    if ! fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; then
+      return 0
+    fi
+    echo "aguardando apt liberar (unattended-upgrades em andamento)... ${i}/60"
+    sleep 5
+  done
+  # última tentativa: mata o processo automático e repara
+  systemctl stop unattended-upgrades apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+  pkill -9 -f unattended-upgrade 2>/dev/null || true
+  dpkg --configure -a || true
+}
+
+apt_wait
 apt-get update -qq
-apt-get install -y -qq curl ca-certificates gnupg lsb-release git rsync ufw nginx ffmpeg cron \
+apt_wait
+apt-get install -y -qq curl ca-certificates gnupg lsb-release git rsync ufw nginx ffmpeg cron unzip \
   postgresql-common >/dev/null
 OLD_PG="$($SSH "psql -V 2>/dev/null | grep -oE '[0-9]+' | head -1" || echo 16)"
 OLD_PG_SERVER="$($SSH "sudo -u postgres psql -tAc 'show server_version_num' 2>/dev/null | cut -c1-2" || echo 16)"
