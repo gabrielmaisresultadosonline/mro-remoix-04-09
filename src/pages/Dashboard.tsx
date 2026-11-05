@@ -900,8 +900,8 @@ export default function Dashboard() {
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="font-semibold text-foreground">{product.title}</h2>
                     {isPropagandaMroProduct(product) ? (
-                      <Badge className="shrink-0 bg-[#facc15] text-black hover:bg-[#eab308] border-none px-2 py-0.5 font-black text-[10px] uppercase tracking-tighter">
-                        {PROPAGANDA_MRO_LABEL}
+                      <Badge className="shimmer-reflection relative shrink-0 overflow-hidden bg-[#facc15] text-black hover:bg-[#eab308] border-none px-2 py-0.5 font-black text-[10px] uppercase tracking-tighter">
+                        <span className="relative z-10">{PROPAGANDA_MRO_LABEL}</span>
                       </Badge>
                     ) : (
                       <Badge variant={product.status === 'construction' ? "destructive" : (product.unlocked ? "default" : "secondary")}>
