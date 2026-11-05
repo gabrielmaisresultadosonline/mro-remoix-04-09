@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { markHubReturn } from "@/lib/hubReturn";
+import { PROPAGANDA_MRO_LABEL, isPropagandaMroProduct } from "@/lib/dashboardProducts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
