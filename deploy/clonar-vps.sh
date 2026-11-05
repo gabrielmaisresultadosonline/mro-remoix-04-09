@@ -112,7 +112,15 @@ $SSH "crontab -l 2>/dev/null" | crontab - || true
 log "6/8 Banco de dados completo (todos os bancos, usuários e senhas)"
 DBS="$(sudo -u postgres psql -tAc "select datname from pg_database where datname not in ('postgres','template0','template1')")"
 for db in $DBS; do sudo -u postgres dropdb --if-exists "$db"; done
-$SSH "sudo -u postgres pg_dumpall --clean --if-exists" | sudo -u postgres psql -q -v ON_ERROR_STOP=0 -f - 2>/tmp/clone-db-erros.log || true
+# baixa o dump para arquivo local com retry (conexão pode cair em bancos grandes)
+DUMP_OK=0
+for tentativa in 1 2 3; do
+  if $SSH "sudo -u postgres pg_dumpall --clean --if-exists" > /tmp/clone-dump.sql; then DUMP_OK=1; break; fi
+  echo "⚠ conexão caiu no dump do banco (tentativa $tentativa/3) — tentando de novo em 5s..."
+  sleep 5
+done
+[ "$DUMP_OK" = 1 ] || { echo "ERRO: não consegui baixar o dump do banco. Rode o script de novo."; exit 1; }
+sudo -u postgres psql -q -v ON_ERROR_STOP=0 -f /tmp/clone-dump.sql 2>/tmp/clone-db-erros.log || true
 echo "Bancos copiados:"; sudo -u postgres psql -tAc "select datname, pg_size_pretty(pg_database_size(datname)) from pg_database where datname not like 'template%'"
 grep -iE "error" /tmp/clone-db-erros.log | grep -viE "already exists|does not exist" | head -20 || true
 
