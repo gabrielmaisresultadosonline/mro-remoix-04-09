@@ -74,19 +74,6 @@ export interface HubProduct {
 }
 
 
-/**
- * A tarja "Propaganda MRO" identifica o acesso de divulgação (WhatsApp API Oficial)
- * na dashboard. É só apresentação: não altera desbloqueio, preço nem checkout.
- */
-export const PROPAGANDA_MRO_LABEL = "PROPAGANDA MRO";
-
-export function isPropagandaMroProduct(p: HubProduct): boolean {
-  if (p.access_source === "zapmro") return true;
-  const haystack = `${p.slug || ""} ${p.title || ""}`.toLowerCase();
-  return haystack.includes("whatsapp") && haystack.includes("api");
-}
-
-
 export function getDashboardSession(): DashboardSession | null {
   try {
     const raw = localStorage.getItem(DASHBOARD_SESSION_KEY);
