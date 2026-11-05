@@ -466,7 +466,7 @@ const Renddx = () => {
           </div>
           <p className="text-zinc-400 mb-6">12 meses de acesso • suporte já incluso</p>
           <ul className="text-left space-y-3 mb-8 text-zinc-300 text-sm">
-            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 4 contas fixas + 5 testes (Total 9)</li>
+            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 3 contas fixas + 5 testes (Total 8)</li>
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Passo a passo completo de uso</li>
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Treinamento de gestão para empresas</li>
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Acesso imediato (12 meses)</li>
