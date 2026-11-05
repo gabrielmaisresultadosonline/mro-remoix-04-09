@@ -59,14 +59,20 @@ PGV="${OLD_PG_SERVER:-16}"
 if ! apt-cache show "postgresql-$PGV" >/dev/null 2>&1; then
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
 fi
+apt_wait
 apt-get install -y -qq "postgresql-$PGV" "postgresql-contrib-$PGV" "postgresql-$PGV-cron" >/dev/null || \
   apt-get install -y -qq "postgresql-$PGV" "postgresql-contrib-$PGV" >/dev/null
 if ! command -v node >/dev/null 2>&1; then
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null
+  apt_wait
   apt-get install -y -qq nodejs >/dev/null
 fi
 command -v pm2 >/dev/null || npm i -g pm2 --silent
-command -v deno >/dev/null || (curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh -s -- -y >/dev/null)
+if ! command -v deno >/dev/null 2>&1; then
+  command -v unzip >/dev/null || { apt_wait; apt-get install -y -qq unzip >/dev/null; }
+  curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh -s -- -y >/dev/null
+fi
+command -v deno >/dev/null || { echo "ERRO: Deno não instalou. Rode: apt-get install -y unzip && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh"; exit 1; }
 echo "PostgreSQL $PGV (antiga: servidor $PGV / cliente ${OLD_PG:-?})"
 
 log "3/8 Configuração do PostgreSQL"
