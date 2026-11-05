@@ -847,8 +847,8 @@ export default function Dashboard() {
               >
                 <div className="relative aspect-video bg-muted">
                   {isPropagandaMroProduct(product) && (
-                    <div className="absolute bottom-0 left-0 right-0 z-20 bg-[#facc15] py-1 text-center shadow-md">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-black">
+                    <div className="shimmer-reflection absolute bottom-0 left-0 right-0 z-20 overflow-hidden bg-[#facc15] py-1 text-center shadow-md">
+                      <span className="relative z-10 text-[10px] font-black uppercase tracking-widest text-black">
                         {PROPAGANDA_MRO_LABEL}
                       </span>
                     </div>
