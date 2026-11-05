@@ -1,3 +1,4 @@
+import { RenddxBusinessSections } from "@/components/sales/RenddxBusinessSections";
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -448,6 +449,8 @@ const Renddx = () => {
         </div>
       </section>
 
+      <RenddxBusinessSections onCta={() => pricingRef.current?.scrollIntoView({ behavior: 'smooth' })} />
+
       {/* CTA Adicional Superior */}
       <section className="py-10 text-center">
           <Button onClick={() => pricingRef.current?.scrollIntoView({ behavior: 'smooth' })} className="btn-pulse-yellow px-10 py-8 rounded-2xl text-xl">
@@ -466,10 +469,11 @@ const Renddx = () => {
           </div>
           <p className="text-zinc-400 mb-6">12 meses de acesso • suporte já incluso</p>
           <ul className="text-left space-y-3 mb-8 text-zinc-300 text-sm">
-            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 4 contas fixas + 5 testes (Total 9)</li>
+            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 3 contas fixas + 5 testes (Total 8)</li>
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Passo a passo completo de uso</li>
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Treinamento de gestão para empresas</li>
             <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Acesso imediato (12 meses)</li>
+            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Pagamento único • sem mensalidade</li>
           </ul>
           <Button onClick={() => setShowCheckoutModal(true)} className="w-full bg-green-500 hover:bg-green-600 text-black font-black py-6 rounded-xl text-lg btn-pulse-green shadow-[0_0_20px_rgba(34,197,94,0.2)]">QUERO ACESSAR O MRO</Button>
         </div>
