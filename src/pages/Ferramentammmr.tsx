@@ -61,7 +61,7 @@ import ActiveClientsSection from "@/components/ActiveClientsSection";
 import { MroServiceBonus } from "@/components/sales/MroServiceBonus";
 import { pageCopy, type SalesLang } from "@/lib/salesCopy";
 import {
-  BlackNovemberHero,
+  BlackNovemberBadge,
   BlackNovemberPricing,
   BlackNovemberSparkles,
   BlackNovemberTapes,
@@ -514,7 +514,6 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       <section className="relative pt-8 sm:pt-12 md:pt-16 pb-10 sm:pb-16 px-3 sm:px-4">
         <div className="max-w-5xl mx-auto text-center">
 
-          {blackPromo && <BlackNovemberHero />}
           <MroIntelligentIntro lang={lang} />
 
           {/* Main Video */}
@@ -543,6 +542,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
 
       <MroContentAutomation lang={lang} />
 
+      {blackPromo && <BlackNovemberBadge />}
       {blackPromo && <BlackNovemberTapes />}
 
       {/* Guarantee Section */}
