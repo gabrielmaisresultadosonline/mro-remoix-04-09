@@ -101,7 +101,13 @@ async function createInstagramUser(
     };
     const baseCfg = planMap[plan] || planMap.annual;
     // Compras feitas em /renddx (Renda Extra) iniciam com 3 contas fixas (+5 testes padrão).
-    const cfg = source === "renddx" ? { ...baseCfg, accounts: 3 } : baseCfg;
+    // Compras Black November da /ferramentamropromo: anual 3 contas, vitalício 10 contas.
+    const blackAccounts = isBlackPromoSource(source) ? blackPromoAccounts(plan) : null;
+    const cfg = source === "renddx"
+      ? { ...baseCfg, accounts: 3 }
+      : blackAccounts !== null
+        ? { ...baseCfg, accounts: blackAccounts }
+        : baseCfg;
     const rawDays = Number(daysAccess) || cfg.dias;
     const expiration = rawDays >= 9999 ? LIFETIME_DAYS : Math.max(0, Math.floor(rawDays));
 
