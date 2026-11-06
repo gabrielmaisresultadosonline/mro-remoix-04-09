@@ -30,35 +30,20 @@ function useCountdown() {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-const TICKER = [
-  'BLACK NOVEMBER MRO',
-  'DESCONTO BLACK NOVEMBER',
-  `ANUAL ${brl(MRO_BLACK_PROMO.annual.price)}`,
-  `VITALÍCIO ${brl(MRO_BLACK_PROMO.lifetime.price)}`,
-  'O MAIOR DESCONTO DO ANO',
-];
-
-/** Faixa amarela fixa no topo com letreiro correndo e contagem regressiva. */
+/** Faixa amarela fixa no topo: só "BLACK NOVEMBER" e a contagem regressiva. */
 export function BlackNovemberTopBar() {
   const cd = useCountdown();
-  const items = [...TICKER, ...TICKER];
   return (
     <div className="sticky top-0 z-[60] bg-primary text-primary-foreground border-b border-primary">
-      <div className="flex items-center">
-        <div className="bn-ticker flex-1 overflow-hidden py-2">
-          <div className="bn-ticker-track flex w-max gap-8 font-black text-xs sm:text-sm tracking-wide">
-            {items.map((txt, i) => (
-              <span key={i} className="inline-flex items-center gap-2 whitespace-nowrap" aria-hidden={i >= TICKER.length}>
-                <Flame className="h-4 w-4" /> {txt}
-              </span>
-            ))}
-          </div>
-        </div>
+      <div className="flex items-center justify-center gap-3 px-3 py-2">
+        <span className="inline-flex items-center gap-2 font-black text-sm sm:text-base tracking-[0.3em] uppercase">
+          <Flame className="h-4 w-4" /> Black November
+        </span>
         {cd && (
-          <div className="shrink-0 bg-background text-primary px-3 sm:px-4 py-2 font-mono text-xs sm:text-sm font-bold tabular-nums">
+          <span className="shrink-0 bg-background text-primary px-2 sm:px-3 py-1 rounded font-mono text-xs sm:text-sm font-bold tabular-nums">
             <span className="hidden sm:inline text-foreground font-sans mr-2">TERMINA EM</span>
             {cd.d > 0 ? `${cd.d}d ` : ''}{pad(cd.h)}:{pad(cd.m)}:{pad(cd.s)}
-          </div>
+          </span>
         )}
       </div>
     </div>
@@ -96,22 +81,13 @@ export function BlackNovemberSparkles() {
   );
 }
 
-/** Selo grande "BLACK NOVEMBER" no topo da página. */
-export function BlackNovemberHero() {
+/** Selo "Desconto Black November" — fica no meio da página, não no topo. */
+export function BlackNovemberBadge() {
   return (
-    <div className="mb-8 sm:mb-10">
+    <div className="flex justify-center my-6 sm:my-8">
       <div className="inline-flex items-center gap-2 rounded-full border border-primary/60 bg-primary/10 px-4 py-1.5 text-primary text-[11px] sm:text-xs font-black tracking-[0.25em] uppercase bn-pulse">
         <Zap className="h-3.5 w-3.5" /> Desconto Black November
       </div>
-      <h2 className="mro-sales-title bn-shimmer-text mt-4 text-5xl sm:text-7xl md:text-8xl uppercase leading-none">
-        Black November
-      </h2>
-      <p className="mt-3 text-muted-foreground text-base sm:text-xl">
-        O maior desconto do ano na Ferramenta MRO —{' '}
-        <span className="text-foreground font-bold">
-          anual por {brl(MRO_BLACK_PROMO.annual.price)} e vitalício por {brl(MRO_BLACK_PROMO.lifetime.price)}
-        </span>
-      </p>
     </div>
   );
 }
