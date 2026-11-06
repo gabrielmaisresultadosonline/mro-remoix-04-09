@@ -31,6 +31,21 @@ ok(){   echo -e "  ${G}✓${N} $1"; }
 warn(){ echo -e "  ${Y}!${N} $1"; }
 fail(){ echo -e "  ${R}✗${N} $1"; exit 1; }
 
+# O apt pode estar travado pelo unattended-upgrades do Ubuntu recém-instalado.
+mro_apt_wait() {
+  local i
+  for i in $(seq 1 60); do
+    if ! fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; then
+      return 0
+    fi
+    warn "aguardando o apt liberar (unattended-upgrades em andamento)... $i/60"
+    sleep 5
+  done
+  sudo systemctl stop unattended-upgrades apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+  sudo pkill -9 -f unattended-upgrade 2>/dev/null || true
+  sudo dpkg --configure -a || true
+}
+
 RAPIDO=false
 MIGRATE_ARGS=()
 for arg in "$@"; do
@@ -124,17 +139,25 @@ SQL
     mkdir -p "$STORAGE_DIR"; chmod 750 "$STORAGE_DIR"
     ok "Uploads em $STORAGE_DIR."
 
-    # O Supabase roda PostgreSQL 17: um pg_dump 14 (padrão do Ubuntu 22.04)
-    # aborta com "server version mismatch" ao copiar o schema.
-    if ! ls /usr/lib/postgresql/1[7-9]/bin/pg_dump >/dev/null 2>&1; then
-      warn "Instalando postgresql-client-17 (necessário para copiar o schema do Supabase)."
+    # pg_dump >= 17 só serve para copiar o schema do banco antigo (PostgreSQL 17).
+    # O site já roda 100% no PostgreSQL local, então isto só roda numa cópia de
+    # dados real: --rapido, ou sem chave legada, não instala nada.
+    # Nenhum passo aqui pergunta no terminal: gpg em batch e apt noninteractive.
+    if [ "$RAPIDO" != true ] && [ -n "${LEGACY_SUPABASE_SERVICE_KEY:-}" ] \
+       && ! ls /usr/lib/postgresql/1[7-9]/bin/pg_dump >/dev/null 2>&1; then
+      warn "Instalando postgresql-client-17 (necessário para copiar o schema do banco antigo)."
       sudo install -d /usr/share/keyrings
-      curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-        | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+      if [ ! -f /usr/share/keyrings/pgdg.gpg ]; then
+        curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+          | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/pgdg.gpg
+      fi
       echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
         | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
-      sudo apt-get update -qq
-      sudo apt-get install -y -qq postgresql-client-17 \
+      mro_apt_wait
+      sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+      sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+        -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+        postgresql-client-17 \
         || fail "Falha ao instalar postgresql-client-17. Rode manualmente e repita."
       ok "postgresql-client-17 instalado."
     fi
@@ -239,7 +262,7 @@ cat <<EOF
 
 $(echo -e "${G}═══ Atualização concluída ═══${N}")
 
-O Lovable Cloud / Supabase continua ativo e inalterado.
+Os dados ficam no PostgreSQL local da VPS — ele é a fonte única. O Supabase não é usado.
 
 Testar o backend próprio em paralelo, sem cortar nada:
   VITE_USE_LOCAL_BACKEND=true npm run build && pm2 restart mro-api

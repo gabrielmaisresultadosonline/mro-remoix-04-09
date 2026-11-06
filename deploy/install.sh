@@ -3,7 +3,7 @@
 # =============================================================
 # Script de Instalação Automática - I.A MRO
 # Para Ubuntu LTS (VPS Hostinger)
-# Repositório: https://github.com/gabrielmaisresultadosonline/instaboost-mro.git
+# Repositório: https://github.com/gabrielmaisresultadosonline/mro-remoix-04-09.git
 # Domínio: maisresultadosonline.com.br
 # =============================================================
 
@@ -21,7 +21,7 @@ NC='\033[0m' # No Color
 APP_NAME="ia-mro"
 APP_DIR="/var/www/$APP_NAME"
 DOMAIN="maisresultadosonline.com.br"
-REPO_URL="https://github.com/gabrielmaisresultadosonline/instaboost-mro.git"
+REPO_URL="https://github.com/gabrielmaisresultadosonline/mro-remoix-04-09.git"
 
 echo -e "${YELLOW}Atualizando sistema...${NC}"
 sudo apt update && sudo apt upgrade -y

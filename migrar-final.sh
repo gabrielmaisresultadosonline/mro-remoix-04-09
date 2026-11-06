@@ -124,14 +124,19 @@ mkdir -p "$STORAGE_DIR"; chmod 750 "$STORAGE_DIR"
 mkdir -p /var/log/mro 2>/dev/null || sudo mkdir -p /var/log/mro
 ok "Estrutura aplicada. Uploads em $STORAGE_DIR."
 
-# pg_dump precisa ser >= servidor de origem (Supabase roda PostgreSQL 17).
+# pg_dump precisa ser >= servidor de origem (banco antigo roda PostgreSQL 17).
+# gpg roda em batch e o apt é noninteractive: nenhum passo pergunta no terminal.
 if ! ls /usr/lib/postgresql/1[7-9]/bin/pg_dump >/dev/null 2>&1; then
   warn "Instalando postgresql-client-17…"
   sudo install -d /usr/share/keyrings
-  curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+  if [ ! -f /usr/share/keyrings/pgdg.gpg ]; then
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/pgdg.gpg
+  fi
   echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
     | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
-  sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17 \
+  sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq \
+    && sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+         -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" postgresql-client-17 \
     || fail "Instale o postgresql-client-17 manualmente e rode de novo."
 fi
 
