@@ -1590,7 +1590,15 @@ Participe também do nosso GRUPO DE AVISOS
       userEmail = userEmail.split(":").slice(1).join(":");
     }
     
+    // Pagamento iniciado e ainda dentro do prazo: sempre aparece em Pendentes,
+    // mesmo que o mesmo e-mail já tenha uma compra concluída antes.
+    if (current.status === "pending") {
+      acc.push(current);
+      return acc;
+    }
+
     const existingIndex = acc.findIndex(o => {
+      if (o.status === "pending") return false;
       let existingEmail = o.email.toLowerCase();
       if (existingEmail.includes(":")) {
         existingEmail = existingEmail.split(":").slice(1).join(":");
