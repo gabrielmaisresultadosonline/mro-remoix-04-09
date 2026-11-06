@@ -679,11 +679,12 @@ export default function Dashboard() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <Card className="w-full max-w-md">
+      <div className="dash-login min-h-screen bg-background text-foreground flex items-center justify-center px-4 relative overflow-hidden">
+        <div className="dash-halftone" aria-hidden="true" />
+        <Card className="dash-login-card w-full max-w-md relative z-10">
           <CardContent className="pt-6">
             <div className="text-center mb-6">
-              <div className="mx-auto mb-3 h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="dash-login-icon mx-auto mb-3 h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Package className="h-6 w-6 text-primary" />
               </div>
               <h1 className="text-2xl font-bold text-foreground">Dashboard MRO</h1>
@@ -724,7 +725,7 @@ export default function Dashboard() {
                   disabled={loggingIn}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loggingIn}>
+              <Button type="submit" className="dash-login-btn w-full h-11 font-bold" disabled={loggingIn}>
                 {loggingIn ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                 {loggingIn ? "Entrando..." : "Entrar"}
               </Button>

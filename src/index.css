@@ -771,3 +771,69 @@
 .mro-training-theme header.glass-card { background: hsl(var(--background) / .96); box-shadow: none; }
 @media (max-width: 767px) { .mro-training-theme { --training-shade: linear-gradient(0deg, hsl(var(--background)), hsl(var(--background) / .75) 75%, hsl(var(--background) / .5)); } }
 @media (prefers-reduced-motion: reduce) { .mro-training-theme * { transition: none !important; animation: none !important; } }
+
+/* ===== /dashboard login: halftone + luz radial em loop ===== */
+.dash-login {
+  --background: 0 0% 2%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 98%;
+  --muted-foreground: 0 0% 64%;
+  --primary: 48 96% 53%;
+  --primary-foreground: 0 0% 5%;
+  --input: 0 0% 20%;
+  --border: 0 0% 18%;
+  --ring: 48 96% 53%;
+  --dot: 48 30% 30%;
+  --dot-lit: 48 96% 60%;
+}
+.dash-halftone, .dash-halftone::before, .dash-halftone::after { position: absolute; inset: 0; pointer-events: none; }
+.dash-halftone {
+  background-image: radial-gradient(circle, hsl(var(--dot) / .35) 1.2px, transparent 1.6px);
+  background-size: 18px 18px;
+}
+/* Bolinhas acesas: mesma grade, visível só onde a luz passa */
+.dash-halftone::before {
+  content: '';
+  background-image: radial-gradient(circle, hsl(var(--dot-lit)) 1.6px, transparent 2.2px);
+  background-size: 18px 18px;
+  -webkit-mask-image: radial-gradient(circle at var(--lx, 50%) var(--ly, 50%), #000 0, rgba(0,0,0,.5) 18%, transparent 42%);
+  mask-image: radial-gradient(circle at var(--lx, 50%) var(--ly, 50%), #000 0, rgba(0,0,0,.5) 18%, transparent 42%);
+  animation: dash-light 16s ease-in-out infinite;
+}
+/* Brilho suave atrás das bolinhas */
+.dash-halftone::after {
+  content: '';
+  background: radial-gradient(circle at var(--lx, 50%) var(--ly, 50%), hsl(var(--primary) / .14), transparent 40%);
+  animation: dash-light 16s ease-in-out infinite;
+}
+@property --lx { syntax: '<percentage>'; inherits: false; initial-value: 50%; }
+@property --ly { syntax: '<percentage>'; inherits: false; initial-value: 50%; }
+@keyframes dash-light {
+  0%   { --lx: 10%; --ly: 20%; }
+  25%  { --lx: 85%; --ly: 30%; }
+  50%  { --lx: 75%; --ly: 85%; }
+  75%  { --lx: 20%; --ly: 75%; }
+  100% { --lx: 10%; --ly: 20%; }
+}
+.dash-login-card {
+  background: hsl(var(--card) / .78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid hsl(var(--primary) / .25);
+  border-radius: 1.25rem;
+  box-shadow: 0 0 0 1px hsl(var(--foreground) / .04), 0 24px 60px -20px hsl(var(--primary) / .35);
+}
+.dash-login-card input { background: hsl(0 0% 10%); height: 2.75rem; transition: border-color .2s, box-shadow .2s; }
+.dash-login-card input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / .2); }
+.dash-login-icon { box-shadow: 0 0 24px hsl(var(--primary) / .35); }
+.dash-login-btn { position: relative; overflow: hidden; box-shadow: 0 8px 24px -8px hsl(var(--primary) / .6); }
+.dash-login-btn::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 35%; left: -40%;
+  background: linear-gradient(90deg, transparent, hsl(var(--foreground) / .5), transparent);
+  transform: skewX(-20deg); animation: dash-btn-sweep 3s ease-in-out infinite;
+}
+@keyframes dash-btn-sweep { 0%, 60% { left: -40%; } 100% { left: 120%; } }
+@media (prefers-reduced-motion: reduce) {
+  .dash-halftone::before, .dash-halftone::after, .dash-login-btn::after { animation: none; }
+}
