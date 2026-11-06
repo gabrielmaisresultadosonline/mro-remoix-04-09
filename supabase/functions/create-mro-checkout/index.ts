@@ -213,7 +213,10 @@ serve(async (req) => {
       .select()
       .single();
     // Banco sem a coluna customer_name ainda: salva o pedido sem o nome.
-    if (insertError && cleanName && /customer_name/i.test(String(insertError.message))) {
+    // Qualquer falha ao gravar com o nome: grava o pedido do jeito antigo
+    // (email, usuário, telefone) para ele nunca sumir dos Pendentes.
+    if (insertError && cleanName) {
+      log("Insert with customer_name failed, retrying without it", insertError);
       ({ data: orderData, error: insertError } = await supabase.from("mro_orders").insert(orderRow).select().single());
     }
 
