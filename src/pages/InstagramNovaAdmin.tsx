@@ -79,6 +79,7 @@ interface MROOrder {
   id: string;
   email: string;
   username: string;
+  customer_name?: string | null;
   phone: string | null;
   plan_type: string;
   amount: number;
@@ -2702,6 +2703,9 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
               <p className="text-white text-sm font-mono bg-zinc-900/30 p-2 rounded-lg border border-zinc-700/30 truncate">
                 {order.username}
               </p>
+              {order.customer_name && (
+                <p className="text-zinc-300 text-xs mt-1 truncate">Nome: {order.customer_name}</p>
+              )}
             </div>
 
             <div className="min-w-0">
