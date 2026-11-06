@@ -280,23 +280,11 @@
 }
 
 /* Faixa de criativos MRO passando de um lado para o outro */
-@keyframes mro-marquee-scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
 .mro-marquee {
+  /* Arraste horizontal fica com a faixa; rolagem vertical da página continua normal. */
+  touch-action: pan-y;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
-}
-.mro-marquee-track {
-  animation: mro-marquee-scroll 40s linear infinite;
-}
-.mro-marquee:hover .mro-marquee-track {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .mro-marquee { overflow-x: auto; }
-  .mro-marquee-track { animation: none; }
 }
 
 /* Gold shimmer animation for text */
