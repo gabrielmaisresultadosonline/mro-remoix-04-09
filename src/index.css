@@ -599,6 +599,104 @@
   .mro-intelligent-sales *, .mro-intelligent-sales *::before, .mro-intelligent-sales *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
+/* Black November /ferramentamropromo — fundo preto total e efeitos Black Friday (escopado). */
+.mro-intelligent-sales.mro-black-november {
+  --background: 0 0% 0%;
+  --card: 0 0% 5%;
+  --secondary: 0 0% 14%;
+  --muted: 0 0% 14%;
+  --muted-foreground: 0 0% 72%;
+  --border: 0 0% 16%;
+  --input: 0 0% 16%;
+  background: hsl(var(--background));
+}
+.mro-black-november .bn-ticker-track { animation: bn-scroll-x 28s linear infinite; }
+.mro-black-november .bn-tape {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(0.85rem, 2.4vw, 1.35rem);
+  letter-spacing: .04em;
+  border-top: 4px solid hsl(var(--primary-foreground));
+  border-bottom: 4px solid hsl(var(--primary-foreground));
+  box-shadow: 0 0 40px hsl(var(--primary) / .35);
+}
+.mro-black-november .bn-tape-dark {
+  background: hsl(var(--background));
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+.mro-black-november .bn-tape-track { animation: bn-scroll-x 30s linear infinite; }
+.mro-black-november .bn-tape-reverse { animation-direction: reverse; }
+@keyframes bn-scroll-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.mro-black-november .bn-shimmer-text {
+  background: linear-gradient(100deg, hsl(var(--primary)) 20%, hsl(var(--foreground)) 45%, hsl(var(--primary)) 70%);
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gold-shimmer 4s linear infinite;
+  filter: drop-shadow(0 0 18px hsl(var(--primary) / .35));
+}
+.mro-black-november .bn-pulse { animation: bn-pulse 2s ease-in-out infinite; }
+@keyframes bn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / .55); }
+  50% { box-shadow: 0 0 0 10px hsl(var(--primary) / 0); }
+}
+
+.mro-black-november .bn-glow-card { position: relative; overflow: hidden; padding: 2px; isolation: isolate; }
+.mro-black-november .bn-glow-card::before {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, transparent 0 62%, hsl(var(--primary)) 80%, hsl(var(--foreground)) 84%, hsl(var(--primary)) 88%, transparent 100%);
+  animation: bn-spin 5s linear infinite;
+}
+.mro-black-november .bn-glow-inner { position: relative; background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--background))); }
+@keyframes bn-spin { to { transform: rotate(360deg); } }
+.mro-black-november .bn-off-badge { animation: bn-wiggle 2.6s ease-in-out infinite; }
+@keyframes bn-wiggle {
+  0%, 80%, 100% { transform: rotate(0) scale(1); }
+  85% { transform: rotate(-6deg) scale(1.08); }
+  90% { transform: rotate(6deg) scale(1.08); }
+  95% { transform: rotate(-3deg) scale(1.04); }
+}
+.mro-intelligent-sales.mro-black-november button.bn-cta {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 8px 32px hsl(var(--primary) / .4);
+  position: relative;
+  overflow: hidden;
+}
+.mro-intelligent-sales.mro-black-november button.bn-cta:hover { background: hsl(var(--primary) / .9); }
+.mro-black-november button.bn-cta::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, hsl(var(--foreground) / .55), transparent);
+  transform: skewX(-20deg);
+  animation: shimmer-sweep 2.4s ease-in-out infinite;
+}
+.mro-black-november .bn-spark {
+  position: absolute;
+  bottom: -10px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 8px hsl(var(--primary) / .9);
+  opacity: 0;
+  animation-name: bn-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes bn-rise {
+  0% { transform: translateY(0) scale(.6); opacity: 0; }
+  10% { opacity: .7; }
+  80% { opacity: .35; }
+  100% { transform: translateY(-105vh) scale(1); opacity: 0; }
+}
+
 /* Teste grátis /teste002 — preto, cinza, branco e amarelo (escopado). */
 .teste002-theme {
   --background: 0 0% 4%;

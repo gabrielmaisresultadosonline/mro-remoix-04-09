@@ -2781,6 +2781,11 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
                   RENDA EXTRA · 3 contas
                 </Badge>
               )}
+              {order.source === MRO_BLACK_PROMO_SOURCE && (
+                <Badge className="bg-yellow-400 text-black border-yellow-300 text-[10px] px-2 py-0.5 font-black uppercase">
+                  {MRO_BLACK_PROMO_LABEL} · {blackPromoAccounts(order.plan_type) ?? "?"} contas
+                </Badge>
+              )}
               {order.nsu_order?.startsWith("LOTARGRUPOS") && (
                 <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-2 py-0.5">
                   <Target className="w-3 h-3 mr-1" /> LOTARGRUPOS
