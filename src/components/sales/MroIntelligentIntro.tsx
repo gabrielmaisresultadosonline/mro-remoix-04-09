@@ -22,9 +22,12 @@ export function MroIntelligentIntro({ branding, lang = 'pt' }: MroIntelligentInt
   return <>
     {branding || <img src={logoMro} alt="MRO — Mais Resultados Online" width={180} height={90} className="h-16 md:h-20 w-auto object-contain mx-auto mb-10" />}
     <p className="text-primary text-sm font-bold uppercase mb-4">{t.eyebrow}</p>
-    <h1 className="mro-sales-title text-4xl md:text-7xl text-foreground uppercase leading-tight mb-4">
-      {t.title1}
-      <span className="block text-primary text-2xl md:text-5xl mt-3">{t.title2}</span>
+    <h1 className="mro-sales-title text-[1.7rem] sm:text-4xl md:text-7xl text-foreground uppercase leading-tight mb-4">
+      {(() => {
+        const m = t.title1.match(/^(.*?)\s+((?:COM|EN)\s.*)$/);
+        return m ? <><span className="block md:inline">{m[1]}</span>{' '}<span className="block md:inline">{m[2]}</span></> : t.title1;
+      })()}
+      <span className="block text-primary text-[1.05rem] sm:text-2xl md:text-5xl mt-3 whitespace-nowrap md:whitespace-normal">{t.title2}</span>
     </h1>
     <p className="text-base md:text-xl font-semibold text-primary max-w-3xl mx-auto">{t.sub}</p>
   </>;
