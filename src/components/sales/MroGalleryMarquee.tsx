@@ -69,8 +69,6 @@ export function MroGalleryMarquee({
       </div>
 
       <div className="mro-marquee relative -mx-4 overflow-hidden py-2">
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-10 md:w-24 z-10 bg-gradient-to-r from-background to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 md:w-24 z-10 bg-gradient-to-l from-background to-transparent" />
         <div
           className="mro-marquee-track flex w-max gap-3 md:gap-4"
           style={{ animationDuration: `${duration}s` }}

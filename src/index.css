@@ -284,6 +284,10 @@
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+.mro-marquee {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
 .mro-marquee-track {
   animation: mro-marquee-scroll 40s linear infinite;
 }
