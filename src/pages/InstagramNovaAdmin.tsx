@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { trackPurchase } from "@/lib/facebookTracking";
+import { MRO_BLACK_PROMO_LABEL, MRO_BLACK_PROMO_SOURCE, blackPromoAccounts } from "../../supabase/functions/_shared/mro-black-promo";
 
 import { 
   Loader2, 
