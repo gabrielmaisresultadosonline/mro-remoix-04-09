@@ -35,6 +35,7 @@ interface HubProductRow {
   badge_text?: string | null;
   plan_type?: 'mensal' | 'anual' | 'vitalicio';
   is_redirect_only?: boolean;
+  sale_enabled?: boolean;
 }
 
 const emptyProduct = (): HubProductRow => ({
@@ -55,6 +56,7 @@ const emptyProduct = (): HubProductRow => ({
   badge_text: "",
   plan_type: "vitalicio",
   is_redirect_only: false,
+  sale_enabled: true,
 });
 
 
@@ -428,6 +430,26 @@ export default function HubProductsPanel() {
                 />
                 <Label htmlFor="is_redirect_only" className="cursor-pointer">Apenas Redirecionar (Não comprar no hub)</Label>
               </div>
+              <div className="flex items-center gap-2 pt-8">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  checked={editing.is_active !== false}
+                  onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <Label htmlFor="is_active" className="cursor-pointer">Produto ativo (desmarcado: some do dashboard de todos)</Label>
+              </div>
+              <div className="flex items-center gap-2 pt-8">
+                <input
+                  type="checkbox"
+                  id="sale_enabled"
+                  checked={editing.sale_enabled !== false}
+                  onChange={(e) => setEditing({ ...editing, sale_enabled: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <Label htmlFor="sale_enabled" className="cursor-pointer">Disponível para compra (desmarcado: só quem já tem acesso vê)</Label>
+              </div>
             </div>
             
             {editing.id && editing.is_ebook_hub && (
@@ -474,6 +496,9 @@ export default function HubProductsPanel() {
                     <Badge variant={product.is_active ? "default" : "secondary"}>
                       {product.is_active ? "Ativo" : "Inativo"}
                     </Badge>
+                    {product.sale_enabled === false && (
+                      <Badge variant="outline">Fora de venda</Badge>
+                    )}
                     {product.status === 'construction' && (
                       <Badge variant="destructive" className="animate-pulse">
                         Em Construção

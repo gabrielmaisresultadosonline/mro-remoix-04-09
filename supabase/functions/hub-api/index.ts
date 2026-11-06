@@ -552,7 +552,7 @@ serve(async (req) => {
       const result = (products || []).map((p) => ({
         ...p,
         unlocked: p.is_redirect_only || (!isBlocked && (grantedIds.has(p.id) || !!access[p.access_source])),
-      }));
+      })).filter((p) => p.sale_enabled !== false || p.unlocked);
 
       // Identidade efetiva devolvida para o front hidratar o login das ferramentas
       // (ex.: Posts com IA só reconhece e-mail, mesmo se o cliente entrou por usuário).
@@ -637,6 +637,9 @@ serve(async (req) => {
       }
 
       if (!product) return json({ success: false, error: "Produto não encontrado" }, 404);
+      if (product.is_active === false || product.sale_enabled === false) {
+        return json({ success: false, error: "Produto indisponível para compra" }, 200);
+      }
 
       const amount = Number(product.price || 0);
       if (amount <= 0) return json({ success: false, error: "Produto sem preço configurado" }, 400);
@@ -776,14 +779,17 @@ serve(async (req) => {
         badge_text: p.badge_text ? String(p.badge_text) : null,
         plan_type: p.plan_type ? String(p.plan_type) : 'vitalicio',
         is_redirect_only: p.is_redirect_only === true,
+        sale_enabled: p.sale_enabled !== false,
       };
-      if (p.id) {
-        const { error } = await supabase.from("hub_products").update(payload).eq("id", String(p.id));
-        if (error) return json({ success: false, error: error.message }, 400);
-      } else {
-        const { error } = await supabase.from("hub_products").insert(payload);
-        if (error) return json({ success: false, error: error.message }, 400);
+      const persist = async (row: Record<string, unknown>) => p.id
+        ? await supabase.from("hub_products").update(row).eq("id", String(p.id))
+        : await supabase.from("hub_products").insert(row);
+      let { error } = await persist(payload);
+      if (error && /sale_enabled/i.test(error.message || "")) {
+        const { sale_enabled: _ignored, ...legacy } = payload;
+        ({ error } = await persist(legacy));
       }
+      if (error) return json({ success: false, error: error.message }, 400);
       return json({ success: true });
     }
 
