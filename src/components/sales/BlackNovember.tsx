@@ -214,7 +214,7 @@ export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanS
 
                 <Button
                   onClick={() => onSelect(blackPlanSelection(plan))}
-                  className="bg-primary w-full font-black text-base sm:text-xl py-5 sm:py-7 rounded-xl bn-cta"
+                  className="bg-cta hover:bg-cta/90 text-cta-foreground w-full font-black text-base sm:text-xl py-5 sm:py-7 rounded-xl bn-cta bn-cta-green"
                 >
                   {plan === 'annual' ? 'QUERO O ANUAL BLACK' : 'QUERO O VITALÍCIO BLACK'}
                 </Button>

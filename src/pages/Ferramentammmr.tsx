@@ -305,6 +305,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
     installments: annualInstallments,
     oneTime: annualOneTime
   });
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
@@ -331,6 +332,11 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (blackPromo && fullName.trim().length < 2) {
+      toast.error("Por favor, insira seu nome completo");
+      return;
+    }
+
     if (!email || !email.includes("@")) {
       toast.error("Por favor, insira um email válido");
       return;
@@ -363,7 +369,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
           planType: selectedPlan.type,
           amount: selectedPlan.amount,
           checkUserExists: true,
-          ...(blackPromo ? { source: MRO_BLACK_PROMO_SOURCE } : {})
+          ...(blackPromo ? { source: MRO_BLACK_PROMO_SOURCE, name: fullName.trim() } : {})
         }
       });
 
@@ -795,6 +801,23 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
             </div>
             
             <form onSubmit={handleCheckout} className="space-y-3 sm:space-y-4">
+              {blackPromo && (
+                <div>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
+                    Nome completo
+                  </label>
+                  <Input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Seu nome completo"
+                    maxLength={120}
+                    className="bg-card border-border text-foreground text-sm sm:text-base"
+                    required
+                  />
+                </div>
+              )}
               <div>
                 <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">
                   <Mail className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />

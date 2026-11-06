@@ -671,6 +671,12 @@
   overflow: hidden;
 }
 .mro-intelligent-sales.mro-black-november button.bn-cta:hover { background: hsl(var(--primary) / .9); }
+.mro-intelligent-sales.mro-black-november button.bn-cta.bn-cta-green {
+  background: hsl(var(--cta));
+  color: hsl(var(--cta-foreground));
+  box-shadow: 0 8px 32px hsl(var(--cta) / .45);
+}
+.mro-intelligent-sales.mro-black-november button.bn-cta.bn-cta-green:hover { background: hsl(var(--cta-hover)); }
 .mro-black-november button.bn-cta::after {
   content: '';
   position: absolute;
