@@ -190,6 +190,9 @@ export type ContentAutomationCopy = {
   videoCta: string;
   videoFallback: string;
   videoFallbackPlaying: string;
+  galleryTitle: string;
+  galleryDescription: string;
+  galleryCta: string;
 };
 
 export const contentAutomationCopy: Record<SalesLang, ContentAutomationCopy | null> = {
@@ -221,6 +224,10 @@ export const contentAutomationCopy: Record<SalesLang, ContentAutomationCopy | nu
     videoCta: "Assistir o vídeo",
     videoFallback: "Prefiro assistir no YouTube",
     videoFallbackPlaying: "Não abriu? Assistir direto no YouTube",
+    galleryTitle: "Veja alguns modelos produzidos pela MRO!",
+    galleryDescription:
+      "Criou a estratégia, criou o conteúdo/criativo e criou a legenda, e ainda publicou em um horário estratégico para você.",
+    galleryCta: "Ver galeria completa",
   },
   es: null,
 };

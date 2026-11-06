@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Brain, CalendarClock, ExternalLink, Image as ImageIcon, Play, Send } from 'lucide-react';
 import { contentAutomationCopy, type SalesLang } from '@/lib/salesCopy';
+import { MroGalleryMarquee } from './MroGalleryMarquee';
 
 const VIDEO_ID = 'T0uaH1Pe55Y';
 const stepIcons = [Brain, ImageIcon, CalendarClock, Send];
@@ -58,6 +59,8 @@ export function MroContentAutomation({ lang = 'pt' }: { lang?: SalesLang } = {})
             );
           })}
         </div>
+
+        <MroGalleryMarquee title={t.galleryTitle} description={t.galleryDescription} cta={t.galleryCta} />
 
         <div className="max-w-3xl mx-auto space-y-3">
           {playing ? (
