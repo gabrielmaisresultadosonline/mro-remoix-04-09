@@ -14,6 +14,7 @@ import {
   Copy, Eye, EyeOff, Mail, Minus, History, Clock, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { copyAccessToClipboard } from '@/lib/accessClipboard';
+import { MRO_BLACK_PROMO_LABEL, isBlackPromoSource } from '../../../supabase/functions/_shared/mro-black-promo';
 import MroDeletedUsersCard from '@/components/admin/MroDeletedUsersCard';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -428,7 +429,11 @@ const MroUsersPanel: React.FC = () => {
                 ) : (
                   <Badge variant={u.is_active ? 'default' : 'destructive'}>{u.is_active ? 'Ativo' : 'Inativo'}</Badge>
                 )}
-                {u.source && <Badge variant="outline" className="uppercase">{u.source}</Badge>}
+                {u.source && (
+                  <Badge variant="outline" className="uppercase">
+                    {isBlackPromoSource(u.source) ? MRO_BLACK_PROMO_LABEL : u.source}
+                  </Badge>
+                )}
                 {u.expiration_days < LIFETIME && (() => {
                   // Usa expires_at salvo; senão calcula pela data de criação + dias do plano.
                   const base = u.expires_at

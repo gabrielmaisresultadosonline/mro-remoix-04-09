@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { MRO_BLACK_PROMO, MRO_BLACK_PROMO_SOURCE, blackPromoPlan, isBlackPromoSource } from "../_shared/mro-black-promo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,7 +41,22 @@ serve(async (req) => {
     });
 
     const body = await req.json();
-    const { email, username, phone, name, planType, amount, checkUserExists, partner_id, redirectTo, source } = body;
+    const { email, username, phone, name, checkUserExists, partner_id, redirectTo, source } = body;
+    let { planType, amount } = body;
+
+    // Black November: o valor cobrado vem do servidor, nunca do navegador.
+    if (isBlackPromoSource(source)) {
+      const blackPlan = blackPromoPlan(planType);
+      if (!blackPlan) {
+        return new Response(
+          JSON.stringify({ error: "Plano indisponível na oferta Black" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+      planType = blackPlan;
+      amount = MRO_BLACK_PROMO[blackPlan].price;
+      log("Black promo checkout", { source: MRO_BLACK_PROMO_SOURCE, planType, amount });
+    }
 
     if (!email || !email.includes("@")) {
       return new Response(

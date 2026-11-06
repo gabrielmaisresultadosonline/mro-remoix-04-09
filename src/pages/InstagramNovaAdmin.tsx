@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { trackPurchase } from "@/lib/facebookTracking";
+import { MRO_BLACK_PROMO_LABEL, MRO_BLACK_PROMO_SOURCE, blackPromoAccounts } from "../../supabase/functions/_shared/mro-black-promo";
 
 import { 
   Loader2, 
@@ -2779,6 +2780,11 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
               {order.source === "renddx" && (
                 <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px] px-2 py-0.5 font-bold uppercase">
                   RENDA EXTRA · 3 contas
+                </Badge>
+              )}
+              {order.source === MRO_BLACK_PROMO_SOURCE && (
+                <Badge className="bg-yellow-400 text-black border-yellow-300 text-[10px] px-2 py-0.5 font-black uppercase">
+                  {MRO_BLACK_PROMO_LABEL} · {blackPromoAccounts(order.plan_type) ?? "?"} contas
                 </Badge>
               )}
               {order.nsu_order?.startsWith("LOTARGRUPOS") && (

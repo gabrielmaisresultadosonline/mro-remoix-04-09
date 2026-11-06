@@ -59,6 +59,14 @@ import logoMro from "@/assets/logo-mro.png";
 import { PromoHlsVideo } from "@/components/sales/PromoHlsVideo";
 import ActiveClientsSection from "@/components/ActiveClientsSection";
 import { pageCopy, type SalesLang } from "@/lib/salesCopy";
+import {
+  BlackNovemberHero,
+  BlackNovemberPricing,
+  BlackNovemberSparkles,
+  BlackNovemberTapes,
+  BlackNovemberTopBar,
+} from "@/components/sales/BlackNovember";
+import { MRO_BLACK_PROMO_SOURCE } from "../../supabase/functions/_shared/mro-black-promo";
 
 function getVisitorId(): string {
   try {
@@ -101,9 +109,11 @@ export interface FerramentammmrProps {
   lang?: SalesLang;
   /** Mostra o botão flutuante de WhatsApp. Padrão true. */
   showWhatsApp?: boolean;
+  /** Oferta Black November (fundo preto, preços Black e contas Black). */
+  blackPromo?: boolean;
 }
 
-const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, children, lang = "pt", showWhatsApp = true }: FerramentammmrProps) => {
+const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, children, lang = "pt", showWhatsApp = true, blackPromo = false }: FerramentammmrProps) => {
   const t = pageCopy[lang];
   const annualAmount = promotionalOffer ? 300 : 397;
   const annualInstallments = promotionalOffer ? '12x de R$30' : '12x de R$ 40,00';
@@ -351,7 +361,8 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
           phone: phone.replace(/\D/g, "").trim(),
           planType: selectedPlan.type,
           amount: selectedPlan.amount,
-          checkUserExists: true
+          checkUserExists: true,
+          ...(blackPromo ? { source: MRO_BLACK_PROMO_SOURCE } : {})
         }
       });
 
@@ -443,7 +454,9 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
   ];
 
   return (
-    <div className="mro-intelligent-sales min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className={`mro-intelligent-sales min-h-screen bg-background text-foreground overflow-x-hidden ${blackPromo ? 'mro-black-november' : ''}`}>
+      {blackPromo && <BlackNovemberTopBar />}
+      {blackPromo && <BlackNovemberSparkles />}
       {promotionalOffer && (
         <div className="sticky top-0 z-[60] bg-primary text-primary-foreground py-3 px-4">
           <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-center flex-wrap">
@@ -500,7 +513,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       <section className="relative pt-8 sm:pt-12 md:pt-16 pb-10 sm:pb-16 px-3 sm:px-4">
         <div className="max-w-5xl mx-auto text-center">
 
-          
+          {blackPromo && <BlackNovemberHero />}
           <MroIntelligentIntro lang={lang} />
 
           {/* Main Video */}
@@ -518,7 +531,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
             onClick={scrollToPricing}
             className="mt-8 sm:mt-10 bg-gradient-to-r from-card to-background hover:from-card hover:to-background text-foreground font-bold text-sm sm:text-lg px-6 sm:px-10 py-5 sm:py-6 rounded-full shadow-lg shadow-primary/30"
           >
-            {promotionalOffer ? t.heroCtaPromo : t.heroCta} <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
+            {promotionalOffer || blackPromo ? t.heroCtaPromo : t.heroCta} <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
       </section>
@@ -528,6 +541,8 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       <MroIntelligentFeatures lang={lang} />
 
       <MroContentAutomation lang={lang} />
+
+      {blackPromo && <BlackNovemberTapes />}
 
       {/* Guarantee Section */}
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
@@ -569,7 +584,14 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
 
       {/* O que está incluso */}
       <section ref={pricingRef} className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
-        {pricingContent ?? <div className="max-w-6xl mx-auto">
+        {pricingContent ?? (blackPromo ? (
+          <BlackNovemberPricing
+            onSelect={(plan) => {
+              setSelectedPlan(plan);
+              setShowCheckoutModal(true);
+            }}
+          />
+        ) : <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-center mb-3 sm:mb-4">
             {promotionalOffer ? <span className="text-primary">OFERTA ESPECIAL</span> : <>ESCOLHA SEU <span className="text-primary">PLANO</span></>}
           </h2>
@@ -705,7 +727,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
             </div>
             )}
           </div>
-        </div>}
+        </div>)}
       </section>
 
 

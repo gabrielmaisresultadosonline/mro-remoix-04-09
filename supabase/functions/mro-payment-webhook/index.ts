@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { verifyInfinitePayWebhook } from "../_shared/webhook-security.ts";
+import { blackPromoAccounts, isBlackPromoSource } from "../_shared/mro-black-promo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -101,7 +102,13 @@ async function createInstagramUser(
     };
     const baseCfg = planMap[plan] || planMap.annual;
     // Compras feitas em /renddx (Renda Extra) iniciam com 3 contas fixas (+5 testes padrão).
-    const cfg = source === "renddx" ? { ...baseCfg, accounts: 3 } : baseCfg;
+    // Compras Black November da /ferramentamropromo: anual 3 contas, vitalício 10 contas.
+    const blackAccounts = isBlackPromoSource(source) ? blackPromoAccounts(plan) : null;
+    const cfg = source === "renddx"
+      ? { ...baseCfg, accounts: 3 }
+      : blackAccounts !== null
+        ? { ...baseCfg, accounts: blackAccounts }
+        : baseCfg;
     const rawDays = Number(daysAccess) || cfg.dias;
     const expiration = rawDays >= 9999 ? LIFETIME_DAYS : Math.max(0, Math.floor(rawDays));
 
