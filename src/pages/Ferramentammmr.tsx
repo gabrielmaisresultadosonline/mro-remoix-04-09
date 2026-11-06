@@ -58,6 +58,7 @@ import {
 import logoMro from "@/assets/logo-mro.png";
 import { PromoHlsVideo } from "@/components/sales/PromoHlsVideo";
 import ActiveClientsSection from "@/components/ActiveClientsSection";
+import { MroServiceBonus } from "@/components/sales/MroServiceBonus";
 import { pageCopy, type SalesLang } from "@/lib/salesCopy";
 import {
   BlackNovemberHero,
@@ -729,6 +730,9 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
           </div>
         </div>)}
       </section>
+
+      {/* Bônus: faturar prestando serviço (somente /ferramentamropromo) */}
+      {blackPromo && <MroServiceBonus onCta={scrollToPricing} />}
 
 
       {/* Final CTA */}
