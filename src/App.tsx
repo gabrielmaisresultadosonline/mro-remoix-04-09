@@ -226,7 +226,6 @@ import ComercialAAFAdmin from "./pages/ComercialAAFAdmin";
 import MktCompleto from "./pages/MktCompleto";
 import MktCC from "./pages/MktCC";
 import MktCCAdmin from "./pages/MktCCAdmin";
-import FerramentaMROPromo from "./pages/FerramentaMROPromo";
 import FerramentaMROPromoAdmin from "./pages/FerramentaMROPromoAdmin";
 import AoVivo from "./pages/AoVivo";
 import Dloar from "./pages/Dloar";
@@ -507,7 +506,8 @@ const App = () => (
           <Route path="/mktcompleto" element={<MktCompleto />} />
           <Route path="/mktcc" element={<MktCC />} />
           <Route path="/mktcc/admin" element={<MktCCAdmin />} />
-          <Route path="/ferramentamropromo2" element={<FerramentaMROPromo />} />
+          {/* Clone exato da /ferramentamropromo */}
+          <Route path="/ferramentamropromo2" element={<Ferramentammmr />} />
           <Route path="/ferramentamropromo/admin" element={<FerramentaMROPromoAdmin />} />
           <Route path="/ferramentamropromo/video" element={<FerramentaMROPromoAdmin />} />
           <Route path="/aovivo" element={<AoVivo />} />
