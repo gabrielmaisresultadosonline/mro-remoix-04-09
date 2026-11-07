@@ -1,5 +1,10 @@
 # Roadmap
 
+## Pixel Cadastro Rend
+- [ ] Configurar Pixel próprio no admin e salvar no PostgreSQL da VPS
+- [ ] Retirar explicações do quiz e manter política/preferências em tela separada
+- [ ] Validar configuração e Lead sem alterar os outros produtos
+
 ## Temas /mro-ferramenta
 - [x] Preservar tema antigo e adicionar tema Netflix com escolha salva no navegador
 - [x] Editar título, descrição e fundo das boas-vindas no admin existente

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { isCadastroRendLeadEligible, isCadastroRendRegionAllowed } from "../src/lib/cadastroRendLead";
+import { isCadastroRendLeadEligible, isCadastroRendRegionAllowed, isCadastroRendPixelEnabled } from "../src/lib/cadastroRendLead";
 
 describe("Cadastro Rend Lead", () => {
+  it("uses only the enabled Pixel saved for this page", () => {
+    expect(isCadastroRendPixelEnabled({ pixel_id: "123456789", pixel_enabled: true })).toBe(true);
+    expect(isCadastroRendPixelEnabled({ pixel_id: "123456789", pixel_enabled: false })).toBe(false);
+    expect(isCadastroRendPixelEnabled({ pixel_id: "", pixel_enabled: true })).toBe(false);
+    expect(isCadastroRendPixelEnabled(null)).toBe(false);
+  });
   it("counts a saved registration that received the group link", () => {
     expect(isCadastroRendLeadEligible(true, true, "https://chat.whatsapp.com/example")).toBe(true);
   });

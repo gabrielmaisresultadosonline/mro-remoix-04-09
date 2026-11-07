@@ -22,7 +22,7 @@ serve(async (req) => {
     const isAdmin = async () => !!(await verifyAdminSessionToken(String(body.token ?? ""), sessionSecret, SCOPE));
 
     const getLink = async () => {
-      const { data } = await db.from("cadastrorend_settings").select("id, grupo_link")
+      const { data } = await db.from("cadastrorend_settings").select("id, grupo_link, pixel_id, pixel_enabled")
         .order("created_at", { ascending: true }).limit(1).maybeSingle();
       return data;
     };
@@ -37,6 +37,11 @@ serve(async (req) => {
     if (action === "visit") {
       await db.from("cadastrorend_visits").insert({});
       return json({ success: true });
+    }
+
+    if (action === "public_settings") {
+      const settings = await getLink();
+      return json({ success: true, pixel_id: settings?.pixel_id ?? "", pixel_enabled: settings?.pixel_enabled === true });
     }
 
     if (action === "register") {
@@ -56,15 +61,22 @@ serve(async (req) => {
         .order("created_at", { ascending: false }).limit(5000);
       if (error) return json({ success: false, error: error.message }, 400);
       const { count } = await db.from("cadastrorend_visits").select("id", { count: "exact", head: true });
-      return json({ success: true, leads: data ?? [], visitas: count ?? 0, grupo_link: (await getLink())?.grupo_link ?? "" });
+      const settings = await getLink();
+      return json({ success: true, leads: data ?? [], visitas: count ?? 0, grupo_link: settings?.grupo_link ?? "", pixel_id: settings?.pixel_id ?? "", pixel_enabled: settings?.pixel_enabled === true });
     }
 
     if (action === "save_settings") {
       const link = clean(body.grupo_link, 500);
       if (link && !/^https:\/\//i.test(link)) return json({ success: false, error: "Use um link https://" }, 400);
       const cur = await getLink();
-      if (cur?.id) await db.from("cadastrorend_settings").update({ grupo_link: link, updated_at: new Date().toISOString() }).eq("id", cur.id);
-      else await db.from("cadastrorend_settings").insert({ grupo_link: link });
+      const pixelId = body.pixel_id === undefined ? cur?.pixel_id ?? "" : clean(body.pixel_id, 30);
+      const enabled = body.pixel_enabled === undefined ? cur?.pixel_enabled === true : body.pixel_enabled === true;
+      if ((pixelId && !/^\d{5,30}$/.test(pixelId)) || (enabled && !pixelId)) return json({ success: false, error: "Informe um ID de Pixel válido" }, 400);
+      const values = { grupo_link: link, pixel_id: pixelId, pixel_enabled: enabled, updated_at: new Date().toISOString() };
+      const result = cur?.id
+        ? await db.from("cadastrorend_settings").update(values).eq("id", cur.id)
+        : await db.from("cadastrorend_settings").insert(values);
+      if (result.error) return json({ success: false, error: "Não foi possível salvar as configurações" }, 500);
       return json({ success: true });
     }
 

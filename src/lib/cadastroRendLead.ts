@@ -1,9 +1,14 @@
-import { getAdminData } from "./adminConfig";
+import { supabase } from "@/integrations/supabase/client";
 
 const restricted = new Set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IS IE IT LV LI LT LU MT NL NO PL PT RO SK SI ES SE GB CH BR".split(" "));
 const refusalKey = "cadastrorend_advertising_refused";
 let region: Promise<string | null> | undefined;
 let initialized = false;
+let configuration: Promise<{ pixel_id: string; pixel_enabled: boolean } | null> | undefined;
+
+export function isCadastroRendPixelEnabled(settings: { pixel_id: string; pixel_enabled: boolean } | null) {
+  return settings?.pixel_enabled === true && /^\d{5,30}$/.test(settings.pixel_id);
+}
 
 export function isCadastroRendLeadEligible(hasComputer: boolean, success: boolean, link: string) {
   return hasComputer && success && /^https:\/\//i.test(link.trim());
@@ -38,8 +43,14 @@ async function canSend() {
 
 export async function initializeCadastroRendPixel() {
   if (!await canSend()) return false;
-  const settings = getAdminData()?.settings?.pixelSettings;
-  if (settings?.enabled === false) return false;
+  configuration ??= (async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("cadastrorend", { body: { action: "public_settings" } });
+      return !error && data?.success === true ? { pixel_id: String(data.pixel_id ?? ""), pixel_enabled: data.pixel_enabled === true } : null;
+    } catch { return null; }
+  })();
+  const settings = await configuration;
+  if (!settings || !isCadastroRendPixelEnabled(settings) || !await canSend()) return false;
   if (!initialized) {
     // Same queue contract as Meta's base snippet. No customer matching or server uploads.
     if (!window.fbq) {
@@ -56,7 +67,7 @@ export async function initializeCadastroRendPixel() {
       script.async = true;
       document.head.appendChild(script);
     }
-    window.fbq("init", settings?.pixelId || "569414052132145", {}, { agent: "lovable" });
+    window.fbq("init", settings.pixel_id, {}, { agent: "lovable" });
     initialized = true;
   }
   window.fbq("consent", "grant");
