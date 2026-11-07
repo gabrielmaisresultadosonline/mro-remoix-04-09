@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { trackLead } from "@/lib/facebookTracking";
+import { hasCadastroRendOptOut, initializeCadastroRendPixel, isCadastroRendLeadEligible, refuseCadastroRendAdvertising, reportCadastroRendLead } from "@/lib/cadastroRendLead";
 import { Loader2, ArrowRight, Users, Laptop, AlertTriangle, Instagram } from "lucide-react";
 import logoMro from "@/assets/logo-mro.png";
 
@@ -19,13 +19,22 @@ const CadastroRend = () => {
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
   const [link, setLink] = useState("");
+  const submitting = useRef(false);
+  const [advertisingRefused, setAdvertisingRefused] = useState(hasCadastroRendOptOut);
 
   useEffect(() => {
     document.title = "Utilize a MRO você também! | Grupo grátis";
+    void initializeCadastroRendPixel();
+    const syncChoice = () => {
+      setAdvertisingRefused(hasCadastroRendOptOut());
+      if (hasCadastroRendOptOut()) window.fbq?.("consent", "revoke");
+    };
+    window.addEventListener("storage", syncChoice);
     if (!sessionStorage.getItem("cadastrorend_visit")) {
       sessionStorage.setItem("cadastrorend_visit", "1");
       supabase.functions.invoke("cadastrorend", { body: { action: "visit" } }).catch(() => {});
     }
+    return () => window.removeEventListener("storage", syncChoice);
   }, []);
 
   const avancar = (next: Step, valido: boolean, msg: string) => {
@@ -35,18 +44,27 @@ const CadastroRend = () => {
   };
 
   const finalizar = async (tem: boolean) => {
+    if (submitting.current) return;
+    submitting.current = true;
     setLoading(true);
-    let grupo = "";
+    setErro("");
     try {
-      const { data } = await supabase.functions.invoke("cadastrorend", {
+      const { data, error } = await supabase.functions.invoke("cadastrorend", {
         body: { action: "register", ...form, tem_computador: tem },
       });
-      grupo = data?.grupo_link ?? "";
-    } catch { /* segue o fluxo */ }
-    setLink(tem ? grupo : "");
-    if (tem) trackLead("Cadastro Rend MRO", { email: form.email, phone: form.whatsapp.replace(/\D/g, ""), content_name: "Cadastro Rend MRO" });
-    setLoading(false);
-    setStep(tem ? "final" : "sem-pc");
+      if (error || data?.success !== true) throw new Error("registration failed");
+      const grupo = typeof data.grupo_link === "string" ? data.grupo_link.trim() : "";
+      setLink(tem ? grupo : "");
+      setStep(tem ? "final" : "sem-pc");
+      if (isCadastroRendLeadEligible(tem, data.success, grupo)) {
+        void reportCadastroRendLead(crypto.randomUUID());
+      }
+    } catch {
+      setErro("Não conseguimos salvar seu cadastro. Tente novamente.");
+    } finally {
+      submitting.current = false;
+      setLoading(false);
+    }
   };
 
   const input = "w-full rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-4 text-xl font-medium text-white outline-none transition placeholder:text-neutral-500 focus:border-yellow-400";
@@ -114,6 +132,7 @@ const CadastroRend = () => {
               <Laptop className="mx-auto h-14 w-14 text-yellow-400" />
               <h2 className="text-2xl font-extrabold leading-snug text-white sm:text-3xl">Tem notebook, computador de mesa ou MacBook?</h2>
               <div className="grid gap-3">
+                {erro && <p role="alert" className="text-base font-semibold text-yellow-400">{erro}</p>}
                 <button disabled={loading} onClick={() => finalizar(true)} className={btn}>
                   {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Sim"}
                 </button>
@@ -150,6 +169,16 @@ const CadastroRend = () => {
             </div>
           )}
         </div>
+        <details className="mt-5 text-sm text-neutral-300">
+          <summary>Privacidade e preferências de publicidade</summary>
+          <p className="mt-3">Seu cadastro (nome, e-mail, WhatsApp e disponibilidade de computador) fica com a MRO para liberar o grupo e entrar em contato. Quando permitido, o Pixel da Meta recebe o evento Lead após liberar o link, endereço desta página, informações do navegador e identificadores de publicidade, para medir anúncios e otimizar campanhas. Não enviamos os campos do formulário ao Facebook.</p>
+          <p className="mt-3">Sem faixa de consentimento, não medimos visitantes nas regiões que exigem consentimento, incluindo o Brasil, nem quando a região é desconhecida. Respeitamos a recusa e o controle global de privacidade.</p>
+          <label className="mt-3 flex items-center gap-2">
+            <input type="checkbox" checked={advertisingRefused} disabled={advertisingRefused} onChange={() => { refuseCadastroRendAdvertising(); setAdvertisingRefused(true); }} />
+            Não permitir medição publicitária nesta página
+          </label>
+          <p className="mt-2">Esta preferência fica salva neste navegador e pode ser marcada a qualquer momento, sem afetar seu cadastro ou acesso ao grupo.</p>
+        </details>
       </div>
     </main>
   );
