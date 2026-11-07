@@ -4,6 +4,7 @@ import { hasCadastroRendOptOut, initializeCadastroRendPixel, isCadastroRendLeadE
 import { Loader2, ArrowRight, Users, Laptop, AlertTriangle, Instagram } from "lucide-react";
 import logoMro from "@/assets/logo-mro.png";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 type Step = "intro" | "nome" | "whatsapp" | "email" | "pc" | "final" | "sem-pc";
 
@@ -23,6 +24,7 @@ const CadastroRend = () => {
   const submitting = useRef(false);
   const [advertisingRefused, setAdvertisingRefused] = useState(hasCadastroRendOptOut);
   const isPrivacyPage = new URLSearchParams(window.location.search).get("privacidade") === "1";
+  const [privacyOpen, setPrivacyOpen] = useState(isPrivacyPage);
 
   useEffect(() => {
     document.title = "Utilize a MRO você também! | Grupo grátis";
@@ -103,20 +105,6 @@ const CadastroRend = () => {
 
   const progress = { intro: 0, nome: 25, whatsapp: 50, email: 75, pc: 90, final: 100, "sem-pc": 100 }[step];
 
-  if (isPrivacyPage) return (
-    <main className="min-h-screen bg-background px-5 py-12 text-foreground">
-      <section className="mx-auto max-w-xl space-y-5">
-        <h1 className="text-2xl font-bold">Política de privacidade — Cadastro MRO</h1>
-        <p>Seu nome, e-mail, WhatsApp e disponibilidade de computador ficam com a MRO para liberar o grupo e entrar em contato. Os campos do formulário não são enviados ao Facebook.</p>
-        <p>Quando permitido e ativado, o Pixel da Meta recebe o evento Lead após a liberação do link, o endereço da página, informações do navegador e identificadores de publicidade, para medir anúncios e otimizar campanhas.</p>
-        <p>Sem faixa de consentimento, a medição é bloqueada nas regiões que exigem consentimento, incluindo o Brasil, e quando a região é desconhecida. Recusas e controle global de privacidade são respeitados.</p>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={advertisingRefused} disabled={advertisingRefused} onChange={() => { refuseCadastroRendAdvertising(); setAdvertisingRefused(true); }} /> Não permitir medição publicitária</label>
-        <p>Você pode recusar a qualquer momento nesta página. A preferência fica salva neste navegador, sem afetar o cadastro ou o acesso ao grupo.</p>
-        <Button asChild variant="outline"><a href="/cadastrorend">Voltar ao cadastro</a></Button>
-      </section>
-    </main>
-  );
-
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-black px-4 py-10">
       <div className="w-full max-w-md">
@@ -185,7 +173,27 @@ const CadastroRend = () => {
             </div>
           )}
         </div>
-        <a href="/cadastrorend?privacidade=1" target="_blank" rel="noopener noreferrer" className="mt-5 block text-center text-xs text-neutral-500 hover:underline">Política de privacidade</a>
+        <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
+          <div className="mt-3 text-center">
+            <DialogTrigger asChild>
+              <Button variant="link" className="h-auto px-2 py-1 text-[10px] font-normal text-muted-foreground">Política de privacidade</Button>
+            </DialogTrigger>
+          </div>
+          <DialogContent className="max-h-[85dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-lg border-border bg-background text-foreground">
+            <DialogHeader className="pr-6">
+              <DialogTitle className="leading-snug">Política de privacidade — Cadastro MRO</DialogTitle>
+              <DialogDescription>Informações sobre seu cadastro e suas preferências de publicidade.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 text-sm leading-relaxed">
+              <p>Seu nome, e-mail, WhatsApp e disponibilidade de computador ficam com a MRO para liberar o grupo e entrar em contato. Os campos do formulário não são enviados ao Facebook.</p>
+              <p>Quando permitido e ativado, o Pixel da Meta recebe o evento Lead após a liberação do link, o endereço da página, informações do navegador e identificadores de publicidade, para medir anúncios e otimizar campanhas.</p>
+              <p>Sem faixa de consentimento, a medição é bloqueada nas regiões que exigem consentimento, incluindo o Brasil, e quando a região é desconhecida. Recusas e controle global de privacidade são respeitados.</p>
+              <label className="flex items-start gap-2"><input className="mt-1 shrink-0" type="checkbox" checked={advertisingRefused} disabled={advertisingRefused} onChange={() => { refuseCadastroRendAdvertising(); setAdvertisingRefused(true); }} /> Não permitir medição publicitária</label>
+              <p>Você pode recusar a qualquer momento nesta janela. A preferência fica salva neste navegador, sem afetar o cadastro ou o acesso ao grupo.</p>
+            </div>
+            <Button variant="outline" onClick={() => setPrivacyOpen(false)}>Voltar ao cadastro</Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   );

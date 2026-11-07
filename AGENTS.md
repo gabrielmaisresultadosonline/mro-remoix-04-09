@@ -1,6 +1,6 @@
 # Architecture rules
 
-- Cadastro Rend uses its own PostgreSQL-backed admin Pixel settings and reports only successful group-link release through a scoped browser Pixel with regional blocking and opt-out checks; privacy and withdrawal live in a linked separate view, because the quiz must stay uncluttered without removing disclosures or sharing customer identifiers.
+- Cadastro Rend uses its own PostgreSQL-backed admin Pixel settings and reports only successful group-link release through a scoped browser Pixel with regional blocking and opt-out checks; privacy and withdrawal share an in-page dialog with legacy deep-link support, because the quiz must preserve progress without removing disclosures or sharing customer identifiers.
 
 - MRO training themes share the existing module data and welcome settings, with scoped styling and a browser-only layout preference, because presentation changes must not fork tutorials or authentication.
 
