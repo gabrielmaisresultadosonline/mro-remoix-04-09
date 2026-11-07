@@ -150,9 +150,6 @@ const CadastroRend = () => {
             </div>
           )}
         </div>
-
-        {/* Instagram sempre no final da página */}
-        {step !== "sem-pc" && <div className="mt-6 text-center">{instagramLink}</div>}
       </div>
     </main>
   );
