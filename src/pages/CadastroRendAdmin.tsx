@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logoMro from "@/assets/logo-mro.png";
 import { Loader2, LogOut, RefreshCw, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Lead { id: string; nome: string; email: string; whatsapp: string; tem_computador: boolean | null; created_at: string }
 const KEY = "cadastrorend_admin_token";
@@ -13,6 +14,8 @@ const CadastroRendAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [link, setLink] = useState("");
+  const [pixelId, setPixelId] = useState("");
+  const [pixelEnabled, setPixelEnabled] = useState(false);
   const [visitas, setVisitas] = useState(0);
   const [aba, setAba] = useState<"cadastros" | "config">("cadastros");
   const [busca, setBusca] = useState("");
@@ -38,6 +41,7 @@ const CadastroRendAdmin = () => {
     try {
       const d = await call({ action: "list", token: t });
       setLeads(d.leads ?? []); setLink(d.grupo_link ?? ""); setVisitas(d.visitas ?? 0);
+      setPixelId(d.pixel_id ?? ""); setPixelEnabled(d.pixel_enabled === true);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
       // Só desloga quando o token for realmente rejeitado; outros erros mantêm a sessão.
@@ -56,7 +60,7 @@ const CadastroRendAdmin = () => {
   };
 
   const salvar = async () => {
-    try { await call({ action: "save_settings", token, grupo_link: link.trim() }); toast.success("Link salvo"); }
+    try { await call({ action: "save_settings", token, grupo_link: link.trim(), pixel_id: pixelId.trim(), pixel_enabled: pixelEnabled }); toast.success("Configurações salvas"); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao salvar"); }
   };
 
@@ -111,8 +115,12 @@ const CadastroRendAdmin = () => {
             <h2 className="font-bold">Link do grupo (último botão do quiz)</h2>
             <div className="flex flex-col gap-3 sm:flex-row">
               <input className={inp} value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://chat.whatsapp.com/..." />
-              <button onClick={salvar} className={btn}>Salvar</button>
             </div>
+            <label htmlFor="cadastro-pixel" className="block font-bold">ID do Pixel do Facebook</label>
+            <input id="cadastro-pixel" className={inp} inputMode="numeric" value={pixelId} onChange={(e) => setPixelId(e.target.value.replace(/\D/g, "").slice(0, 30))} placeholder="ID do Pixel" />
+            <label className="flex items-center gap-2"><input type="checkbox" checked={pixelEnabled} onChange={(e) => setPixelEnabled(e.target.checked)} /> Ativar Pixel nesta página</label>
+            <p className="text-sm text-neutral-400">Lead é registrado somente após salvar o cadastro e liberar o link do grupo. A configuração vale apenas para /cadastrorend. Sem faixa de consentimento, a medição permanece bloqueada no Brasil, nas demais regiões que exigem consentimento e quando a região não puder ser identificada. Recusas são respeitadas; nenhum dado do formulário é enviado ao Facebook.</p>
+            <Button onClick={salvar}>Salvar configurações</Button>
           </section>
         ) : (
           <section className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">

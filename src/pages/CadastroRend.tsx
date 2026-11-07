@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { hasCadastroRendOptOut, initializeCadastroRendPixel, isCadastroRendLeadEligible, refuseCadastroRendAdvertising, reportCadastroRendLead } from "@/lib/cadastroRendLead";
 import { Loader2, ArrowRight, Users, Laptop, AlertTriangle, Instagram } from "lucide-react";
 import logoMro from "@/assets/logo-mro.png";
+import { Button } from "@/components/ui/button";
 
 type Step = "intro" | "nome" | "whatsapp" | "email" | "pc" | "final" | "sem-pc";
 
@@ -21,10 +22,11 @@ const CadastroRend = () => {
   const [link, setLink] = useState("");
   const submitting = useRef(false);
   const [advertisingRefused, setAdvertisingRefused] = useState(hasCadastroRendOptOut);
+  const isPrivacyPage = new URLSearchParams(window.location.search).get("privacidade") === "1";
 
   useEffect(() => {
     document.title = "Utilize a MRO você também! | Grupo grátis";
-    void initializeCadastroRendPixel();
+    if (!isPrivacyPage) void initializeCadastroRendPixel();
     const syncChoice = () => {
       setAdvertisingRefused(hasCadastroRendOptOut());
       if (hasCadastroRendOptOut()) window.fbq?.("consent", "revoke");
@@ -101,6 +103,20 @@ const CadastroRend = () => {
 
   const progress = { intro: 0, nome: 25, whatsapp: 50, email: 75, pc: 90, final: 100, "sem-pc": 100 }[step];
 
+  if (isPrivacyPage) return (
+    <main className="min-h-screen bg-background px-5 py-12 text-foreground">
+      <section className="mx-auto max-w-xl space-y-5">
+        <h1 className="text-2xl font-bold">Política de privacidade — Cadastro MRO</h1>
+        <p>Seu nome, e-mail, WhatsApp e disponibilidade de computador ficam com a MRO para liberar o grupo e entrar em contato. Os campos do formulário não são enviados ao Facebook.</p>
+        <p>Quando permitido e ativado, o Pixel da Meta recebe o evento Lead após a liberação do link, o endereço da página, informações do navegador e identificadores de publicidade, para medir anúncios e otimizar campanhas.</p>
+        <p>Sem faixa de consentimento, a medição é bloqueada nas regiões que exigem consentimento, incluindo o Brasil, e quando a região é desconhecida. Recusas e controle global de privacidade são respeitados.</p>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={advertisingRefused} disabled={advertisingRefused} onChange={() => { refuseCadastroRendAdvertising(); setAdvertisingRefused(true); }} /> Não permitir medição publicitária</label>
+        <p>Você pode recusar a qualquer momento nesta página. A preferência fica salva neste navegador, sem afetar o cadastro ou o acesso ao grupo.</p>
+        <Button asChild variant="outline"><a href="/cadastrorend">Voltar ao cadastro</a></Button>
+      </section>
+    </main>
+  );
+
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-black px-4 py-10">
       <div className="w-full max-w-md">
@@ -169,16 +185,7 @@ const CadastroRend = () => {
             </div>
           )}
         </div>
-        <details className="mt-5 text-sm text-neutral-300">
-          <summary>Privacidade e preferências de publicidade</summary>
-          <p className="mt-3">Seu cadastro (nome, e-mail, WhatsApp e disponibilidade de computador) fica com a MRO para liberar o grupo e entrar em contato. Quando permitido, o Pixel da Meta recebe o evento Lead após liberar o link, endereço desta página, informações do navegador e identificadores de publicidade, para medir anúncios e otimizar campanhas. Não enviamos os campos do formulário ao Facebook.</p>
-          <p className="mt-3">Sem faixa de consentimento, não medimos visitantes nas regiões que exigem consentimento, incluindo o Brasil, nem quando a região é desconhecida. Respeitamos a recusa e o controle global de privacidade.</p>
-          <label className="mt-3 flex items-center gap-2">
-            <input type="checkbox" checked={advertisingRefused} disabled={advertisingRefused} onChange={() => { refuseCadastroRendAdvertising(); setAdvertisingRefused(true); }} />
-            Não permitir medição publicitária nesta página
-          </label>
-          <p className="mt-2">Esta preferência fica salva neste navegador e pode ser marcada a qualquer momento, sem afetar seu cadastro ou acesso ao grupo.</p>
-        </details>
+        <a href="/cadastrorend?privacidade=1" target="_blank" rel="noopener noreferrer" className="mt-5 block text-center text-xs text-neutral-500 hover:underline">Política de privacidade</a>
       </div>
     </main>
   );
