@@ -10,7 +10,7 @@ const isRel = (u: string) => u.startsWith("/");
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { trackPageView } from "@/lib/facebookTracking";
+import { trackPageView, trackLead, trackFacebookEvent } from "@/lib/facebookTracking";
 import { toast } from "sonner";
 import { 
   Sparkles, 
@@ -388,6 +388,17 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       if (!checkData.success) {
         toast.error(checkData.error || "Erro ao criar pagamento");
         return;
+      }
+
+      // Cadastro salvo (pedido pendente criado): evento de cadastro no Pixel.
+      // A compra aprovada é enviada pelo servidor (webhook) somente após o pagamento.
+      if (blackPromo) {
+        trackFacebookEvent('CompleteRegistration', {
+          content_name: `Ferramenta MRO Promo - ${selectedPlan.type}`,
+          value: selectedPlan.amount,
+          currency: 'BRL',
+        });
+        await new Promise((r) => setTimeout(r, 400));
       }
 
       // Redirecionar diretamente para o checkout (funciona melhor no mobile)
@@ -905,6 +916,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
           message={t.waMessage}
           ariaLabel={t.waAria}
           hoverLabel={t.waHover}
+          onOpen={blackPromo ? () => trackLead('WhatsApp - Ferramenta MRO Promo') : undefined}
         />
       )}
 

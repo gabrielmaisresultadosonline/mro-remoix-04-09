@@ -9,6 +9,8 @@ interface Props {
   ariaLabel?: string;
   /** Short text shown next to the icon on hover (desktop). */
   hoverLabel?: string;
+  /** Optional callback fired before opening WhatsApp (e.g. tracking). */
+  onOpen?: () => void;
 }
 
 /**
@@ -21,8 +23,10 @@ const FloatingWhatsAppCta = ({
   message,
   ariaLabel = "Falar no WhatsApp",
   hoverLabel,
+  onOpen,
 }: Props) => {
   const handleClick = () => {
+    try { onOpen?.(); } catch { /* tracking must never block the chat */ }
     openWhatsAppChat(phone, message);
   };
 
