@@ -276,7 +276,8 @@ await fetch('${ENDPOINT}', {
       <h3 className="font-bold">Imagens geradas e aprovadas (galeria)</h3>
       <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
         <li>Quando o cliente <strong>aprova e processa</strong> uma publicação, a extensão envia cada imagem para o servidor com a legenda da publicação (ação <code>gallery_upload</code>).</li>
-        <li>O arquivo fica no disco da VPS e o registro no PostgreSQL. Depois de <strong>30 dias</strong> imagem e registro são apagados automaticamente (limpeza a cada hora).</li>
+        <li>O arquivo fica no disco da VPS e o registro no PostgreSQL <strong>sem expiração</strong>, até exclusão manual pelo administrador. Imagens e carrosséis existentes também permanecem salvos.</li>
+        <li>O campo <code>instagram</code> vincula as imagens à conta. Em <code>/instagram</code>, o cliente vê somente imagens de perfis cuja propriedade foi validada pelo servidor, também no resumo Crescimentos.</li>
         <li>Formatos: JPG, PNG ou WEBP, até 8 MB por imagem (o servidor confere o tipo real do arquivo).</li>
         <li><code>publication_id</code> + <code>image_index</code> evitam duplicar: se a mesma imagem for reenviada, a resposta traz <code>duplicate: true</code> e nada é gravado de novo.</li>
         <li><strong>Carrossel:</strong> todas as imagens do mesmo carrossel precisam do <strong>mesmo</strong> <code>publication_id</code> e de um <code>image_index</code> diferente (0, 1, 2…). É isso que faz a galeria mostrar as setas para passar para o lado. Se cada slide chegar com um <code>publication_id</code> novo, ou só a capa for enviada, cada imagem aparece sozinha.</li>
@@ -307,7 +308,7 @@ async function enviarImagemAprovada({ instagram, publicacaoId, indice, imagemBlo
       caption: legenda                   // legenda da publicação (até 2200 caracteres)
     })
   }).then(x => x.json());
-  // { success:true, id:"...", expires_at:"...", duplicate:false }
+  // { success:true, id:"...", expires_at:null, duplicate:false }
   return r;
 }`}
     />
@@ -374,7 +375,7 @@ async function enviarImagemAprovada({ instagram, publicacaoId, indice, imagemBlo
 → { "images": [{ "id", "url", "caption", "created_at", "publication_id", "image_index" }], "next_before": "..." }
    próxima página: &before=<next_before>
 
-GET ${ENDPOINT}?file=<id>   → a imagem (some depois de 30 dias)`}</pre>
+GET ${ENDPOINT}?file=<id>   → a imagem (permanece até exclusão manual pelo admin)`}</pre>
     </Card>
 
     <Card className="p-4 space-y-2">

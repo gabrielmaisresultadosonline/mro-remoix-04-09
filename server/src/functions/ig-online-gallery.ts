@@ -3,7 +3,7 @@
  *
  * A extensão envia cada imagem aprovada (base64 em JSON) com a legenda da
  * publicação. O arquivo fica no disco da VPS (STORAGE_ROOT/ig-gallery) e a
- * linha no PostgreSQL; ambos expiram em 30 dias e são removidos sozinhos.
+ * linha no PostgreSQL; permanecem até exclusão manual pelo administrador.
  * A galeria pública mostra apenas imagem + legenda, nunca o perfil.
  */
 import crypto from "node:crypto";
@@ -17,7 +17,7 @@ import { env } from "../env.js";
 type Body = Record<string, unknown>;
 type Row = Record<string, unknown>;
 
-export const GALLERY_RETENTION_DAYS = 30;
+export const GALLERY_RETENTION_DAYS = null;
 export const GALLERY_MAX_BYTES = 8 * 1024 * 1024;
 const ROOT = path.join(env.storage.root, "ig-gallery");
 const MIME_EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
@@ -42,16 +42,9 @@ export function decodeImage(raw: unknown): Buffer | null {
   return buf.length ? buf : null;
 }
 
-let lastCleanup = 0;
-export async function cleanupExpired(force = false): Promise<number> {
-  if (!force && Date.now() - lastCleanup < 60 * 60 * 1000) return 0;
-  lastCleanup = Date.now();
-  const rows = await adminQuery<Row>(
-    "DELETE FROM public.ig_online_gallery WHERE expires_at < now() RETURNING file_path",
-  ).catch(() => [] as Row[]);
-  for (const r of rows) await fs.rm(path.join(ROOT, String(r.file_path)), { force: true }).catch(() => undefined);
-  if (rows.length) console.info(`[ig-gallery] ${rows.length} imagem(ns) expirada(s) removida(s)`);
-  return rows.length;
+export async function cleanupExpired(_force = false): Promise<number> {
+  // Compatibility for older callers: automatic deletion is permanently disabled.
+  return 0;
 }
 
 const firstDefined = (body: Body, keys: string[]): unknown => {
@@ -89,11 +82,11 @@ async function saveOne(ig: string, raw: unknown, publicationId: string | null, i
   await fs.writeFile(path.join(ROOT, rel), buf);
   const [row] = await adminQuery<Row>(
     `INSERT INTO public.ig_online_gallery (instagram_username, publication_id, image_index, caption, file_path, mime, size_bytes, expires_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7, now() + make_interval(days => $8)) RETURNING id, expires_at`,
-    [ig, publicationId, imageIndex, caption, rel, mime, buf.length, GALLERY_RETENTION_DAYS],
+     VALUES ($1,$2,$3,$4,$5,$6,$7, 'infinity'::timestamptz) RETURNING id`,
+    [ig, publicationId, imageIndex, caption, rel, mime, buf.length],
   );
   console.info(`[ig-gallery] @${ig} pub=${publicationId ?? "-"} slide=${imageIndex} salvo ${row?.id} (${Math.round(buf.length / 1024)} KB)`);
-  return { status: 200, body: { success: true, id: row?.id, image_index: imageIndex, expires_at: row?.expires_at, duplicate: false } };
+  return { status: 200, body: { success: true, id: row?.id, image_index: imageIndex, expires_at: null, duplicate: false } };
 }
 
 /**
@@ -119,7 +112,6 @@ export async function galleryUpload(ig: string, body: Body) {
       const idx = isObj ? toIndex(firstDefined(item as Body, ["image_index", "index", "slide_index", "position"]), i) : i;
       results.push((await saveOne(ig, raw, publicationId, idx, caption)).body);
     }
-    void cleanupExpired();
     const saved = results.filter((r) => r.success).length;
     return [saved ? 200 : 400, {
       success: saved > 0, publication_id: publicationId, total: list.length, saved, results,
@@ -129,17 +121,28 @@ export async function galleryUpload(ig: string, body: Body) {
   const imageIndex = toIndex(firstDefined(body, ["image_index", "index", "slide_index", "position"]), 0);
   if (!publicationId) console.warn(`[ig-gallery] @${ig} enviou imagem sem publication_id — não será agrupada em carrossel`);
   const r = await saveOne(ig, body.image_base64 ?? body.image, publicationId, imageIndex, caption);
-  void cleanupExpired();
   return [r.status, { ...r.body, publication_id: publicationId }] as const;
 }
 
 const fileUrl = (base: string, id: unknown) => `${base}?file=${id}`;
 
+/** Only accepts server-validated owned usernames; never expose account names in public_gallery. */
+export async function ownedGalleryImages(owned: string[], base: string) {
+  if (!owned.length) return [];
+  const rows = await adminQuery<Row>(
+    `SELECT id, instagram_username, publication_id, image_index, caption, created_at
+       FROM public.ig_online_gallery WHERE lower(instagram_username) = ANY($1::text[])
+       ORDER BY created_at DESC, image_index ASC`, [owned],
+  );
+  const allowed = new Set(owned);
+  return rows.filter(r => allowed.has(String(r.instagram_username).toLowerCase())).map(r => ({ ...r, url: fileUrl(base, r.id) }));
+}
+
 export async function adminGallery(body: Body, base: string) {
   const ig = clean(body.instagram, 60).replace(/^@/, "").toLowerCase();
   const rows = await adminQuery<Row>(
     `SELECT id, instagram_username, publication_id, image_index, caption, size_bytes, created_at, expires_at
-       FROM public.ig_online_gallery WHERE expires_at > now() ${ig ? "AND lower(instagram_username)=$1" : ""}
+       FROM public.ig_online_gallery ${ig ? "WHERE lower(instagram_username)=$1" : ""}
       ORDER BY created_at DESC LIMIT 2000`,
     ig ? [ig] : [],
   );
@@ -147,7 +150,7 @@ export async function adminGallery(body: Body, base: string) {
   for (const r of rows) byClient.set(String(r.instagram_username), (byClient.get(String(r.instagram_username)) ?? 0) + 1);
   return [200, {
     success: true,
-    images: rows.map((r) => ({ ...r, size_bytes: Number(r.size_bytes), url: fileUrl(base, r.id) })),
+    images: rows.map((r) => ({ ...r, expires_at: null, size_bytes: Number(r.size_bytes), url: fileUrl(base, r.id) })),
     clients: [...byClient.entries()].map(([instagram, total]) => ({ instagram, total })).sort((a, b) => b.total - a.total),
     retention_days: GALLERY_RETENTION_DAYS,
   }] as const;
@@ -167,7 +170,7 @@ export async function handleGalleryGet(req: Request, res: Response, base: string
   if (fileId) {
     if (!UUID_RE.test(fileId)) { res.status(400).end(); return true; }
     const [row] = await adminQuery<Row>(
-      "SELECT file_path, mime FROM public.ig_online_gallery WHERE id=$1::uuid AND expires_at > now()", [fileId],
+      "SELECT file_path, mime FROM public.ig_online_gallery WHERE id=$1::uuid", [fileId],
     );
     if (!row) { res.status(404).end(); return true; }
     const full = path.join(ROOT, String(row.file_path));
@@ -180,12 +183,11 @@ export async function handleGalleryGet(req: Request, res: Response, base: string
     return true;
   }
   if (req.query.public_gallery) {
-    void cleanupExpired();
     const before = String(req.query.before ?? "");
     const limit = Math.max(1, Math.min(120, Number(req.query.limit ?? 60) || 60));
     const rows = await adminQuery<Row>(
       `SELECT id, caption, created_at, publication_id, image_index FROM public.ig_online_gallery
-        WHERE expires_at > now() ${before ? "AND created_at < $2::timestamptz" : ""}
+        ${before ? "WHERE created_at < $2::timestamptz" : ""}
         ORDER BY created_at DESC LIMIT $1`,
       before ? [limit, before] : [limit],
     );
