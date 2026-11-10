@@ -1,5 +1,11 @@
 # Roadmap
 
+## AfiliadosX: sessão, Pix e resumo
+- [ ] Reutilizar o acesso conectado sem pedir confirmação de senha
+- [ ] Salvar chave Pix no PostgreSQL e listar no /admin → Afiliados
+- [ ] Abrir resumo atualizado dentro do /afiliadosx com acesso validado no servidor
+- [ ] Validar regras e telas; persistência real depende da atualização da VPS
+
 ## Pixel Cadastro Rend
 - [x] Implementar configuração própria de Pixel no admin e atualização aditiva do PostgreSQL
 - [x] Retirar explicações do quiz e manter política/preferências em tela separada
