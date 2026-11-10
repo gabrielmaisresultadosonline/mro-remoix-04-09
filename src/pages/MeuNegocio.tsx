@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Bot, ChevronDown, Instagram, Loader2, Play, Plus, RefreshCw, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Instagram, Loader2, Play, Plus, RefreshCw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
