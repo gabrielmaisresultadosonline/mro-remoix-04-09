@@ -1,5 +1,9 @@
 # Roadmap
 
+## Retorno ao dashboard
+- [x] Redirecionar /instagram/painel antigo para /dashboard e corrigir os botões e o retorno sem sessão
+- [x] Verificar destinos antigos e retorno sem sessão no navegador, sem alterar contas ou PostgreSQL
+
 ## Instagram: cadastro e acompanhamento
 - [x] Reorganizar /instagram em cadastro e tutoriais, com contas em cascata
 - [x] Mostrar métricas privadas da API preservando referência inicial e prints antigos
