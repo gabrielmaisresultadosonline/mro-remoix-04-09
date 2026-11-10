@@ -11,13 +11,14 @@ import { Logo } from '@/components/Logo';
 import { StrategyGenerator } from '@/components/StrategyGenerator';
 import { StrategyDisplay } from '@/components/StrategyDisplay';
 import { InstagramGrowthOverview } from '@/components/InstagramGrowthOverview';
+import { InstagramAccountImages } from '@/components/InstagramAccountImages';
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser, getRegisteredIGs, isAuthenticated, addRegisteredIG, loadUserFromCloud, saveUserToCloud, syncIGsFromSquare, updateUserEmail } from '@/lib/userStorage';
 import { getSession, addProfile, setActiveProfile, addStrategy, saveSession, getArchivedProfiles, initializeFromCloud, setCloudSyncCallback, restoreProfileFromArchive } from '@/lib/storage';
 import { verifyRegisteredIGs, canRegisterIG, addIGToSquare } from '@/lib/squareApi';
 import { normalizeInstagramUsername } from '@/types/user';
 import { getAffiliateCredentials } from '@/lib/affiliateSession';
-import { accountFollowerSummary, accountUsageSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, type AccountMetrics } from '@/lib/instagramAccountOverview';
+import { accountImages, accountFollowerSummary, accountUsageSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, type AccountMetrics } from '@/lib/instagramAccountOverview';
 import { supabase } from '@/integrations/supabase/client';
 import type { ProfileSession } from '@/types/instagram';
 
@@ -160,7 +161,7 @@ export default function MeuNegocioPage() {
   function accountList() {
     return filteredAccounts.length ? <Accordion type="single" collapsible className="space-y-3">{filteredAccounts.map(account => <AccordionItem key={account.id} value={account.id} className="border border-border rounded-lg bg-card px-4 sm:px-5">
       <div className="flex items-center gap-3"><AccordionTrigger className="min-w-0 flex-1 text-left hover:no-underline"><span className="flex items-center gap-3 min-w-0"><Instagram className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0"><span className="block font-semibold break-all">@{account.profile.username}</span><span className="block text-xs text-muted-foreground font-normal break-words">{account.profile.fullName || account.profile.username}{account.isHistorical ? ' · Histórico' : ''}</span></span></span></AccordionTrigger><Button variant="ghost" size="icon" title={`Estratégias de @${account.profile.username}`} aria-label={`Estratégias de @${account.profile.username}`} onClick={() => openStrategy(account)}><Bot className="h-5 w-5 text-primary" /></Button></div>
-      <AccordionContent><AccountGrowth account={account} metrics={metrics[account.profile.username]} /></AccordionContent>
+      <AccordionContent><div className="space-y-6"><AccountGrowth account={account} metrics={metrics[account.profile.username]} /><InstagramAccountImages images={accountImages(account, metrics[account.profile.username])} /></div></AccordionContent>
     </AccordionItem>)}</Accordion> : <p className="text-muted-foreground py-8 text-center">{accounts.length ? 'Nenhuma conta encontrada.' : 'Nenhuma conta cadastrada.'}</p>;
   }
   if (loading) return <div className="dash-member min-h-screen bg-background text-foreground flex items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-primary" aria-label="Carregando contas" /></div>;
