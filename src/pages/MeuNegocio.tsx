@@ -17,7 +17,7 @@ import { getSession, addProfile, setActiveProfile, addStrategy, saveSession, get
 import { verifyRegisteredIGs, canRegisterIG, addIGToSquare } from '@/lib/squareApi';
 import { normalizeInstagramUsername } from '@/types/user';
 import { getAffiliateCredentials } from '@/lib/affiliateSession';
-import { accountFollowerSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, type AccountMetrics } from '@/lib/instagramAccountOverview';
+import { accountFollowerSummary, accountUsageSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, type AccountMetrics } from '@/lib/instagramAccountOverview';
 import { supabase } from '@/integrations/supabase/client';
 import type { ProfileSession } from '@/types/instagram';
 
@@ -26,6 +26,7 @@ const date = (value?: string | null) => value ? new Date(value).toLocaleString('
 
 function AccountGrowth({ account, metrics }: { account: ProfileSession; metrics?: AccountMetrics }) {
   const summary = accountFollowerSummary(account, metrics);
+  const usage = accountUsageSummary(account, metrics);
   const points = [
     ...(summary.initial !== null ? [{ day: metrics?.initial_captured_at ?? account.startedAt, followers_end: summary.initial }] : []),
     ...(metrics?.metrics.filter(m => m.followers_end !== null) ?? []),
@@ -35,9 +36,9 @@ function AccountGrowth({ account, metrics }: { account: ProfileSession; metrics?
   const polyline = values.map((v, i) => `${24 + i / Math.max(1, values.length - 1) * 552},${140 - (v - low) / Math.max(1, high - low) * 112}`).join(' ');
   return <div className="space-y-5">
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {[['Seguidores iniciais', number(summary.initial)], ['Seguidores atuais', number(summary.current)], ['Crescimento', summary.growth === null ? 'Aguardando dados' : `${summary.growth > 0 ? '+' : ''}${number(summary.growth)}`], ['Boas-vindas enviadas', number(metrics?.welcome_total ?? null)]].map(([label, value]) => <div key={label} className="min-w-0"><p className="text-xs text-muted-foreground mb-1">{label}</p><p className="font-semibold text-sm sm:text-lg break-words">{value}</p></div>)}
+      {[['Seguidores iniciais', number(summary.initial)], ['Seguidores atuais', number(summary.current)], ['Crescimento', summary.growth === null ? 'Aguardando dados' : `${summary.growth > 0 ? '+' : ''}${number(summary.growth)}`], ['Boas-vindas enviadas', number(metrics?.welcome_total ?? null)]].map(([label, value]) => <div key={label} className="min-w-0"><p className="text-xs text-muted-foreground mb-1">{label}</p><p className="font-semibold text-sm sm:text-lg break-words">{value}</p>{label === 'Seguidores iniciais' && <div className="mt-2 text-xs text-muted-foreground space-y-1"><p>Início: {usage?.date ?? 'Aguardando data inicial'}</p>{usage && <p>Tempo de uso: {usage.duration}</p>}</div>}</div>)}
     </div>
-    <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"><span>Início: {date(metrics?.initial_captured_at ?? account.startedAt)}</span><span>Último acesso: {date(metrics?.last_seen_at)}</span><span className="text-primary">{metrics?.online ? 'Em atividade' : 'Sem atividade recente'}</span></div>
+    <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"><span>Último acesso: {date(metrics?.last_seen_at)}</span><span className="text-primary">{metrics?.online ? 'Em atividade' : 'Sem atividade recente'}</span></div>
     {values.length > 1 ? <div><p className="text-sm font-semibold mb-2">Crescimento de seguidores</p><svg role="img" aria-label="Gráfico de crescimento de seguidores" viewBox="0 0 600 170" className="w-full h-40"><path d="M24 12 V144 H580" fill="none" className="instagram-growth-axis" /><polyline points={polyline} fill="none" strokeWidth="3" strokeLinejoin="round" className="instagram-growth-line" /><text x="24" y="165" fill="currentColor" fontSize="11">{new Date(points[0].day).toLocaleDateString('pt-BR')}</text><text x="575" y="165" fill="currentColor" textAnchor="end" fontSize="11">{new Date(points[points.length - 1].day).toLocaleDateString('pt-BR')}</text></svg></div> : <p className="text-sm text-muted-foreground">Aguardando as próximas leituras do perfil para mostrar o crescimento.</p>}
   </div>;
 }

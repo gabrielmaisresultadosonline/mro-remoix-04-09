@@ -18,6 +18,31 @@ export function accountFollowerSummary(session: ProfileSession, metrics?: Accoun
   return { initial, current, growth: initial !== null && current !== null ? current - initial : null };
 }
 
+export function accountUsageSummary(session: ProfileSession, metrics?: AccountMetrics, now = new Date()) {
+  const candidates = [metrics?.initial_captured_at, session.initialSnapshot?.date, session.startedAt];
+  const startedAt = candidates.find(value => value && Number.isFinite(Date.parse(value))) ?? null;
+  if (!startedAt) return null;
+  // Compare calendar dates in Brazil, so daylight-saving/time-of-day cannot add or remove a day.
+  const calendar = (value: Date) => {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(value);
+    const part = (type: string) => Number(parts.find(p => p.type === type)?.value);
+    return { year: part('year'), month: part('month'), day: part('day') };
+  };
+  const start = calendar(new Date(startedAt)), end = calendar(now);
+  const totalDays = Math.max(0, Math.floor((Date.UTC(end.year, end.month - 1, end.day) - Date.UTC(start.year, start.month - 1, start.day)) / 86_400_000));
+  let months = Math.max(0, (end.year - start.year) * 12 + end.month - start.month);
+  const anniversary = (count: number) => {
+    const first = new Date(Date.UTC(start.year, start.month - 1 + count, 1));
+    const lastDay = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+    return Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), Math.min(start.day, lastDay));
+  };
+  const endDay = Date.UTC(end.year, end.month - 1, end.day);
+  if (months > 0 && anniversary(months) > endDay) months--;
+  const days = Math.max(0, Math.floor((endDay - anniversary(months)) / 86_400_000));
+  const duration = months > 0 ? `${months} ${months === 1 ? 'mês' : 'meses'} e ${days} ${days === 1 ? 'dia' : 'dias'} (${totalDays} dias no total)` : `${totalDays} ${totalDays === 1 ? 'dia' : 'dias'}`;
+  return { startedAt, totalDays, months, days, duration, date: new Date(startedAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) };
+}
+
 export function createAccountProfile(username: string, fullName: string): InstagramProfile {
   return { username, fullName, bio: '', followers: 0, following: 0, posts: 0, profilePicUrl: '', isBusinessAccount: false, category: '', externalUrl: '', recentPosts: [], engagement: 0, avgLikes: 0, avgComments: 0, needsScreenshotAnalysis: false, dataSource: 'placeholder' };
 }
