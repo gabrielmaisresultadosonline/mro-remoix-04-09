@@ -127,6 +127,7 @@ export default function AfiliadosX() {
     if (!user) return;
     if (!form.first_name.trim()) return toast.error("Informe seu nome");
     if (!form.email.includes("@")) return toast.error("Email inválido");
+    if (form.desired_id.trim().length < 3) return toast.error("Informe o identificador do link (mínimo 3 letras/números)");
     if (!form.password || form.password.length < 3) {
       return toast.error("Sessão sem senha — faça login novamente em /instagram");
     }
@@ -365,11 +366,12 @@ export default function AfiliadosX() {
           </div>
 
           <div>
-            <Label className="text-xs uppercase tracking-widest text-zinc-500 font-black">Identificador do link (opcional)</Label>
+            <Label className="text-xs uppercase tracking-widest text-zinc-500 font-black">Identificador do link *</Label>
             <Input
               value={form.desired_id}
               onChange={e => setForm(f => ({ ...f, desired_id: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "") }))}
               placeholder="ex.: joao"
+              required
               className="bg-black border-zinc-800 mt-1"
             />
             <p className="text-[11px] text-zinc-500 mt-1">
@@ -534,11 +536,11 @@ function InlineLogin({ onSuccess }: { onSuccess: (u: MROUser) => void }) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate("/instagram")}
+              onClick={() => navigate("/ferramentamropromo")}
               className="border-zinc-700 text-xs"
             >
               <Lock className="w-3 h-3 mr-2" />
-              Ver planos em /instagram
+              Ver planos em /ferramentamropromo
             </Button>
           </div>
         </Card>
