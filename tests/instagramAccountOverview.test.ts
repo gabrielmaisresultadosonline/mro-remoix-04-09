@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'bun:test';
-import { accountFollowerSummary, accountUsageSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, summarizeAccountGrowth } from '../src/lib/instagramAccountOverview';
+import { accountImages, groupAccountImages, accountFollowerSummary, accountUsageSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, summarizeAccountGrowth } from '../src/lib/instagramAccountOverview';
 import type { ProfileSession } from '../src/types/instagram';
 import { normalizeInstagramUsername } from '../src/types/user';
 
 const saved = { profile: { ...createAccountProfile('loja', 'Loja'), dataSource: 'screenshot', followers: 120 }, initialSnapshot: { followers: 100 } } as ProfileSession;
 describe('Instagram sem novos prints', () => {
+  it('vincula imagens da galeria somente ao próprio Instagram, preservando criativos antigos', () => {
+    const metrics = { instagram_username: 'loja', initial_followers: 100, current_followers: 137, initial_captured_at: null, last_seen_at: null, welcome_total: 7, online: false, metrics: [], images: [{ id: 'own', instagram_username: 'LOJA', url: '/own.jpg', caption: null, publication_id: 'p', image_index: 0 }, { id: 'other', instagram_username: 'outrocliente', url: '/other.jpg', caption: null, publication_id: 'p', image_index: 0 }] };
+    expect(accountImages({ ...saved, creatives: [{ id: 'legacy', imageUrl: '/legacy.jpg' }] } as ProfileSession, metrics).map(i => i.id)).toEqual(['own', 'legacy']);
+  });
+  it('agrupa todos os slides em ordem sem misturar publicações de outras contas', () => {
+    const images = [2, 0, 1].map(i => ({ id: `slide${i}`, imageUrl: `/${i}.jpg`, username: 'loja', publication_id: 'p', image_index: i }));
+    const groups = groupAccountImages([...images, { ...images[0], username: 'segunda' }]);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].map(i => i.image_index)).toEqual([0, 1, 2]);
+  });
   it('usa a data inicial persistida da API e calcula meses completos e dias até hoje', () => {
     const metrics = { instagram_username: 'loja', initial_followers: 100, current_followers: 137, initial_captured_at: '2026-08-09T12:00:00Z', last_seen_at: null, welcome_total: 7, online: false, metrics: [] };
     expect(accountUsageSummary({ ...saved, startedAt: '2026-11-01T12:00:00Z' }, metrics, new Date('2026-11-10T02:01:00Z'))).toMatchObject({ date: '09/08/2026', months: 3, days: 0, totalDays: 92 });
