@@ -329,7 +329,9 @@ serve(async (req) => {
         amount: sale.amount,
         date: formatToBrazilTime(sale.paid_at || sale.created_at),
         nsuOrder: sale.nsu_order,
-        commissionPaid: affiliatePaidCommissions.includes(sale.nsu_order)
+        commissionPaid: affiliatePaidCommissions.includes(sale.nsu_order),
+        plan: Number(sale.amount) >= 1000 ? 'vitalicio' : 'anual',
+        commission: Number(sale.amount) >= 1000 ? 197 : 97
       }));
 
       // Filtrar tentativas: remover se email OU telefone já está em vendas pagas
@@ -368,8 +370,9 @@ serve(async (req) => {
           };
         });
 
-      const totalCommission = sales.length * 97;
-      const paidCommissionsTotal = salesList.filter(s => s.commissionPaid).length * 97;
+      // Vitalício (R$1.197) paga R$197; anual (R$397) paga R$97.
+      const totalCommission = salesList.reduce((t, s) => t + s.commission, 0);
+      const paidCommissionsTotal = salesList.filter(s => s.commissionPaid).reduce((t, s) => t + s.commission, 0);
       const pendingCommissionsTotal = totalCommission - paidCommissionsTotal;
 
       const resumo = {
@@ -377,6 +380,8 @@ serve(async (req) => {
         affiliateName,
         totalSales: sales.length,
         totalCommission,
+        lifetimeSales: salesList.filter(s => s.plan === 'vitalicio').length,
+        annualSales: salesList.filter(s => s.plan === 'anual').length,
         paidCommissionsTotal,
         pendingCommissionsTotal,
         salesList,

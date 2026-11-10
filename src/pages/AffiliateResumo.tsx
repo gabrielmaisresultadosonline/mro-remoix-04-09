@@ -30,6 +30,8 @@ interface SaleItem {
   date: string;
   nsuOrder?: string;
   commissionPaid?: boolean;
+  plan?: 'vitalicio' | 'anual';
+  commission?: number;
 }
 
 interface AttemptItem {
@@ -329,7 +331,12 @@ export default function AffiliateResumo() {
                       <td className="p-2 text-white text-xs">{sale.customerEmail}</td>
                       <td className="p-2 text-white">{sale.customerName || '-'}</td>
                       <td className="p-2 text-green-400 text-xs">{sale.phone || '-'}</td>
-                      <td className="p-2 text-green-400 font-medium">R$ {Number(sale.amount).toFixed(2)}</td>
+                      <td className="p-2 text-green-400 font-medium">
+                        R$ {Number(sale.amount).toFixed(2)}
+                        <span className="block text-[10px] text-amber-400">
+                          {(sale.plan ?? (Number(sale.amount) >= 1000 ? 'vitalicio' : 'anual')) === 'vitalicio' ? 'Vitalício' : 'Anual'} · comissão R$ {sale.commission ?? (Number(sale.amount) >= 1000 ? 197 : 97)}
+                        </span>
+                      </td>
                       <td className="p-2">
                         {sale.commissionPaid ? (
                           <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">

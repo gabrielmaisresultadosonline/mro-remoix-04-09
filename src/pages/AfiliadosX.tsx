@@ -209,6 +209,25 @@ export default function AfiliadosX() {
             <ArrowRight className="w-6 h-6 ml-3" />
           </Button>
 
+          <Card className="bg-zinc-950 border-yellow-500/40 p-6 space-y-4">
+            <p className="text-[11px] uppercase tracking-widest text-zinc-500 font-black">Suas comissões por venda aprovada</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/5 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-yellow-400">Plano Vitalício</p>
+                <p className="text-zinc-400 text-xs mt-1">Cliente paga R$ 1.197</p>
+                <p className="text-3xl font-black text-green-400 mt-2">R$ 197</p>
+                <p className="text-[11px] text-zinc-500">de comissão para você</p>
+              </div>
+              <div className="rounded-xl border border-zinc-800 bg-black p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-yellow-400">Plano Anual</p>
+                <p className="text-zinc-400 text-xs mt-1">Cliente paga R$ 397</p>
+                <p className="text-3xl font-black text-green-400 mt-2">R$ 97</p>
+                <p className="text-[11px] text-zinc-500">de comissão para você</p>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500 leading-relaxed">Os dois planos podem ser vendidos pelos mesmos links abaixo. Cada venda aprovada aparece em tempo real no seu Dashboard com o plano e a comissão correspondente.</p>
+          </Card>
+
           <Card className="bg-zinc-950 border-zinc-800 p-6 space-y-4">
             <p className="text-[11px] uppercase tracking-widest text-zinc-500 font-black">Seus links de divulgação</p>
             {items.map(it => (
@@ -264,10 +283,10 @@ export default function AfiliadosX() {
             <span className="text-xs font-black uppercase tracking-widest text-yellow-400">Exclusivo para clientes MRO</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-black leading-[1.05] mb-4">
-            Ganhe <span className="text-yellow-400">R$ 97</span> por venda<br />aprovada como afiliado(a)
+            Ganhe até <span className="text-yellow-400">R$ 197</span> por venda<br />aprovada como afiliado(a)
           </h1>
           <p className="text-zinc-400 max-w-2xl mx-auto text-base md:text-lg">
-            Você já usa a ferramenta — divulgue, receba em cada venda PRO aprovada e acompanhe tudo em tempo real no seu painel.
+            Você já usa a ferramenta — divulgue, receba R$ 197 no plano Vitalício e R$ 97 no plano Anual, e acompanhe tudo em tempo real no seu painel.
           </p>
         </div>
       </section>
@@ -275,7 +294,7 @@ export default function AfiliadosX() {
       {/* Benefits */}
       <section className="max-w-5xl mx-auto px-4 pb-10 grid md:grid-cols-3 gap-4">
         {[
-          { icon: DollarSign, title: "R$ 97 por venda", desc: "Comissão fixa sobre cada plano PRO aprovado no seu link." },
+          { icon: DollarSign, title: "Duas comissões", desc: "R$ 197 por Vitalício (R$ 1.197) e R$ 97 por Anual (R$ 397) aprovado no seu link." },
           { icon: Eye,        title: "100% transparente", desc: "Você vê em tempo real tentativas e vendas aprovadas." },
           { icon: TrendingUp, title: "Dois links prontos", desc: "Instagram PRO e Renda Extra — divulgue onde quiser." },
         ].map(b => (

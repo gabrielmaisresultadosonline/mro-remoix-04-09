@@ -31,23 +31,21 @@ const supabase = createClient(
 // SquareCloud validation — same flow used by /instagram
 // -------------------------------------------------------------
 async function validateSquareCloud(username: string, password: string) {
+  // Mesmo login usado hoje no /instagram (API interna MRO no PostgreSQL da VPS).
   try {
-    const { data, error } = await supabase.functions.invoke("square-proxy", {
-      body: {
-        endpoint: "/verificar-numero",
-        method: "POST",
-        contentType: "form",
-        body: `numero=${encodeURIComponent(password)}&nome=${encodeURIComponent(username)}`,
-      },
+    const { data, error } = await supabase.functions.invoke("mro-tool-api", {
+      body: { action: "login", username, password },
     });
-    if (error) return { ok: false, error: "Erro ao validar usuário MRO" };
-    const r = data as { senhaCorrespondente?: boolean };
-    if (!r?.senhaCorrespondente) {
+    const r = (data ?? {}) as { success?: boolean; error?: string };
+    if (r.success) return { ok: true };
+    if (error && !data) {
+      console.error("[afiliadosx] login check error", error);
       return { ok: false, error: "Usuário MRO ou senha incorretos" };
     }
-    return { ok: true };
-  } catch {
-    return { ok: false, error: "Erro de conexão SquareCloud" };
+    return { ok: false, error: r.error || "Usuário MRO ou senha incorretos" };
+  } catch (e) {
+    console.error("[afiliadosx] login check fatal", e);
+    return { ok: false, error: "Erro ao validar usuário MRO" };
   }
 }
 
@@ -174,11 +172,16 @@ function welcomeEmailHtml(name: string, affiliateId: string, email: string) {
   <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#111;border:1px solid #262626;border-radius:16px;overflow:hidden;">
     <tr><td style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:32px 32px 24px;text-align:center;">
       <h1 style="margin:0;color:#000;font-size:26px;font-weight:900;letter-spacing:-0.5px;">Bem-vindo(a) ao Programa de Afiliados MRO</h1>
-      <p style="margin:8px 0 0;color:#111;font-size:14px;font-weight:600;">R$ 97 de comissão por venda PRO aprovada</p>
+      <p style="margin:8px 0 0;color:#111;font-size:14px;font-weight:600;">R$ 197 no Vitalício · R$ 97 no Anual</p>
     </td></tr>
     <tr><td style="padding:28px 32px;color:#e5e5e5;font-size:15px;line-height:1.6;">
       <p style="margin:0 0 16px;">Olá <strong style="color:#fbbf24;">${name}</strong>, seu cadastro como afiliado(a) foi ativado.</p>
-      <p style="margin:0 0 16px;">Como você já é cliente MRO Instagram, agora pode divulgar a ferramenta e ganhar <strong style="color:#fbbf24;">R$ 97,00</strong> a cada venda aprovada.</p>
+      <p style="margin:0 0 16px;">Como você já é cliente MRO Instagram, agora pode divulgar a ferramenta e ganhar comissão a cada venda aprovada no seu link.</p>
+      <div style="background:#0a0a0a;border:1px solid #fbbf24;border-radius:12px;padding:20px;margin:20px 0;">
+        <p style="margin:0 0 12px;font-size:11px;color:#a3a3a3;text-transform:uppercase;letter-spacing:2px;font-weight:800;">Suas comissões</p>
+        <p style="margin:0 0 8px;font-size:14px;color:#e5e5e5;"><strong style="color:#fbbf24;">Plano Vitalício — R$ 1.197:</strong> você recebe <strong style="color:#22c55e;">R$ 197,00</strong> por venda.</p>
+        <p style="margin:0;font-size:14px;color:#e5e5e5;"><strong style="color:#fbbf24;">Plano Anual — R$ 397:</strong> você recebe <strong style="color:#22c55e;">R$ 97,00</strong> por venda.</p>
+      </div>
 
       <div style="background:#0a0a0a;border:1px solid #262626;border-radius:12px;padding:20px;margin:20px 0;">
         <p style="margin:0 0 12px;font-size:11px;color:#a3a3a3;text-transform:uppercase;letter-spacing:2px;font-weight:800;">Seus links de venda</p>
@@ -233,7 +236,7 @@ async function actionRegister(body: any) {
 
   // 1. Gate: must be an active MRO Instagram client
   const v = await validateSquareCloud(scUsername, scPassword);
-  if (!v.ok) return json({ success: false, error: v.error }, 401);
+  if (!v.ok) return json({ success: false, error: v.error }, 200);
 
   // 2. Load affiliates list (single JSON, same used by admin panel)
   let affiliates: Affiliate[] = [];
