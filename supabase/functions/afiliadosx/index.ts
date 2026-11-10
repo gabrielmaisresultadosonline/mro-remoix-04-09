@@ -2,7 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { sanitizeEmailSubject, htmlToPlainText } from "../_shared/email-encode.ts";
 import { isAdminRequest } from "../_shared/require-admin.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import nodemailer from "npm:nodemailer@6.10.1";
+import { deliverAffiliateWelcome } from "../_shared/affiliate-welcome-delivery.ts";
 
 // Self-service affiliate registration.
 // Writes into the SAME affiliates JSON managed by /instagram-nova-admin
@@ -131,37 +132,38 @@ async function setResumoPassword(affiliateId: string, password: string) {
 // Email
 // -------------------------------------------------------------
 async function sendEmail(to: string, subject: string, html: string) {
-  const smtpPass = Deno.env.get("SMTP_PASSWORD");
+  const smtpPass = Deno.env.get("SMTP_PASSWORD")?.trim();
   if (!smtpPass) {
     console.error("[afiliadosx] SMTP_PASSWORD missing");
     return { ok: false };
   }
-  const client = new SMTPClient({
-    connection: {
-      hostname: "smtp.hostinger.com",
-      port: 465,
-      tls: true,
-      auth: { username: "contato@maisresultadosonline.com.br", password: smtpPass },
-    },
+  const smtpUser = Deno.env.get("SMTP_USER")?.trim() || "suporte@maisresultadosonline.com.br";
+  const port = Number(Deno.env.get("SMTP_PORT") || 465);
+  const transport = nodemailer.createTransport({
+    host: Deno.env.get("SMTP_HOST")?.trim() || "smtp.hostinger.com",
+    port, secure: port === 465,
+    auth: { user: smtpUser, pass: smtpPass },
+    connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 20000,
   });
   try {
-    await client.send({
-      from: "MRO Afiliados <contato@maisresultadosonline.com.br>",
+    const result = await deliverAffiliateWelcome(transport, {
+      from: `MRO Afiliados <${smtpUser}>`,
       to,
       subject: sanitizeEmailSubject(subject),
-      content: htmlToPlainText(html),
+      text: htmlToPlainText(html),
       html,
     });
-    await client.close();
-    return { ok: true };
+    console.info(`[afiliadosx] boas_vindas status=${result.ok ? 'aceito_smtp' : 'recusado_smtp'}`);
+    return result;
   } catch (e) {
-    console.error("[afiliadosx] email error", e);
-    try { await client.close(); } catch { /* ignore */ }
+    const error = e as { code?: string; responseCode?: number };
+    console.error(`[afiliadosx] boas_vindas falhou code=${error.code || 'smtp_error'} smtp_status=${error.responseCode || 'indisponivel'}`);
     return { ok: false };
   }
 }
 
 function welcomeEmailHtml(name: string, affiliateId: string, email: string) {
+  name = name.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
   const base = "https://maisresultadosonline.com.br";
   const linkPromo = `${base}/promo/${affiliateId}`;
   const linkRenda = `${base}/promorendaextra/${affiliateId}`;
@@ -305,8 +307,8 @@ async function actionRegister(body: any) {
     // non-fatal: user can still recover with defaults
   }
 
-  // 6. Send welcome email (best effort)
-  await sendEmail(
+  // Registration remains saved if SMTP fails, but the UI must report the real send status.
+  const welcome = await sendEmail(
     email,
     "Bem-vindo(a) ao Programa de Afiliados MRO",
     welcomeEmailHtml(first, affiliateId, email),
@@ -314,6 +316,7 @@ async function actionRegister(body: any) {
 
   return json({
     success: true,
+    welcomeEmailSent: welcome.ok,
     affiliate: {
       id: affiliateId,
       name: fullName,
@@ -378,6 +381,15 @@ serve(async (req) => {
       const { data: pix, error } = await supabase.from("affiliate_pix").select("affiliate_id,pix_key,updated_at");
       if (error) throw error;
       return json({ success: true, affiliates: affiliates.map(a => ({ ...a, pixKey: pix?.find(p => p.affiliate_id === a.id)?.pix_key || "", pixUpdatedAt: pix?.find(p => p.affiliate_id === a.id)?.updated_at })) });
+    }
+    if (action === "resend_welcome") {
+      const username = String(body.squarecloud_username || "").trim().toLowerCase();
+      const validation = await validateSquareCloud(username, String(body.password || ""));
+      if (!validation.ok) return json({ success: false, error: validation.error }, 401);
+      const affiliate = (await loadAffiliates()).find(a => a.active && a.squarecloudUsername?.toLowerCase() === username);
+      if (!affiliate) return json({ success: false, error: "Afiliado não encontrado" }, 403);
+      const result = await sendEmail(affiliate.email, "Bem-vindo(a) ao Programa de Afiliados MRO", welcomeEmailHtml(affiliate.name, affiliate.id, affiliate.email));
+      return json({ success: result.ok, welcomeEmailSent: result.ok, ...(result.ok ? {} : { error: "Seu cadastro está salvo, mas o e-mail não pôde ser enviado agora. Tente novamente." }) });
     }
     if (action === "save_pix") {
       const username = String(body.squarecloud_username || "").trim().toLowerCase();

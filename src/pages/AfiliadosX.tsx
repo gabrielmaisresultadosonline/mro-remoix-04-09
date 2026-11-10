@@ -42,6 +42,7 @@ export default function AfiliadosX() {
   const [pixKey, setPixKey] = useState("");
   const [savingPix, setSavingPix] = useState(false);
   const [showResumo, setShowResumo] = useState(false);
+  const [sendingWelcome, setSendingWelcome] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState({
@@ -150,7 +151,8 @@ export default function AfiliadosX() {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Erro ao cadastrar");
       setCreated(data.affiliate as CreatedAffiliate);
-      toast.success("Afiliado ativado! Confira seu email.");
+      if (data.welcomeEmailSent) toast.success("Afiliado ativado! Boas-vindas enviadas ao seu e-mail.");
+      else toast.warning("Afiliado ativado e links salvos, mas o e-mail não foi enviado. Use Reenviar boas-vindas.");
     } catch (e: any) {
       toast.error(e?.message || "Erro ao cadastrar");
     } finally {
@@ -213,6 +215,20 @@ export default function AfiliadosX() {
           </Button>
 
           {showResumo && credentials && <AffiliateResumo embeddedAffiliateId={created.id} credentials={credentials} />}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-4">
+            <p className="text-sm text-muted-foreground break-all">E-mail de recebimento: {created.email}</p>
+            <Button variant="outline" disabled={sendingWelcome || !credentials} onClick={async () => {
+              if (!credentials) return;
+              setSendingWelcome(true);
+              try {
+                const { data, error } = await supabase.functions.invoke("afiliadosx", { body: { action: "resend_welcome", ...credentials } });
+                if (error || !data?.success) throw new Error(data?.error || "Não foi possível enviar agora. Tente novamente.");
+                toast.success("Boas-vindas enviadas ao seu e-mail!");
+              } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível enviar o e-mail."); }
+              finally { setSendingWelcome(false); }
+            }}>{sendingWelcome ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}Reenviar boas-vindas</Button>
+          </div>
 
           <section className="border-y border-border py-6 space-y-3">
             <Label htmlFor="affiliate-pix">Chave Pix para receber comissões</Label>

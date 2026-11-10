@@ -5,6 +5,7 @@
 - Instagram usage dates prefer the immutable API baseline, then the saved initial snapshot and session start, with elapsed calendar months/days in Brazil time, because hydration and later readings must not restart the displayed usage period.
 
 - Affiliate self-service reuses connected MRO credentials validated server-side for ownership, stores Pix separately in private VPS PostgreSQL rows and embeds the existing summary view, because no repeated password prompt or public affiliate file may expose payout details.
+- Affiliate welcome emails use the existing VPS Hostinger SMTP configuration, check recipient acceptance and expose a retry only for the authenticated owner's saved address, because SMTP failures must not discard activation or falsely claim an email was sent.
 
 - Dashboard presentation partitions official WhatsApp advertising from the product grid, places unlocked ZAPMRO last in the grid and locked ZAPMRO below advertising, and reuses connected MRO credentials for return navigation, because presentation must not change entitlements or require another login.
 

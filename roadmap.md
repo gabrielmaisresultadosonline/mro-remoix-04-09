@@ -1,5 +1,11 @@
 # Roadmap
 
+## E-mail boas-vindas afiliados
+- [ ] Usar SMTP Hostinger configurado na VPS e reportar resultado real do envio
+- [ ] Permitir reenvio ao e-mail salvo do próprio afiliado, com comissões e acesso ao resumo
+- [ ] Testar aceitação/recusa SMTP e fluxo de cadastro/reenvio
+- [ ] Confirmar recebimento real na VPS (depende de atualização e envio SMTP real)
+
 ## Imagens por Instagram e permanência
 - [x] Vincular imagens da galeria às contas privadas e mostrar carrosséis no /instagram
 - [x] Desativar expiração de arquivos novos e existentes e atualizar documentação
