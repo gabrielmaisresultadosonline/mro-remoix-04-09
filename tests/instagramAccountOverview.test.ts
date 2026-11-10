@@ -1,10 +1,25 @@
 import { describe, expect, it } from 'bun:test';
-import { accountFollowerSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, summarizeAccountGrowth } from '../src/lib/instagramAccountOverview';
+import { accountFollowerSummary, accountUsageSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, summarizeAccountGrowth } from '../src/lib/instagramAccountOverview';
 import type { ProfileSession } from '../src/types/instagram';
 import { normalizeInstagramUsername } from '../src/types/user';
 
 const saved = { profile: { ...createAccountProfile('loja', 'Loja'), dataSource: 'screenshot', followers: 120 }, initialSnapshot: { followers: 100 } } as ProfileSession;
 describe('Instagram sem novos prints', () => {
+  it('usa a data inicial persistida da API e calcula meses completos e dias até hoje', () => {
+    const metrics = { instagram_username: 'loja', initial_followers: 100, current_followers: 137, initial_captured_at: '2026-08-09T12:00:00Z', last_seen_at: null, welcome_total: 7, online: false, metrics: [] };
+    expect(accountUsageSummary({ ...saved, startedAt: '2026-11-01T12:00:00Z' }, metrics, new Date('2026-11-10T02:01:00Z'))).toMatchObject({ date: '09/08/2026', months: 3, days: 0, totalDays: 92 });
+  });
+  it('preserva a data do print antigo quando a API não possui data inicial', () => {
+    const account = { ...saved, initialSnapshot: { ...saved.initialSnapshot, date: '2026-10-01T12:00:00Z' }, startedAt: '2026-11-01T12:00:00Z' };
+    expect(accountUsageSummary(account, undefined, new Date('2026-11-10T02:01:00Z'))).toMatchObject({ date: '01/10/2026', months: 1, days: 8, totalDays: 39 });
+  });
+  it('calcula mês completo no último dia do mês sem meses fixos de 30 dias', () => {
+    expect(accountUsageSummary({ ...saved, startedAt: '2026-01-31T12:00:00Z' }, undefined, new Date('2026-02-28T12:00:00Z'))).toMatchObject({ months: 1, days: 0, totalDays: 28 });
+  });
+  it('não inventa data ausente nem tempo negativo', () => {
+    expect(accountUsageSummary(saved)).toBeNull();
+    expect(accountUsageSummary({ ...saved, startedAt: '2026-12-01T12:00:00Z' }, undefined, new Date('2026-11-09T12:00:00Z'))).toMatchObject({ months: 0, days: 0, totalDays: 0 });
+  });
   it('pesquisa nome e @usuário sem diferenciar maiúsculas ou acentos', () => {
     expect(filterInstagramAccounts([saved], '@LOJA')).toHaveLength(1);
     expect(filterInstagramAccounts([{ ...saved, profile: { ...saved.profile, fullName: 'Calçados Ana' } }], 'calcados')).toHaveLength(1);
