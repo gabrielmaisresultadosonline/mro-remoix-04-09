@@ -793,6 +793,10 @@
   --dot-lit: 48 96% 60%;
 }
 .dash-member > .dash-halftone { position: fixed; }
+.instagram-workspace { letter-spacing: 0; }
+.instagram-growth-line { stroke: hsl(var(--primary)); }
+.instagram-growth-axis { stroke: hsl(var(--border)); }
+.instagram-workspace .glass-card { border-radius: 8px; }
 .dash-member > header, .dash-member > main { position: relative; z-index: 1; }
 .dash-halftone, .dash-halftone::before, .dash-halftone::after { position: absolute; inset: 0; pointer-events: none; }
 .dash-halftone {

@@ -1,5 +1,12 @@
 # Roadmap
 
+## Instagram: cadastro e acompanhamento
+- [x] Reorganizar /instagram em cadastro e tutoriais, com contas em cascata
+- [x] Mostrar métricas privadas da API preservando referência inicial e prints antigos
+- [x] Gerar estratégias a partir da descrição escrita e preservar recursos existentes
+- [x] Testar cadastro de duas contas, navegação, descrição salva e telas mobile/desktop com respostas simuladas
+- [ ] Confirmar métricas e geração reais na VPS (depende da atualização e de sessão MRO real disponível)
+
 ## Posição ZAPMRO
 - [x] ZAPMRO liberado no final da grade; sem acesso, abaixo da propaganda
 - [x] Validar as duas situações em desktop/mobile e preservar abertura da compra com respostas simuladas

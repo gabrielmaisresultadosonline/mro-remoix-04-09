@@ -72,6 +72,20 @@ function safeEqual(left: string, right: string): boolean {
   return crypto.timingSafeEqual(leftDigest, rightDigest);
 }
 
+/** Read-only validation for the private Instagram metrics view. */
+export async function authenticateMroMetrics(username: string, password: string): Promise<string | null> {
+  if (!username || !password || username.length > 255 || password.length > 255) return null;
+  const [user] = await adminQuery<MroUserRow>(
+    `SELECT id, username, password_hash, password_plain, is_active, expiration_days, expires_at
+       FROM public.mro_tool_users WHERE lower(username) = $1 LIMIT 1`,
+    [username.trim().toLowerCase()],
+  );
+  if (!user || !planInfo(user).access_allowed) return null;
+  const valid = (user.password_hash && safeEqual(sha256(password), user.password_hash)) ||
+    (user.password_plain && safeEqual(password, user.password_plain));
+  return valid ? user.username.toLowerCase() : null;
+}
+
 function normalizeInstagram(value: unknown): string {
   return String(value ?? "").trim().toLowerCase().replace(/^@/, "");
 }
