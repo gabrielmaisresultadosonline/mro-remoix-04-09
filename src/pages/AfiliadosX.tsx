@@ -171,7 +171,7 @@ export default function AfiliadosX() {
     );
   }
 
-  if (!user) {
+  if (!user || !credentials) {
     return (
       <InlineLogin
         onSuccess={async (u) => {
