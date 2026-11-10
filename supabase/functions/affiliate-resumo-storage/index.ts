@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { isAdminRequest } from "../_shared/require-admin.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -35,7 +36,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, affiliateId, password, resumoData } = await req.json();
+    const body = await req.json();
+    const { action, affiliateId, password, resumoData } = body;
     
     logStep("Request received", { action, affiliateId });
 
@@ -47,6 +49,19 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    if (["get", "get-realtime"].includes(action) && body.squarecloud_username) {
+      const username = String(body.squarecloud_username).trim().toLowerCase();
+      const { data: login } = await supabase.functions.invoke("mro-tool-api", { body: { action: "login", username, password } });
+      const { data: file } = await supabase.storage.from("user-data").download("admin/affiliates.json");
+      const affiliates = file ? JSON.parse(await file.text()) : [];
+      const owned = affiliates.some((a: any) => a.active && a.id === affiliateId && a.squarecloudUsername?.toLowerCase() === username);
+      if (!login?.success || !owned) return new Response(JSON.stringify({ success: false, error: "Acesso não autorizado" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } else if (["get", "get-realtime"].includes(action) && !await isAdminRequest(req, body)) {
+      const { data: file } = await supabase.storage.from("user-data").download(`affiliate-resumos/${affiliateId}/config.json`);
+      const config = file ? JSON.parse(await file.text()) : null;
+      if (!config?.password || password !== config.password) return new Response(JSON.stringify({ success: false, error: "Faça login para acessar o resumo" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     if (action === "verify-password") {
       // Verify affiliate password

@@ -57,10 +57,12 @@ interface ResumoData {
   updatedAt: string;
 }
 
-export default function AffiliateResumo() {
-  const { affiliateId } = useParams();
+export default function AffiliateResumo({ embeddedAffiliateId, credentials }: { embeddedAffiliateId?: string; credentials?: { squarecloud_username: string; password: string } } = {}) {
+  const params = useParams();
+  const affiliateId = embeddedAffiliateId || params.affiliateId;
+  const embedded = Boolean(embeddedAffiliateId && credentials);
   
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(embedded);
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -73,12 +75,14 @@ export default function AffiliateResumo() {
 
   // Check if already authenticated via sessionStorage
   useEffect(() => {
-    const storedAuth = sessionStorage.getItem(`affiliate_auth_${affiliateId}`);
-    if (storedAuth === "true") {
+    if (embedded) { setIsAuthenticated(true); loadResumo(); return; }
+    const storedAuth = sessionStorage.getItem(`affiliate_password_${affiliateId}`);
+    if (storedAuth) {
+      setPassword(storedAuth);
       setIsAuthenticated(true);
       loadResumo();
     }
-  }, [affiliateId]);
+  }, [affiliateId, embedded]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +102,7 @@ export default function AffiliateResumo() {
 
       if (data.success) {
         setIsAuthenticated(true);
-        sessionStorage.setItem(`affiliate_auth_${affiliateId}`, "true");
+        sessionStorage.setItem(`affiliate_password_${affiliateId}`, password);
         loadResumo();
       } else {
         setLoginError("Senha incorreta");
@@ -120,6 +124,8 @@ export default function AffiliateResumo() {
       const { data, error } = await supabase.functions.invoke("affiliate-resumo-storage", {
         body: { 
           action: "get-realtime",
+          ...credentials,
+          password: credentials?.password || password || sessionStorage.getItem(`affiliate_password_${affiliateId}`),
           affiliateId
         }
       });
@@ -135,6 +141,8 @@ export default function AffiliateResumo() {
         const { data: storedData, error: storedError } = await supabase.functions.invoke("affiliate-resumo-storage", {
           body: { 
             action: "get",
+            ...credentials,
+            password: credentials?.password || password || sessionStorage.getItem(`affiliate_password_${affiliateId}`),
             affiliateId
           }
         });
@@ -241,7 +249,7 @@ export default function AffiliateResumo() {
   const notPaidAttempts = (resumoData?.attemptsList?.length || 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-4">
+    <div className={embedded ? "py-4" : "min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-4"}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">

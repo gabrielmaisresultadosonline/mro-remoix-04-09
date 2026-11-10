@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getCurrentUser, logoutUser, loginUser } from "@/lib/userStorage";
 import { loginToSquare } from "@/lib/squareApi";
+import AffiliateResumo from "./AffiliateResumo";
+import { getAffiliateCredentials, type AffiliateCredentials } from "@/lib/affiliateSession";
 import type { MROUser } from "@/types/user";
 import {
   ArrowRight, Camera, CheckCircle2, Copy, DollarSign, Eye, LayoutDashboard,
@@ -20,6 +22,7 @@ interface CreatedAffiliate {
   name: string;
   email: string;
   photoUrl?: string;
+  pixKey?: string;
   links: {
     promo: string;
     promoRendaExtra: string;
@@ -35,7 +38,10 @@ export default function AfiliadosX() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [created, setCreated] = useState<CreatedAffiliate | null>(null);
-  const [hasStoredPwd, setHasStoredPwd] = useState(false);
+  const [credentials, setCredentials] = useState<AffiliateCredentials | null>(null);
+  const [pixKey, setPixKey] = useState("");
+  const [savingPix, setSavingPix] = useState(false);
+  const [showResumo, setShowResumo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState({
@@ -43,7 +49,6 @@ export default function AfiliadosX() {
     last_name: "",
     desired_id: "",
     email: "",
-    password: "",
     show_promo_banner: true,
     photo_url: "" as string,
   });
@@ -51,7 +56,7 @@ export default function AfiliadosX() {
   const lookupExistingAffiliate = async (username: string) => {
     try {
       const { data, error } = await supabase.functions.invoke("afiliadosx", {
-        body: { action: "lookup", squarecloud_username: username.toLowerCase() },
+        body: { action: "lookup", ...getAffiliateCredentials(username) },
       });
       if (error) return null;
       if (data?.success && data.affiliate) return data.affiliate as CreatedAffiliate;
@@ -63,13 +68,17 @@ export default function AfiliadosX() {
 
   useEffect(() => {
     (async () => {
-      const u = await getCurrentUser();
+      const current = await getCurrentUser();
+      const access = getAffiliateCredentials(current?.username);
+      setCredentials(access);
+      const u = current || (access ? { username: access.squarecloud_username } as MROUser : null);
       setUser(u);
       if (u) {
         // Check if this MRO user is already an affiliate — if so, auto-open dashboard
         const existing = await lookupExistingAffiliate(u.username);
         if (existing) {
           setCreated(existing);
+          setPixKey(existing.pixKey || "");
           setChecking(false);
           return;
         }
@@ -78,12 +87,7 @@ export default function AfiliadosX() {
           first_name: f.first_name || (u.username || ""),
           desired_id: f.desired_id || (u.username || "").toLowerCase(),
         }));
-        // Auto-inject stored SquareCloud password from active session
-        const stored = sessionStorage.getItem("mro_temp_pwd") || "";
-        if (stored) {
-          setForm(f => ({ ...f, password: stored }));
-          setHasStoredPwd(true);
-        }
+
       }
       setChecking(false);
     })();
@@ -128,9 +132,7 @@ export default function AfiliadosX() {
     if (!form.first_name.trim()) return toast.error("Informe seu nome");
     if (!form.email.includes("@")) return toast.error("Email inválido");
     if (form.desired_id.trim().length < 3) return toast.error("Informe o identificador do link (mínimo 3 letras/números)");
-    if (!form.password || form.password.length < 3) {
-      return toast.error("Sessão sem senha — faça login novamente em /instagram");
-    }
+    if (!credentials) return toast.error("Seu acesso expirou. Entre novamente na ferramenta MRO.");
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("afiliadosx", {
@@ -140,8 +142,7 @@ export default function AfiliadosX() {
           last_name: form.last_name.trim(),
           desired_id: form.desired_id.trim(),
           email: form.email.trim().toLowerCase(),
-          squarecloud_username: user.username.toLowerCase(),
-          password: form.password,
+          ...credentials,
           photo_url: form.photo_url || null,
           show_promo_banner: form.show_promo_banner,
         },
@@ -175,9 +176,10 @@ export default function AfiliadosX() {
       <InlineLogin
         onSuccess={async (u) => {
           setUser(u);
+          setCredentials(getAffiliateCredentials(u.username));
           // Immediately try to detect existing affiliate for this MRO user
           const existing = await lookupExistingAffiliate(u.username);
-          if (existing) setCreated(existing);
+          if (existing) { setCreated(existing); setPixKey(existing.pixKey || ""); }
         }}
       />
     );
@@ -197,18 +199,38 @@ export default function AfiliadosX() {
             <CheckCircle2 className="w-16 h-16 mx-auto text-green-500 mb-4" />
             <h1 className="text-3xl font-black mb-2">Você é oficialmente afiliado(a) MRO 🎉</h1>
             <p className="text-zinc-400 text-sm">
-              Enviamos os links para <strong className="text-white">{created.email}</strong>. A senha do dashboard é a mesma da <strong className="text-yellow-500">ferramenta MRO</strong>.
+              Seus links estão disponíveis abaixo. Acompanhe suas vendas com o acesso da ferramenta MRO.
             </p>
           </Card>
 
           <Button
-            onClick={() => navigate(created.links.dashboard)}
+            onClick={() => setShowResumo(v => !v)}
             className="w-full bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-black text-lg py-8 shadow-xl shadow-yellow-500/20"
           >
             <LayoutDashboard className="w-6 h-6 mr-3" />
-            Dashboard do Afiliado
+            {showResumo ? "Fechar resumo" : "Ver resumo de vendas"}
             <ArrowRight className="w-6 h-6 ml-3" />
           </Button>
+
+          {showResumo && credentials && <AffiliateResumo embeddedAffiliateId={created.id} credentials={credentials} />}
+
+          <section className="border-y border-border py-6 space-y-3">
+            <Label htmlFor="affiliate-pix">Chave Pix para receber comissões</Label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Input id="affiliate-pix" value={pixKey} maxLength={255} onChange={e => setPixKey(e.target.value)} placeholder="CPF, CNPJ, e-mail, celular ou chave aleatória" />
+              <Button disabled={savingPix || !pixKey.trim() || !credentials} onClick={async () => {
+                if (!credentials) return;
+                setSavingPix(true);
+                try {
+                  const { data, error } = await supabase.functions.invoke("afiliadosx", { body: { action: "save_pix", ...credentials, pix_key: pixKey.trim() } });
+                  if (error || !data?.success) throw new Error(data?.error || "Não foi possível salvar a chave Pix");
+                  setPixKey(data.pixKey);
+                  toast.success("Chave Pix salva!");
+                } catch (error) { toast.error(error instanceof Error ? error.message : "Erro ao salvar Pix"); }
+                finally { setSavingPix(false); }
+              }}>{savingPix ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar Pix"}</Button>
+            </div>
+          </section>
 
           <Card className="bg-zinc-950 border-yellow-500/40 p-6 space-y-4">
             <p className="text-[11px] uppercase tracking-widest text-zinc-500 font-black">Suas comissões por venda aprovada</p>
@@ -403,21 +425,6 @@ export default function AfiliadosX() {
             />
           </div>
 
-          {/* Password fallback — only if not already in session */}
-          {!hasStoredPwd && (
-            <div>
-              <Label className="text-xs uppercase tracking-widest text-zinc-500 font-black">Sua senha MRO (a mesma do /instagram)</Label>
-              <Input
-                type="password"
-                value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                className="bg-black border-zinc-800 mt-1"
-              />
-              <p className="text-[11px] text-zinc-500 mt-1">
-                Não guardamos sua senha — usamos apenas para validar seu cadastro MRO agora.
-              </p>
-            </div>
-          )}
 
           <Button
             onClick={submit}
