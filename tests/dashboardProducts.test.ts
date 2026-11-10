@@ -1,7 +1,14 @@
 import { describe, it, expect } from "bun:test";
-import { isPropagandaMroProduct, PROPAGANDA_MRO_LABEL } from "../src/lib/dashboardProducts";
+import { isPropagandaMroProduct, PROPAGANDA_MRO_LABEL, separateDashboardProducts } from "../src/lib/dashboardProducts";
 
 describe("isPropagandaMroProduct", () => {
+  it("separa API Oficial dos produtos sem retirar a extensão WhatsApp", () => {
+    const original = [{ slug: "api-oficial" }, { slug: "mro" }, { slug: "zapmro-extensao" }];
+    const separated = separateDashboardProducts(original);
+    expect(separated.products.map(p => p.slug)).toEqual(["mro", "zapmro-extensao"]);
+    expect(separated.advertising.map(p => p.slug)).toEqual(["api-oficial"]);
+    expect(original.length).toBe(3);
+  });
   it("marca o card do WhatsApp com API Oficial (o primeiro da lista)", () => {
     expect(
       isPropagandaMroProduct({
