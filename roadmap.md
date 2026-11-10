@@ -1,5 +1,9 @@
 # Roadmap
 
+## Posição ZAPMRO
+- [x] ZAPMRO liberado no final da grade; sem acesso, abaixo da propaganda
+- [x] Validar as duas situações em desktop/mobile e preservar abertura da compra com respostas simuladas
+
 ## Dashboard e acesso afiliados
 - [x] Reutilizar sessão MRO ao voltar dos afiliados ao dashboard
 - [x] Adicionar botão Seja um afiliado MRO
