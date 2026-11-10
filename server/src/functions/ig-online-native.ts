@@ -15,7 +15,8 @@ import type { Request, Response } from "express";
 import type { PoolClient } from "pg";
 import { pool, adminQuery } from "../db.js";
 import { hasValidAdminSession } from "../admin-session.js";
-import { loadBaselines, recordProfileReading } from "./ig-profile-baseline.js";
+import { loadBaselines, recordProfileReading, ownedInstagrams } from "./ig-profile-baseline.js";
+import { authenticateMroMetrics } from "./mro-tool-login-native.js";
 import { adminGallery, adminGalleryDelete, galleryUpload, handleGalleryGet } from "./ig-online-gallery.js";
 
 const PUBLIC_BASE = (process.env.PUBLIC_API_URL || "https://api.maisresultadosonline.com.br").replace(/\/$/, "") + "/functions/v1/ig-online-api";
@@ -526,6 +527,45 @@ async function adminMessages() {
 
 const EXTENSION_ACTIONS = new Set(["ping", "metrics", "check_access", "message_event", "gallery_upload"]);
 
+async function userMetrics(body: Body) {
+  const requested = Array.isArray(body.instagrams) ? body.instagrams : [];
+  if (requested.length > 100 || requested.some((ig) => typeof ig !== 'string' || !IG_RE.test(normalizeIG(ig)))) {
+    return [400, { success: false, error: 'Perfis inválidos' }] as const;
+  }
+  if (typeof body.username !== 'string' || typeof body.password !== 'string') {
+    return [401, { success: false, error: 'Acesso MRO necessário' }] as const;
+  }
+  const username = await authenticateMroMetrics(body.username, body.password);
+  if (!username) return [401, { success: false, error: 'Sessão MRO inválida ou expirada' }] as const;
+  const owned = await ownedInstagrams(username, requested.map(normalizeIG));
+  const keys = [...owned];
+  if (!keys.length) return [200, { success: true, profiles: [] }] as const;
+  const [baselines, sessions, metrics] = await Promise.all([
+    loadBaselines(keys),
+    adminQuery<Row>(`SELECT instagram_username, followers_current, welcome_total, last_seen_at
+      FROM public.ig_online_sessions WHERE lower(instagram_username) = ANY($1::text[])`, [keys]),
+    adminQuery<Row>(`SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_end, welcome_sent
+      FROM public.ig_online_metrics WHERE lower(instagram_username) = ANY($1::text[])
+      AND day >= current_date - 365 ORDER BY day ASC`, [keys]),
+  ]);
+  return [200, { success: true, profiles: keys.map((ig) => {
+    const baseline = baselines.get(ig);
+    const s = sessions.find((row) => normalizeIG(row.instagram_username) === ig);
+    return {
+      instagram_username: ig,
+      initial_followers: baseline?.initial_followers ?? null,
+      initial_captured_at: baseline?.initial_captured_at ?? null,
+      current_followers: baseline?.current_followers ?? numOrNull(s?.followers_current),
+      welcome_total: Number(s?.welcome_total ?? 0),
+      last_seen_at: iso(s?.last_seen_at),
+      online: Boolean(s?.last_seen_at && Date.now() - new Date(String(s.last_seen_at)).getTime() < ONLINE_WINDOW_MS),
+      metrics: metrics.filter((m) => normalizeIG(m.instagram_username) === ig).map((m) => ({
+        day: m.day, followers_end: numOrNull(m.followers_end), welcome_sent: Number(m.welcome_sent ?? 0),
+      })),
+    };
+  }) }] as const;
+}
+
 export async function handleNativeIgOnline(req: Request, res: Response): Promise<boolean> {
   if (req.method === "GET") {
     try { return await handleGalleryGet(req, res, PUBLIC_BASE); } catch (e) {
@@ -543,7 +583,13 @@ export async function handleNativeIgOnline(req: Request, res: Response): Promise
 
   try {
     let result: readonly [number, unknown];
-    if (EXTENSION_ACTIONS.has(action)) {
+    if (action === 'user_metrics') {
+      if (rateLimited(`${ip}|user-metrics`, 30)) {
+        res.status(429).json({ success: false, error: 'Aguarde antes de atualizar.' });
+        return true;
+      }
+      result = await userMetrics(body);
+    } else if (EXTENSION_ACTIONS.has(action)) {
       const igKey = normalizeIG(body.instagram ?? body.instagram_username);
       if (rateLimited(`${ip}|${igKey}`)) {
         res.status(429).json({ success: false, error: "Muitas requisições. Aguarde um minuto." });
