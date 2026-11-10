@@ -1,255 +1,174 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Rocket, Briefcase, ArrowRight, Instagram, CheckSquare, X, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, ChevronDown, Instagram, Loader2, Play, Plus, RefreshCw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getRegisteredIGs, isAuthenticated, getCurrentUser } from '@/lib/userStorage';
-import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Logo } from '@/components/Logo';
+import { StrategyGenerator } from '@/components/StrategyGenerator';
+import { StrategyDisplay } from '@/components/StrategyDisplay';
+import { useToast } from '@/hooks/use-toast';
+import { getCurrentUser, getRegisteredIGs, isAuthenticated, addRegisteredIG, loadUserFromCloud, saveUserToCloud, syncIGsFromSquare, updateUserEmail } from '@/lib/userStorage';
+import { getSession, addProfile, setActiveProfile, addStrategy, saveSession, getArchivedProfiles, initializeFromCloud, setCloudSyncCallback, restoreProfileFromArchive } from '@/lib/storage';
+import { verifyRegisteredIGs, canRegisterIG, addIGToSquare } from '@/lib/squareApi';
+import { normalizeIG } from '@/lib/mroToolApi';
+import { getAffiliateCredentials } from '@/lib/affiliateSession';
+import { accountFollowerSummary, businessAnalysis, createAccountProfile, type AccountMetrics } from '@/lib/instagramAccountOverview';
+import { supabase } from '@/integrations/supabase/client';
+import type { ProfileSession } from '@/types/instagram';
 
-// Add the pulse and shine animations to the page
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes shine-loop {
-    0% { transform: translateX(-100%); }
-    50% { transform: translateX(100%); }
-    100% { transform: translateX(100%); }
-  }
-  @keyframes pulse-soft {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
-    70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
-  }
-  @keyframes pulse-emerald {
-    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-    70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-  }
-  @keyframes pulse-purple {
-    0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
-    70% { box-shadow: 0 0 0 15px rgba(168, 85, 247, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
-  }
-  @keyframes pulse-blue {
-    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-    70% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-  }
-  .animate-shine {
-    position: relative;
-    overflow: hidden;
-  }
-  .animate-shine::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    animation: shine-loop 3s infinite;
-  }
-`;
-document.head.appendChild(style);
+const number = (value: number | null) => value === null ? 'Aguardando dados' : value.toLocaleString('pt-BR');
+const date = (value?: string | null) => value ? new Date(value).toLocaleString('pt-BR') : 'Aguardando atividade';
 
-const MeuNegocioPage = () => {
+function AccountGrowth({ account, metrics }: { account: ProfileSession; metrics?: AccountMetrics }) {
+  const summary = accountFollowerSummary(account, metrics);
+  const points = [
+    ...(summary.initial !== null ? [{ day: metrics?.initial_captured_at ?? account.startedAt, followers_end: summary.initial }] : []),
+    ...(metrics?.metrics.filter(m => m.followers_end !== null) ?? []),
+  ];
+  const values = points.map(p => p.followers_end ?? 0);
+  const low = Math.min(...values), high = Math.max(...values);
+  const polyline = values.map((v, i) => `${24 + i / Math.max(1, values.length - 1) * 552},${140 - (v - low) / Math.max(1, high - low) * 112}`).join(' ');
+  return <div className="space-y-5">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {[['Seguidores iniciais', number(summary.initial)], ['Seguidores atuais', number(summary.current)], ['Crescimento', summary.growth === null ? 'Aguardando dados' : `${summary.growth > 0 ? '+' : ''}${number(summary.growth)}`], ['Boas-vindas enviadas', number(metrics?.welcome_total ?? null)]].map(([label, value]) => <div key={label} className="min-w-0"><p className="text-xs text-muted-foreground mb-1">{label}</p><p className="font-semibold text-sm sm:text-lg break-words">{value}</p></div>)}
+    </div>
+    <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"><span>Início: {date(metrics?.initial_captured_at ?? account.startedAt)}</span><span>Último acesso: {date(metrics?.last_seen_at)}</span><span className="text-primary">{metrics?.online ? 'Em atividade' : 'Sem atividade recente'}</span></div>
+    {values.length > 1 ? <div><p className="text-sm font-semibold mb-2">Crescimento de seguidores</p><svg role="img" aria-label="Gráfico de crescimento de seguidores" viewBox="0 0 600 170" className="w-full h-40"><path d="M24 12 V144 H580" fill="none" className="instagram-growth-axis" /><polyline points={polyline} fill="none" strokeWidth="3" strokeLinejoin="round" className="instagram-growth-line" /><text x="24" y="165" fill="currentColor" fontSize="11">{new Date(points[0].day).toLocaleDateString('pt-BR')}</text><text x="575" y="165" fill="currentColor" textAnchor="end" fontSize="11">{new Date(points[points.length - 1].day).toLocaleDateString('pt-BR')}</text></svg></div> : <p className="text-sm text-muted-foreground">Aguardando as próximas leituras do perfil para mostrar o crescimento.</p>}
+  </div>;
+}
+
+export default function MeuNegocioPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isAuth, setIsAuth] = useState(false);
+  const [view, setView] = useState<'home' | 'register' | 'strategy'>('home');
+  const [accounts, setAccounts] = useState<ProfileSession[]>([]);
+  const [metrics, setMetrics] = useState<Record<string, AccountMetrics>>({});
+  const [metricsError, setMetricsError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [showGuide, setShowGuide] = useState(false);
-  
-  const registeredProfiles = getRegisteredIGs();
-  const hasRegisteredProfiles = registeredProfiles.length > 0;
+  const [busy, setBusy] = useState(false);
+  const [input, setInput] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState(getCurrentUser()?.email ?? '');
+  const [registeredMore, setRegisteredMore] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [description, setDescription] = useState('');
+  const mounted = useRef(true);
+  const writing = useRef(false);
+  const user = getCurrentUser();
+  const active = accounts.find(a => a.id === selected);
 
+  function readAccounts() { setAccounts(getSession().profiles); }
+  async function persist() {
+    const current = getCurrentUser();
+    if (!current) return false;
+    const session = getSession();
+    return saveUserToCloud(current.username, current.email, current.daysRemaining, session.profiles.filter(a => !a.isHistorical), getArchivedProfiles(), current.lifetimeCreativeUsedAt);
+  }
+  async function refreshMetrics() {
+    const current = getCurrentUser();
+    if (!current || writing.current) return;
+    const credentials = getAffiliateCredentials(current.username);
+    if (!credentials) { setMetricsError('Entre novamente pelo dashboard para atualizar as métricas.'); return; }
+    const profiles = getSession().profiles;
+    const { data, error } = await supabase.functions.invoke('ig-online-api', { body: { action: 'user_metrics', username: current.username, password: credentials.password, instagrams: profiles.map(a => a.profile.username) } });
+    if (!mounted.current) return;
+    if (error || !data?.success) { setMetricsError('Não foi possível atualizar agora. Seus dados salvos permanecem disponíveis.'); return; }
+    setMetricsError('');
+    setMetrics(Object.fromEntries((data.profiles ?? []).map((m: AccountMetrics) => [m.instagram_username, m])));
+  }
   useEffect(() => {
-    const authStatus = isAuthenticated();
-    if (!authStatus) {
-      navigate('/instagram/painel', { replace: true });
-      return;
+    mounted.current = true;
+    if (!isAuthenticated()) { navigate('/instagram/painel', { replace: true }); return; }
+    setCloudSyncCallback(saveUserToCloud);
+    async function load() {
+      const current = getCurrentUser();
+      if (!current) return;
+      try {
+        const cloud = await loadUserFromCloud(current.username);
+        if (!mounted.current) return;
+        if (cloud) initializeFromCloud(cloud.profileSessions, cloud.archivedProfiles);
+        const registered = await verifyRegisteredIGs(current.username);
+        if (!mounted.current) return;
+        const usernames = registered.success ? registered.instagrams ?? [] : getRegisteredIGs().map(ig => ig.username);
+        if (current.email) await syncIGsFromSquare(usernames, current.email);
+        for (const username of usernames) {
+          if (getSession().profiles.some(a => a.profile.username.toLowerCase() === username.toLowerCase())) continue;
+          if (restoreProfileFromArchive(username)) continue;
+          addProfile(createAccountProfile(username, username), businessAnalysis(''));
+        }
+        readAccounts();
+        await refreshMetrics();
+      } catch { toast({ title: 'Os dados salvos foram mantidos', description: 'Tente atualizar novamente.', variant: 'destructive' }); readAccounts(); }
+      finally { if (mounted.current) setLoading(false); }
     }
-    setIsAuth(true);
-    setLoading(false);
+    void load();
+    const timer = window.setInterval(() => { void refreshMetrics(); }, 30_000);
+    return () => { mounted.current = false; window.clearInterval(timer); };
   }, [navigate]);
 
-  if (loading || !isAuth) return null;
-
-  return (
-    <div className="min-h-screen bg-[#0a0a14] text-white p-4 md:p-8 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[50px] md:blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[50px] md:blur-[100px]" />
-      </div>
-
-      <div className="max-w-6xl mx-auto space-y-12 relative z-10">
-        <div className="flex items-center justify-center">
-          <Logo size="sm" />
-        </div>
-
-        <div className="space-y-6 text-center">
-          <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-[0.2em] mb-2 font-display italic">Meu Negócio</div>
-          <h3 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight italic uppercase drop-shadow-2xl">Como iniciar no seu negócio?</h3>
-          
-          <div className="flex flex-col items-center gap-4 pt-2">
-            <button 
-              onClick={() => setShowGuide(!showGuide)}
-              className="group flex flex-col items-center gap-3 transition-all"
-            >
-              <div className="flex items-center gap-3 px-10 py-4 rounded-full bg-amber-500 text-black font-black text-xs md:text-sm uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(245,158,11,0.4)]">
-                {showGuide ? <ChevronUp className="w-5 h-5" /> : <Info className="w-5 h-5" />}
-                {showGuide ? "Fechar guia de início" : "Saber mais / Passo a passo"}
-              </div>
-            </button>
-
-            {/* Top Step-by-step Guide - Animated transition */}
-            <div className={`w-full transition-all duration-500 overflow-hidden ${showGuide ? 'max-h-[1000px] opacity-100 mt-6' : 'max-h-0 opacity-0'}`}>
-              <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex flex-col gap-3 p-6 rounded-[2.5rem] bg-white/5 border border-white/10 text-left group hover:border-emerald-500/30 transition-all duration-500">
-                  <div className="w-12 h-12 shrink-0 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-lg shadow-[0_0_20px_rgba(16,185,129,0.1)] group-hover:scale-110 transition-transform">1º</div>
-                  <h5 className="text-white font-black text-sm uppercase italic tracking-wider">Conexão Inicial</h5>
-                  <p className="text-xs text-white/50 leading-relaxed font-medium">Cadastre pelo menos 1 perfil do Instagram para que nossa I.A. possa realizar a leitura completa dos seus dados.</p>
-                </div>
-                <div className="flex flex-col gap-3 p-6 rounded-[2.5rem] bg-white/5 border border-white/10 text-left group hover:border-purple-500/30 transition-all duration-500">
-                  <div className="w-12 h-12 shrink-0 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400 font-black text-lg shadow-[0_0_20px_rgba(168,85,247,0.1)] group-hover:scale-110 transition-transform">2º</div>
-                  <h5 className="text-white font-black text-sm uppercase italic tracking-wider">Análise Inteligente</h5>
-                  <p className="text-xs text-white/50 leading-relaxed font-medium">Nossa I.A. gera estratégias personalizadas e insights validados baseados no seu nicho e desempenho atual.</p>
-                </div>
-                <div className="flex flex-col gap-3 p-6 rounded-[2.5rem] bg-white/5 border border-white/10 text-left group hover:border-blue-500/30 transition-all duration-500">
-                  <div className="w-12 h-12 shrink-0 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 font-black text-lg shadow-[0_0_20px_rgba(59,130,246,0.1)] group-hover:scale-110 transition-transform">3º</div>
-                  <h5 className="text-white font-black text-sm uppercase italic tracking-wider">Execução Automática</h5>
-                  <p className="text-xs text-white/50 leading-relaxed font-medium">Utilize a Ferramenta MRO instalada para aplicar as estratégias no automático e escalar sua presença digital.</p>
-                </div>
-              </div>
-
-              <div className="max-w-3xl mx-auto pt-6">
-                <p className="text-white/40 text-xs md:text-sm leading-relaxed font-medium bg-white/5 py-4 px-8 rounded-[2rem] border border-white/5 italic shadow-inner">
-                  "O analisador de I.A. identifica o que pode melhorar e entrega o caminho pronto para você executar com a ferramenta MRO trabalhando 24h por você."
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 items-stretch pb-20">
-            {/* Action 1: Registration */}
-            <div className="relative group p-1 rounded-[3rem] bg-gradient-to-br from-emerald-500/20 via-transparent to-transparent h-full">
-              <div className="h-full p-8 rounded-[2.9rem] bg-[#0d0d16] border border-white/5 flex flex-col gap-8">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-black text-2xl shadow-inner">01</div>
-                <div className="space-y-4">
-                  <h4 className="text-white font-black text-2xl uppercase italic leading-tight">CADASTRE SEU INSTAGRAM NA IA DA MRO</h4>
-                  <p className="text-white/40 text-xs leading-relaxed font-medium">Conecte sua conta em poucos segundos e descubra insights estratégicos para aumentar seu desempenho.</p>
-                  <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl">
-                      <p className="text-amber-500 text-[10px] font-black uppercase leading-tight tracking-wider">ATENÇÃO: O CADASTRO É FEITO 1 VEZ. ESTE CADASTRO FIC EM NOSSO BANCO DE DADOS E NÃO PRECISA CADASTRAR NOVAMENTE.</p>
-                  </div>
-                </div>
-                <div className="mt-auto pt-4">
-                  <Button 
-                    className="w-full py-8 rounded-2xl bg-emerald-800 text-white font-black text-sm uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] animate-shine border border-emerald-500/30" 
-                    style={{ animation: 'pulse-emerald 2s infinite' }}
-                    onClick={() => {
-                      localStorage.setItem('mro_force_registration', 'true');
-                      navigate('/instagram/painel');
-                    }}
-                  >
-                    CADASTRAR E ANALISAR <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Action 2: Tool */}
-            <div className="relative group p-1 rounded-[3rem] bg-gradient-to-br from-blue-500/20 via-transparent to-transparent h-full">
-              <div className="h-full p-8 rounded-[2.9rem] bg-[#0d0d16] border border-white/5 flex flex-col gap-8">
-                <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 font-black text-2xl shadow-inner">02</div>
-                <div className="space-y-4">
-                  <h4 className="text-white font-black text-2xl uppercase italic leading-tight">FERRAMENTA MRO</h4>
-                  <p className="text-white/40 text-xs leading-relaxed font-medium">Acesso direto, utilize a ferramenta completa em seu navegador com as contas já vinculadas para automação total.</p>
-                  <div className="py-3 px-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-center">
-                    <p className="text-blue-400 text-[10px] font-black uppercase tracking-wider italic">Software Instalado & Pronto</p>
-                  </div>
-                </div>
-                <div className="mt-auto pt-4">
-                  <Button 
-                    className={`w-full py-8 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all animate-shine ${
-                      hasRegisteredProfiles 
-                        ? 'bg-emerald-800 text-white hover:bg-emerald-700 shadow-[0_0_25px_rgba(16,185,129,0.3)] border border-emerald-500/30' 
-                        : 'bg-white/5 text-white/20 border border-white/10'
-                    }`}
-                    style={hasRegisteredProfiles ? { animation: 'pulse-emerald 2.5s infinite' } : {}}
-                    onClick={() => {
-                      if (!hasRegisteredProfiles) {
-                          toast({ variant: "destructive", title: "Acesso bloqueado", description: "Você precisa cadastrar pelo menos 1 conta que vai utilizar do instagram para acessar essa etapa." });
-                          return;
-                      }
-                      navigate('/mro-ferramenta');
-                    }}
-                  >
-                      INSTALAR E UTILIZAR <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Action 3: Dashboard */}
-            <div className="relative group p-1 rounded-[3rem] bg-gradient-to-br from-purple-500/20 via-transparent to-transparent h-full">
-              <div className="h-full p-8 rounded-[2.9rem] bg-[#0d0d16] border border-white/5 flex flex-col gap-8">
-                <div className="flex justify-between items-start">
-                    <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 font-black text-2xl shadow-inner">03</div>
-                    {hasRegisteredProfiles && (
-                        <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 animate-pulse">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">ON</span>
-                        </div>
-                    )}
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-white/5 border border-white/10 shadow-inner">
-                        <Instagram className="w-7 h-7 text-purple-400" />
-                    </div>
-                    <h4 className="text-white font-black text-2xl uppercase italic">INTELIGÊNCIA MRO</h4>
-                  </div>
-                  <p className="text-white/40 text-xs leading-relaxed font-medium">Acesse seu painel de estratégias validadas e relatórios de desempenho gerados pela nossa tecnologia.</p>
-                  
-                  {hasRegisteredProfiles ? (
-                    <div className="py-3 px-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                        <p className="text-emerald-400 text-xs font-black uppercase tracking-wider flex items-center gap-2">
-                            <CheckSquare className="w-4 h-4" /> {registeredProfiles.length} perfil(s) vinculado(s)!
-                        </p>
-                    </div>
-                  ) : (
-                    <div className="py-3 px-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-center">
-                        <p className="text-red-400 text-[10px] font-black uppercase tracking-wider">Nenhuma conta cadastrada!</p>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-auto pt-4">
-                  <Button 
-                    className={`w-full py-8 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all animate-shine ${
-                      hasRegisteredProfiles 
-                        ? 'bg-emerald-800 text-white hover:bg-emerald-700 shadow-[0_0_25px_rgba(16,185,129,0.3)] border border-emerald-500/30' 
-                        : 'bg-white/5 text-white/20 border border-white/10'
-                    }`}
-                    style={hasRegisteredProfiles ? { animation: 'pulse-emerald 3s infinite' } : {}}
-                    onClick={() => {
-                        if (!hasRegisteredProfiles) {
-                            toast({ variant: "destructive", title: "Nenhum perfil cadastrado", description: "Cadastre uma conta primeiro no Passo 01." });
-                            return;
-                        }
-                        localStorage.setItem('mro_force_dashboard', 'true');
-                        navigate('/instagram/painel');
-                    }}
-                  >
-                      ACESSAR DASHBOARD <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default MeuNegocioPage;
+  async function register(event: React.FormEvent) {
+    event.preventDefault();
+    if (!user || busy) return;
+    const username = normalizeIG(input);
+    if (!/^[a-z0-9._]{1,30}$/.test(username) || !name.trim()) { toast({ title: 'Informe o Instagram e o nome do perfil', variant: 'destructive' }); return; }
+    setBusy(true); writing.current = true;
+    try {
+      if (!user.email) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Informe um e-mail válido para vincular sua conta.');
+        await updateUserEmail(email.trim());
+      }
+      const check = await canRegisterIG(user.username, username);
+      if (!check.canRegister && !check.alreadyExists) throw new Error(check.error ?? 'Limite de contas atingido.');
+      if (!check.alreadyExists) {
+        const result = await addIGToSquare(user.username, username);
+        if (!result.success) throw new Error(result.error ?? 'Não foi possível cadastrar.');
+      }
+      await addRegisteredIG(username, getCurrentUser()?.email ?? email, true);
+      const existing = getSession().profiles.find(a => a.profile.username === username);
+      if (!existing && !restoreProfileFromArchive(username)) addProfile(createAccountProfile(username, name.trim()), businessAnalysis(''));
+      if (!await persist()) throw new Error('A conta foi vinculada, mas falta salvar os dados. Tente novamente sem cadastrar outra conta.');
+      readAccounts(); setInput(''); setName(''); setRegisteredMore(true);
+    } catch (e) { toast({ title: 'Cadastro', description: e instanceof Error ? e.message : 'Tente novamente.', variant: 'destructive' }); }
+    finally { setBusy(false); writing.current = false; void refreshMetrics(); }
+  }
+  function openStrategy(account: ProfileSession) {
+    setActiveProfile(account.id); setSelected(account.id); setDescription(account.businessDescription ?? ''); setView('strategy');
+  }
+  async function saveDescription() {
+    if (!active || description.trim().length < 10) { toast({ title: 'Conte um pouco mais sobre seu negócio', variant: 'destructive' }); return; }
+    setBusy(true); writing.current = true;
+    try {
+      const session = getSession();
+      const account = session.profiles.find(a => a.id === active.id);
+      if (!account) return;
+      account.businessDescription = description.trim();
+      account.analysis = businessAnalysis(description, account.analysis);
+      saveSession(session);
+      if (!await persist()) throw new Error('Não foi possível salvar no servidor. Tente novamente.');
+      readAccounts(); toast({ title: 'Descrição salva' });
+    } catch (e) { toast({ title: 'Não foi possível salvar', description: e instanceof Error ? e.message : 'Tente novamente.', variant: 'destructive' }); }
+    finally { setBusy(false); writing.current = false; }
+  }
+  function accountList() {
+    return accounts.length ? <Accordion type="single" collapsible className="space-y-3">{accounts.map(account => <AccordionItem key={account.id} value={account.id} className="border border-border rounded-lg bg-card px-4 sm:px-5">
+      <div className="flex items-center gap-3"><AccordionTrigger className="min-w-0 flex-1 text-left hover:no-underline"><span className="flex items-center gap-3 min-w-0"><Instagram className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0"><span className="block font-semibold break-all">@{account.profile.username}</span><span className="block text-xs text-muted-foreground font-normal break-words">{account.profile.fullName || account.profile.username}{account.isHistorical ? ' · Histórico' : ''}</span></span></span></AccordionTrigger><Button variant="ghost" size="icon" title={`Estratégias de @${account.profile.username}`} aria-label={`Estratégias de @${account.profile.username}`} onClick={() => openStrategy(account)}><Bot className="h-5 w-5 text-primary" /></Button></div>
+      <AccordionContent><AccountGrowth account={account} metrics={metrics[account.profile.username]} /></AccordionContent>
+    </AccordionItem>)}</Accordion> : <p className="text-muted-foreground py-8 text-center">Nenhuma conta cadastrada.</p>;
+  }
+  if (loading) return <div className="dash-member min-h-screen bg-background text-foreground flex items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-primary" aria-label="Carregando contas" /></div>;
+  return <div className="instagram-workspace dash-member min-h-screen bg-background text-foreground">
+    <header className="border-b border-border"><div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 flex flex-wrap items-center justify-between gap-4"><Logo size="sm" /><div className="flex flex-wrap gap-2"><Button variant="ghost" onClick={() => view === 'home' ? navigate('/dashboard') : setView('home')}><ArrowLeft className="h-4 w-4 mr-2" />{view === 'home' ? 'Dashboard' : 'Voltar ao início'}</Button><Button onClick={() => navigate('/mro-ferramenta')} className="font-semibold"><Play className="h-4 w-4 mr-2" />Acessar tutoriais</Button></div></div></header>
+    <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
+      <div><p className="text-primary text-xs font-semibold uppercase mb-2">Ferramenta MRO</p><h1 className="text-2xl sm:text-3xl font-bold">{view === 'home' ? 'Seu Instagram na MRO' : view === 'register' ? 'Cadastrar Instagram' : `Estratégias · @${active?.profile.username ?? ''}`}</h1></div>
+      {view === 'home' && <div className="grid sm:grid-cols-2 gap-6 border-y border-border py-6"><div className="space-y-3"><span className="text-sm text-muted-foreground">Passo 1</span><h2 className="text-xl font-semibold">Cadastre a conta do Instagram</h2><Button variant="outline" onClick={() => setView('register')} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" />Cadastrar Instagram</Button></div><div className="space-y-3"><span className="text-sm text-muted-foreground">Passo 2</span><h2 className="text-xl font-semibold">Acesse os tutoriais</h2><Button onClick={() => navigate('/mro-ferramenta')} className="w-full sm:w-auto"><Play className="h-4 w-4 mr-2" />Acessar tutoriais</Button></div></div>}
+      {view !== 'strategy' && <section className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Contas cadastradas <span className="text-muted-foreground">({accounts.length})</span></h2><Button variant="ghost" size="sm" onClick={() => { void refreshMetrics(); }}><RefreshCw className="h-4 w-4 mr-2" />Atualizar</Button></div>{metricsError && <p role="status" className="text-sm text-muted-foreground">{metricsError}</p>}{accountList()}</section>}
+      {view === 'register' && <form onSubmit={register} className="border-t border-border pt-8 space-y-5 max-w-2xl"><h2 className="text-lg font-semibold">Nova conta</h2>{!user?.email && <div className="space-y-2"><Label htmlFor="account-email">E-mail</Label><Input id="account-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>}<div className="space-y-2"><Label htmlFor="instagram-link">Link do Instagram ou @nome</Label><Input id="instagram-link" required maxLength={255} value={input} onChange={e => setInput(e.target.value)} placeholder="@seuinstagram" autoCapitalize="none" autoCorrect="off" /></div><div className="space-y-2"><Label htmlFor="instagram-name">Nome do Instagram</Label><Input id="instagram-name" required maxLength={100} value={name} onChange={e => setName(e.target.value)} placeholder="Nome do perfil" /></div><Button type="submit" disabled={busy} className="w-full sm:w-auto">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}Cadastrar</Button></form>}
+      {view === 'strategy' && active && <div className="space-y-6"><AccountGrowth account={active} metrics={metrics[active.profile.username]} /><div className="border-y border-border py-6 space-y-3"><Label htmlFor="business-description" className="text-lg font-semibold">Conte como funciona seu negócio e sua ideia inicial</Label><Textarea id="business-description" value={description} maxLength={4000} rows={6} onChange={e => setDescription(e.target.value)} placeholder="O que você vende, quem deseja alcançar e quais são seus objetivos?" /><Button disabled={busy} onClick={() => { void saveDescription(); }}><Save className="h-4 w-4 mr-2" />{busy ? 'Salvando…' : 'Salvar descrição'}</Button></div>{active.businessDescription && <StrategyGenerator profile={{ ...active.profile, bio: `${active.profile.bio}\nNegócio e objetivos: ${active.businessDescription}` }} analysis={active.analysis} profileId={active.id} existingStrategies={active.strategies} onStrategyGenerated={strategy => { setActiveProfile(active.id); addStrategy(strategy); readAccounts(); void persist().then(saved => { if (!saved) toast({ title: 'Estratégia criada, mas não sincronizada', description: 'Tente salvar novamente.', variant: 'destructive' }); }); }} />}{active.strategies.map(strategy => <StrategyDisplay key={strategy.id} strategy={strategy} />)}<Button variant="outline" onClick={() => { localStorage.setItem('mro_force_dashboard', 'true'); setActiveProfile(active.id); navigate('/instagram/painel'); }}><ArrowRight className="h-4 w-4 mr-2" />Abrir painel completo</Button></div>}
+    </main>
+    <Dialog open={registeredMore} onOpenChange={setRegisteredMore}><DialogContent className="dash-member bg-background text-foreground rounded-lg max-w-md"><DialogHeader><DialogTitle>Conta cadastrada!</DialogTitle><DialogDescription>Deseja cadastrar mais uma conta agora?</DialogDescription></DialogHeader><div className="flex flex-col sm:flex-row gap-3"><Button variant="outline" className="flex-1" onClick={() => setRegisteredMore(false)}>Sim</Button><Button className="flex-1" onClick={() => { setRegisteredMore(false); navigate('/mro-ferramenta'); }}>Por enquanto não</Button></div></DialogContent></Dialog>
+  </div>;
+}
