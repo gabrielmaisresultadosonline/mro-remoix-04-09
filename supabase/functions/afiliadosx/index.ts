@@ -198,7 +198,7 @@ function welcomeEmailHtml(name: string, affiliateId: string, email: string) {
           <a href="${linkDash}" style="display:inline-block;background:#fbbf24;color:#000;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:900;text-transform:uppercase;font-size:13px;letter-spacing:1px;">Acessar Dashboard</a>
         </p>
         <p style="margin:12px 0 0;font-size:13px;color:#a3a3a3;">
-          <strong style="color:#fbbf24;">Sua senha do dashboard é a mesma que você usa hoje no /instagram</strong> (usuário MRO SquareCloud). Basta digitá-la na tela de acesso do painel.
+          <strong style="color:#fbbf24;">Sua senha do dashboard é a mesma que você usa hoje na ferramenta MRO</strong> (usuário MRO SquareCloud). Basta digitá-la na tela de acesso do painel.
         </p>
       </div>
 

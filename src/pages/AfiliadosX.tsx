@@ -197,7 +197,7 @@ export default function AfiliadosX() {
             <CheckCircle2 className="w-16 h-16 mx-auto text-green-500 mb-4" />
             <h1 className="text-3xl font-black mb-2">Você é oficialmente afiliado(a) MRO 🎉</h1>
             <p className="text-zinc-400 text-sm">
-              Enviamos os links para <strong className="text-white">{created.email}</strong>. A senha do dashboard é a mesma do <strong className="text-yellow-500">/instagram</strong>.
+              Enviamos os links para <strong className="text-white">{created.email}</strong>. A senha do dashboard é a mesma da <strong className="text-yellow-500">ferramenta MRO</strong>.
             </p>
           </Card>
 
@@ -245,7 +245,7 @@ export default function AfiliadosX() {
           </Card>
 
           <Button variant="outline" asChild className="w-full border-zinc-700">
-            <Link to="/instagram">Voltar para /instagram</Link>
+            <Link to="/dashboard">Voltar para dashboard</Link>
           </Button>
         </div>
       </div>
