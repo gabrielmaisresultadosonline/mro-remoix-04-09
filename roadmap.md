@@ -2,7 +2,7 @@
 
 ## Posição ZAPMRO
 - [x] ZAPMRO liberado no final da grade; sem acesso, abaixo da propaganda
-- [ ] Validar as duas situações e preservar abertura/compra
+- [x] Validar as duas situações em desktop/mobile e preservar abertura da compra com respostas simuladas
 
 ## Dashboard e acesso afiliados
 - [x] Reutilizar sessão MRO ao voltar dos afiliados ao dashboard
