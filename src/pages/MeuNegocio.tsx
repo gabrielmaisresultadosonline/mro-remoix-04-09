@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser, getRegisteredIGs, isAuthenticated, addRegisteredIG, loadUserFromCloud, saveUserToCloud, syncIGsFromSquare, updateUserEmail } from '@/lib/userStorage';
 import { getSession, addProfile, setActiveProfile, addStrategy, saveSession, getArchivedProfiles, initializeFromCloud, setCloudSyncCallback, restoreProfileFromArchive } from '@/lib/storage';
 import { verifyRegisteredIGs, canRegisterIG, addIGToSquare } from '@/lib/squareApi';
-import { normalizeIG } from '@/lib/mroToolApi';
+import { normalizeInstagramUsername } from '@/types/user';
 import { getAffiliateCredentials } from '@/lib/affiliateSession';
 import { accountFollowerSummary, businessAnalysis, createAccountProfile, type AccountMetrics } from '@/lib/instagramAccountOverview';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,7 +51,6 @@ export default function MeuNegocioPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState('');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState(getCurrentUser()?.email ?? '');
   const [registeredMore, setRegisteredMore] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
@@ -114,8 +113,8 @@ export default function MeuNegocioPage() {
   async function register(event: React.FormEvent) {
     event.preventDefault();
     if (!user || busy) return;
-    const username = normalizeIG(input);
-    if (!/^[a-z0-9._]{1,30}$/.test(username) || !name.trim()) { toast({ title: 'Informe o Instagram e o nome do perfil', variant: 'destructive' }); return; }
+    const username = normalizeInstagramUsername(input);
+    if (!/^[a-z0-9._]{1,30}$/.test(username)) { toast({ title: 'Informe um link, @nome ou nome de usuário válido do Instagram', variant: 'destructive' }); return; }
     setBusy(true); writing.current = true;
     try {
       if (!user.email) {
@@ -130,9 +129,9 @@ export default function MeuNegocioPage() {
       }
       await addRegisteredIG(username, getCurrentUser()?.email ?? email, true);
       const existing = getSession().profiles.find(a => a.profile.username === username);
-      if (!existing && !restoreProfileFromArchive(username)) addProfile(createAccountProfile(username, name.trim()), businessAnalysis(''));
+      if (!existing && !restoreProfileFromArchive(username)) addProfile(createAccountProfile(username, username), businessAnalysis(''));
       if (!await persist()) throw new Error('A conta foi vinculada, mas falta salvar os dados. Tente novamente sem cadastrar outra conta.');
-      readAccounts(); setInput(''); setName(''); setRegisteredMore(true);
+      readAccounts(); setInput(''); setRegisteredMore(true);
     } catch (e) { toast({ title: 'Cadastro', description: e instanceof Error ? e.message : 'Tente novamente.', variant: 'destructive' }); }
     finally { setBusy(false); writing.current = false; void refreshMetrics(); }
   }
@@ -172,7 +171,7 @@ export default function MeuNegocioPage() {
     </main>
     <Dialog open={registrationOpen} onOpenChange={open => { if (!busy) setRegistrationOpen(open); }}><DialogContent className="dash-member bg-background text-foreground border-border rounded-lg w-[calc(100%-2rem)] max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-6" onEscapeKeyDown={event => { if (busy) event.preventDefault(); }} onPointerDownOutside={event => { if (busy) event.preventDefault(); }}>
       <DialogHeader><DialogTitle>{registeredMore ? 'Conta cadastrada!' : 'Cadastrar Instagram'}</DialogTitle><DialogDescription>{registeredMore ? 'Deseja cadastrar mais uma conta agora?' : 'Nova conta'}</DialogDescription></DialogHeader>
-      {registeredMore ? <div className="flex flex-col sm:flex-row gap-3"><Button variant="outline" className="flex-1" onClick={() => setRegisteredMore(false)}>Sim</Button><Button className="flex-1" onClick={() => { setRegistrationOpen(false); setRegisteredMore(false); navigate('/mro-ferramenta'); }}>Por enquanto não</Button></div> : <form onSubmit={register} className="space-y-5">{!user?.email && <div className="space-y-2"><Label htmlFor="account-email">E-mail</Label><Input id="account-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>}<div className="space-y-2"><Label htmlFor="instagram-link">Link do Instagram ou @nome</Label><Input id="instagram-link" required maxLength={255} value={input} onChange={e => setInput(e.target.value)} placeholder="@seuinstagram" autoCapitalize="none" autoCorrect="off" /></div><div className="space-y-2"><Label htmlFor="instagram-name">Nome do Instagram</Label><Input id="instagram-name" required maxLength={100} value={name} onChange={e => setName(e.target.value)} placeholder="Nome do perfil" /></div><Button type="submit" disabled={busy} className="w-full sm:w-auto">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}Cadastrar</Button></form>}
+      {registeredMore ? <div className="flex flex-col sm:flex-row gap-3"><Button variant="outline" className="flex-1" onClick={() => setRegisteredMore(false)}>Sim</Button><Button className="flex-1" onClick={() => { setRegistrationOpen(false); setRegisteredMore(false); navigate('/mro-ferramenta'); }}>Por enquanto não</Button></div> : <form onSubmit={register} className="space-y-5">{!user?.email && <div className="space-y-2"><Label htmlFor="account-email">E-mail</Label><Input id="account-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>}<div className="space-y-2"><Label htmlFor="instagram-link">Cadastre a conta do Instagram que vai utilizar para o crescimento</Label><Input id="instagram-link" required maxLength={255} value={input} onChange={e => setInput(e.target.value)} placeholder="Link, @nome ou nome do Instagram" autoCapitalize="none" autoCorrect="off" /></div><Button type="submit" disabled={busy} className="w-full sm:w-auto">{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}Cadastrar</Button></form>}
     </DialogContent></Dialog>
   </div>;
 }
