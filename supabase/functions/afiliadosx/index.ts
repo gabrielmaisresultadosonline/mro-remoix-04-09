@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { sanitizeEmailSubject, htmlToPlainText } from "../_shared/email-encode.ts";
+import { isAdminRequest } from "../_shared/require-admin.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 // Self-service affiliate registration.
@@ -12,7 +13,7 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-token",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -23,8 +24,8 @@ const json = (body: unknown, status = 200) =>
   });
 
 const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  Deno.env.get("SUPABASE_URL") ?? "",
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
 );
 
 // -------------------------------------------------------------
@@ -164,7 +165,7 @@ function welcomeEmailHtml(name: string, affiliateId: string, email: string) {
   const base = "https://maisresultadosonline.com.br";
   const linkPromo = `${base}/promo/${affiliateId}`;
   const linkRenda = `${base}/promorendaextra/${affiliateId}`;
-  const linkDash  = `${base}/resumo/${affiliateId}`;
+  const linkDash  = `${base}/afiliadosx`;
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,Helvetica,sans-serif;color:#fff;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:24px 0;">
@@ -198,7 +199,7 @@ function welcomeEmailHtml(name: string, affiliateId: string, email: string) {
           <a href="${linkDash}" style="display:inline-block;background:#fbbf24;color:#000;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:900;text-transform:uppercase;font-size:13px;letter-spacing:1px;">Acessar Dashboard</a>
         </p>
         <p style="margin:12px 0 0;font-size:13px;color:#a3a3a3;">
-          <strong style="color:#fbbf24;">Sua senha do dashboard é a mesma que você usa hoje na ferramenta MRO</strong> (usuário MRO SquareCloud). Basta digitá-la na tela de acesso do painel.
+          <strong style="color:#fbbf24;">Abra o resumo dentro da área de afiliados com seu acesso da ferramenta MRO, sem confirmar a senha novamente.</strong>
         </p>
       </div>
 
@@ -232,6 +233,7 @@ async function actionRegister(body: any) {
   if (!first) return json({ success: false, error: "Informe seu nome" }, 400);
   if (!email.includes("@")) return json({ success: false, error: "Email inválido" }, 400);
   if (!scUsername) return json({ success: false, error: "Informe seu usuário MRO" }, 400);
+  if (cleanSlug(desiredId).length < 3) return json({ success: false, error: "Identificador obrigatório: mínimo 3 letras/números" }, 400);
   if (!scPassword || scPassword.length < 3) return json({ success: false, error: "Senha inválida" }, 400);
 
   // 1. Gate: must be an active MRO Instagram client
@@ -289,6 +291,12 @@ async function actionRegister(body: any) {
     return json({ success: false, error: "Erro ao salvar cadastro" }, 500);
   }
 
+  const pixKey = String(body.pix_key || "").trim();
+  if (pixKey && pixKey.length <= 255) {
+    const { error } = await supabase.from("affiliate_pix").upsert({ affiliate_id: affiliateId, owner_username: scUsername, pix_key: pixKey });
+    if (error) console.error("[afiliadosx] Pix não salvo", error.message);
+  }
+
   // 5. Configure dashboard password = SquareCloud password (user request)
   try {
     await setResumoPassword(affiliateId, scPassword);
@@ -323,6 +331,8 @@ async function actionRegister(body: any) {
 async function actionLookup(body: any) {
   const scUsername = String(body.squarecloud_username || "").trim().toLowerCase();
   if (!scUsername) return json({ success: false, error: "Usuário obrigatório" }, 400);
+  const validation = await validateSquareCloud(scUsername, String(body.password || ""));
+  if (!validation.ok) return json({ success: false, error: validation.error }, 401);
 
   let affiliates: Affiliate[] = [];
   try {
@@ -337,11 +347,14 @@ async function actionLookup(body: any) {
   );
 
   if (!match) return json({ success: true, affiliate: null });
+  if (!match.active) return json({ success: false, error: "Cadastro de afiliado inativo" }, 403);
+  const { data: pix } = await supabase.from("affiliate_pix").select("pix_key").eq("affiliate_id", match.id).maybeSingle();
 
   return json({
     success: true,
     affiliate: {
       id: match.id,
+      pixKey: pix?.pix_key || "",
       name: match.name,
       email: match.email,
       photoUrl: match.photoUrl || "",
@@ -359,6 +372,25 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "");
+    if (action === "admin_list") {
+      if (!await isAdminRequest(req, body)) return json({ success: false, error: "Acesso administrativo obrigatório" }, 401);
+      const affiliates = await loadAffiliates();
+      const { data: pix, error } = await supabase.from("affiliate_pix").select("affiliate_id,pix_key,updated_at");
+      if (error) throw error;
+      return json({ success: true, affiliates: affiliates.map(a => ({ ...a, pixKey: pix?.find(p => p.affiliate_id === a.id)?.pix_key || "", pixUpdatedAt: pix?.find(p => p.affiliate_id === a.id)?.updated_at })) });
+    }
+    if (action === "save_pix") {
+      const username = String(body.squarecloud_username || "").trim().toLowerCase();
+      const validation = await validateSquareCloud(username, String(body.password || ""));
+      if (!validation.ok) return json({ success: false, error: validation.error }, 401);
+      const affiliate = (await loadAffiliates()).find(a => a.active && a.squarecloudUsername?.toLowerCase() === username);
+      if (!affiliate) return json({ success: false, error: "Afiliado não encontrado" }, 403);
+      const key = String(body.pix_key || "").trim();
+      if (!key || key.length > 255) return json({ success: false, error: "Informe uma chave Pix válida (até 255 caracteres)" }, 400);
+      const { error } = await supabase.from("affiliate_pix").upsert({ affiliate_id: affiliate.id, owner_username: username, pix_key: key, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      return json({ success: true, pixKey: key });
+    }
     if (action === "register") return await actionRegister(body);
     if (action === "lookup") return await actionLookup(body);
     return json({ success: false, error: "Ação inválida" }, 400);
