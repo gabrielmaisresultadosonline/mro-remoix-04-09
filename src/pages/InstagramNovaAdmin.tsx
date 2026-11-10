@@ -2135,6 +2135,7 @@ ${notPaidAttempts > 0 ? `🎯 Você tem ${notPaidAttempts} vendas para recuperar
     
     await supabase.functions.invoke("affiliate-resumo-storage", {
       body: {
+          admin_token: getAdminSessionToken(),
         action: "save",
         affiliateId: affiliate.id,
         resumoData: resumoData
@@ -2376,6 +2377,7 @@ ${notPaidAttempts > 0 ? `🎯 Você tem ${notPaidAttempts} vendas para recuperar
     try {
       const { data, error } = await supabase.functions.invoke("affiliate-resumo-storage", {
         body: {
+          admin_token: getAdminSessionToken(),
           action: "set-password",
           affiliateId: affId,
           password
@@ -2401,6 +2403,7 @@ ${notPaidAttempts > 0 ? `🎯 Você tem ${notPaidAttempts} vendas para recuperar
     try {
       const { data, error } = await supabase.functions.invoke("affiliate-resumo-storage", {
         body: {
+          admin_token: getAdminSessionToken(),
           action: "get-config",
           affiliateId: affId
         }
@@ -2451,7 +2454,8 @@ Acesse seu resumo aqui: ${window.location.origin}/resumo/${affId.toLowerCase()}`
       if (!resumoPassword) {
         try {
           const { data: pwdData } = await supabase.functions.invoke("affiliate-resumo-storage", {
-            body: { action: "get-config", affiliateId: affiliate.id }
+            body: {
+          admin_token: getAdminSessionToken(), action: "get-config", affiliateId: affiliate.id }
           });
           if (pwdData?.password) {
             resumoPassword = pwdData.password;

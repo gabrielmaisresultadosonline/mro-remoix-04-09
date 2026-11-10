@@ -50,6 +50,10 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    if (["get-config", "set-password", "save"].includes(action) && !await isAdminRequest(req, body)) {
+      return new Response(JSON.stringify({ success: false, error: "Acesso administrativo obrigatório" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (["get", "get-realtime"].includes(action) && body.squarecloud_username) {
       const username = String(body.squarecloud_username).trim().toLowerCase();
       const { data: login } = await supabase.functions.invoke("mro-tool-api", { body: { action: "login", username, password } });
