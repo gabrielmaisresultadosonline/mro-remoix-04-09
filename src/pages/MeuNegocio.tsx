@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Bot, Instagram, Loader2, Play, Plus, RefreshCw, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Instagram, Loader2, Play, Plus, RefreshCw, Save, Search, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,13 +10,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Logo } from '@/components/Logo';
 import { StrategyGenerator } from '@/components/StrategyGenerator';
 import { StrategyDisplay } from '@/components/StrategyDisplay';
+import { InstagramGrowthOverview } from '@/components/InstagramGrowthOverview';
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser, getRegisteredIGs, isAuthenticated, addRegisteredIG, loadUserFromCloud, saveUserToCloud, syncIGsFromSquare, updateUserEmail } from '@/lib/userStorage';
 import { getSession, addProfile, setActiveProfile, addStrategy, saveSession, getArchivedProfiles, initializeFromCloud, setCloudSyncCallback, restoreProfileFromArchive } from '@/lib/storage';
 import { verifyRegisteredIGs, canRegisterIG, addIGToSquare } from '@/lib/squareApi';
 import { normalizeInstagramUsername } from '@/types/user';
 import { getAffiliateCredentials } from '@/lib/affiliateSession';
-import { accountFollowerSummary, businessAnalysis, createAccountProfile, type AccountMetrics } from '@/lib/instagramAccountOverview';
+import { accountFollowerSummary, businessAnalysis, createAccountProfile, filterInstagramAccounts, type AccountMetrics } from '@/lib/instagramAccountOverview';
 import { supabase } from '@/integrations/supabase/client';
 import type { ProfileSession } from '@/types/instagram';
 
@@ -44,7 +45,8 @@ function AccountGrowth({ account, metrics }: { account: ProfileSession; metrics?
 export default function MeuNegocioPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [view, setView] = useState<'home' | 'strategy'>('home');
+  const [view, setView] = useState<'home' | 'strategy' | 'growth'>('home');
+  const [accountQuery, setAccountQuery] = useState('');
   const [accounts, setAccounts] = useState<ProfileSession[]>([]);
   const [metrics, setMetrics] = useState<Record<string, AccountMetrics>>({});
   const [metricsError, setMetricsError] = useState('');
@@ -60,6 +62,7 @@ export default function MeuNegocioPage() {
   const writing = useRef(false);
   const user = getCurrentUser();
   const active = accounts.find(a => a.id === selected);
+  const filteredAccounts = filterInstagramAccounts(accounts, accountQuery);
 
   function readAccounts() { setAccounts(getSession().profiles); }
   async function persist() {
@@ -154,18 +157,19 @@ export default function MeuNegocioPage() {
     finally { setBusy(false); writing.current = false; }
   }
   function accountList() {
-    return accounts.length ? <Accordion type="single" collapsible className="space-y-3">{accounts.map(account => <AccordionItem key={account.id} value={account.id} className="border border-border rounded-lg bg-card px-4 sm:px-5">
+    return filteredAccounts.length ? <Accordion type="single" collapsible className="space-y-3">{filteredAccounts.map(account => <AccordionItem key={account.id} value={account.id} className="border border-border rounded-lg bg-card px-4 sm:px-5">
       <div className="flex items-center gap-3"><AccordionTrigger className="min-w-0 flex-1 text-left hover:no-underline"><span className="flex items-center gap-3 min-w-0"><Instagram className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0"><span className="block font-semibold break-all">@{account.profile.username}</span><span className="block text-xs text-muted-foreground font-normal break-words">{account.profile.fullName || account.profile.username}{account.isHistorical ? ' · Histórico' : ''}</span></span></span></AccordionTrigger><Button variant="ghost" size="icon" title={`Estratégias de @${account.profile.username}`} aria-label={`Estratégias de @${account.profile.username}`} onClick={() => openStrategy(account)}><Bot className="h-5 w-5 text-primary" /></Button></div>
       <AccordionContent><AccountGrowth account={account} metrics={metrics[account.profile.username]} /></AccordionContent>
-    </AccordionItem>)}</Accordion> : <p className="text-muted-foreground py-8 text-center">Nenhuma conta cadastrada.</p>;
+    </AccordionItem>)}</Accordion> : <p className="text-muted-foreground py-8 text-center">{accounts.length ? 'Nenhuma conta encontrada.' : 'Nenhuma conta cadastrada.'}</p>;
   }
   if (loading) return <div className="dash-member min-h-screen bg-background text-foreground flex items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-primary" aria-label="Carregando contas" /></div>;
   return <div className="instagram-workspace dash-member min-h-screen bg-background text-foreground">
     <header className="border-b border-border"><div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 flex flex-wrap items-center justify-between gap-4"><Logo size="sm" /><div className="flex flex-wrap gap-2"><Button variant="ghost" onClick={() => view === 'home' ? navigate('/dashboard') : setView('home')}><ArrowLeft className="h-4 w-4 mr-2" />{view === 'home' ? 'Dashboard' : 'Voltar ao início'}</Button><Button onClick={() => navigate('/mro-ferramenta')} className="font-semibold"><Play className="h-4 w-4 mr-2" />Acessar tutoriais</Button></div></div></header>
     <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
-      <div><p className="text-primary text-xs font-semibold uppercase mb-2">Ferramenta MRO</p><h1 className="text-2xl sm:text-3xl font-bold">{view === 'home' ? 'Seu Instagram na MRO' : `Estratégias · @${active?.profile.username ?? ''}`}</h1></div>
+      <div><p className="text-primary text-xs font-semibold uppercase mb-2">Ferramenta MRO</p><h1 className="text-2xl sm:text-3xl font-bold">{view === 'home' ? 'Seu Instagram na MRO' : view === 'growth' ? 'Crescimentos' : `Estratégias · @${active?.profile.username ?? ''}`}</h1></div>
       {view === 'home' && <div className="grid sm:grid-cols-2 gap-6 border-y border-border py-6"><div className="space-y-3"><span className="text-sm text-muted-foreground">Passo 1</span><h2 className="text-xl font-semibold">Cadastre a conta do Instagram</h2><Button variant="outline" onClick={() => { setRegisteredMore(false); setRegistrationOpen(true); }} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" />Cadastrar Instagram</Button></div><div className="space-y-3"><span className="text-sm text-muted-foreground">Passo 2</span><h2 className="text-xl font-semibold">Acesse os tutoriais</h2><Button onClick={() => navigate('/mro-ferramenta')} className="w-full sm:w-auto"><Play className="h-4 w-4 mr-2" />Acessar tutoriais</Button></div></div>}
-      {view !== 'strategy' && <section className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Contas cadastradas <span className="text-muted-foreground">({accounts.length})</span></h2><Button variant="ghost" size="sm" onClick={() => { void refreshMetrics(); }}><RefreshCw className="h-4 w-4 mr-2" />Atualizar</Button></div>{metricsError && <p role="status" className="text-sm text-muted-foreground">{metricsError}</p>}{accountList()}</section>}
+      {view === 'home' && <section className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Contas cadastradas <span className="text-muted-foreground">({accounts.length})</span></h2><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setView('growth')}><BarChart3 className="h-4 w-4 mr-2" />Crescimentos</Button><Button variant="ghost" size="sm" onClick={() => { void refreshMetrics(); }}><RefreshCw className="h-4 w-4 mr-2" />Atualizar</Button></div></div><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input aria-label="Pesquisar contas cadastradas" placeholder="Pesquisar por nome ou @usuário" value={accountQuery} onChange={event => setAccountQuery(event.target.value)} className="pl-10" /></div>{metricsError && <p role="status" className="text-sm text-muted-foreground">{metricsError}</p>}{accountList()}</section>}
+      {view === 'growth' && <><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => navigate('/dashboard')}><ArrowLeft className="h-4 w-4 mr-2" />Voltar para dashboard</Button><Button variant="ghost" onClick={() => { void refreshMetrics(); }}><RefreshCw className="h-4 w-4 mr-2" />Atualizar</Button></div>{metricsError && <p role="status" className="text-sm text-muted-foreground">{metricsError}</p>}<InstagramGrowthOverview accounts={accounts} metrics={metrics} /></>}
 
       {view === 'strategy' && active && <div className="space-y-6"><AccountGrowth account={active} metrics={metrics[active.profile.username]} /><div className="border-y border-border py-6 space-y-3"><Label htmlFor="business-description" className="text-lg font-semibold">Conte como funciona seu negócio e sua ideia inicial</Label><Textarea id="business-description" value={description} maxLength={4000} rows={6} onChange={e => setDescription(e.target.value)} placeholder="O que você vende, quem deseja alcançar e quais são seus objetivos?" /><Button disabled={busy} onClick={() => { void saveDescription(); }}><Save className="h-4 w-4 mr-2" />{busy ? 'Salvando…' : 'Salvar descrição'}</Button></div>{active.businessDescription && <StrategyGenerator profile={{ ...active.profile, bio: `${active.profile.bio}\nNegócio e objetivos: ${active.businessDescription}` }} analysis={active.analysis} profileId={active.id} existingStrategies={active.strategies} onStrategyGenerated={strategy => { setActiveProfile(active.id); addStrategy(strategy); readAccounts(); void persist().then(saved => { if (!saved) toast({ title: 'Estratégia criada, mas não sincronizada', description: 'Tente salvar novamente.', variant: 'destructive' }); }); }} />}{active.strategies.map(strategy => <StrategyDisplay key={strategy.id} strategy={strategy} />)}<Button variant="outline" onClick={() => { navigate('/dashboard'); }}><ArrowRight className="h-4 w-4 mr-2" />Acessar dashboard</Button></div>}
     </main>

@@ -542,7 +542,7 @@ async function userMetrics(body: Body) {
   if (!keys.length) return [200, { success: true, profiles: [] }] as const;
   const [baselines, sessions, metrics] = await Promise.all([
     loadBaselines(keys),
-    adminQuery<Row>(`SELECT instagram_username, followers_current, welcome_total, last_seen_at
+    adminQuery<Row>(`SELECT instagram_username, followers_current, welcome_total, last_seen_at, metrics_updated_at
       FROM public.ig_online_sessions WHERE lower(instagram_username) = ANY($1::text[])`, [keys]),
     adminQuery<Row>(`SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_end, welcome_sent
       FROM public.ig_online_metrics WHERE lower(instagram_username) = ANY($1::text[])
@@ -558,6 +558,7 @@ async function userMetrics(body: Body) {
       current_followers: baseline?.current_followers ?? numOrNull(s?.followers_current),
       welcome_total: Number(s?.welcome_total ?? 0),
       last_seen_at: iso(s?.last_seen_at),
+      metrics_updated_at: baseline?.current_updated_at ?? iso(s?.metrics_updated_at),
       online: Boolean(s?.last_seen_at && Date.now() - new Date(String(s.last_seen_at)).getTime() < ONLINE_WINDOW_MS),
       metrics: metrics.filter((m) => normalizeIG(m.instagram_username) === ig).map((m) => ({
         day: m.day, followers_end: numOrNull(m.followers_end), welcome_sent: Number(m.welcome_sent ?? 0),
