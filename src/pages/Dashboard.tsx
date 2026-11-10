@@ -683,6 +683,113 @@ export default function Dashboard() {
     }
   };
 
+  const renderProductCard = (product: HubProduct) => (
+              <Card
+                key={product.id}
+                className={cn(
+                  "overflow-hidden transition-all duration-300",
+                  product.status === 'construction' ? "opacity-75 grayscale-[0.3]" : "cursor-pointer hover:shadow-lg"
+                )}
+                onClick={() => handleCardClick(product)}
+              >
+                <div className="relative aspect-video bg-muted">
+                  {isPropagandaMroProduct(product) && (
+                    <div className="shimmer-reflection absolute bottom-0 left-0 right-0 z-20 overflow-hidden bg-[#facc15] py-1 text-center shadow-md">
+                      <span className="relative z-10 text-[10px] font-black uppercase tracking-widest text-black">
+                        {PROPAGANDA_MRO_LABEL}
+                      </span>
+                    </div>
+                  )}
+                  {product.is_pinned && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none px-2 py-0.5 shadow-lg font-black text-[10px] uppercase tracking-tighter">
+                        FIXADO
+                      </Badge>
+                    </div>
+                  )}
+                  {product.new_until && new Date(product.new_until) > new Date() && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <Badge className="bg-[#facc15] hover:bg-[#eab308] text-black border-none px-2 py-0.5 shadow-lg font-black text-[10px] uppercase tracking-tighter animate-pulse">
+                        NOVO
+                      </Badge>
+                    </div>
+                  )}
+                  {product.badge_text && (
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+                      <Badge className="bg-yellow-400 hover:bg-yellow-500 text-black border-none px-2 py-0.5 shadow-lg font-black text-[10px] uppercase tracking-tighter">
+                        {product.badge_text}
+                      </Badge>
+                    </div>
+                  )}
+                  {product.thumb_url ? (
+                    <img src={product.thumb_url} alt={product.title} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <Package className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                  )}
+
+                  {!product.unlocked && product.status !== 'construction' && !product.is_redirect_only && (
+                    <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
+                      <Lock className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  {product.status === 'construction' && (
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
+                      <div className="text-center p-4">
+                        <Settings className="h-8 w-8 text-white mx-auto mb-2 animate-spin-slow" />
+                        <p className="text-white font-black text-xs uppercase tracking-tighter">Em Construção</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <CardContent className="pt-4 space-y-2">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <h2 className="font-semibold text-foreground">{product.title}</h2>
+                    {isPropagandaMroProduct(product) ? (
+                      <Badge className="shimmer-reflection relative shrink-0 overflow-hidden bg-[#facc15] text-black hover:bg-[#eab308] border-none px-2 py-0.5 font-black text-[10px] uppercase tracking-tighter">
+                        <span className="relative z-10">{PROPAGANDA_MRO_LABEL}</span>
+                      </Badge>
+                    ) : (
+                      <Badge variant={product.status === 'construction' ? "destructive" : (product.unlocked ? "default" : "secondary")}>
+                        {product.status === 'construction' ? "Em Construção" : (product.unlocked ? "Liberado" : "Bloqueado")}
+                      </Badge>
+                    )}
+                  </div>
+                  {product.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
+                  )}
+                  <Button
+                    className="w-full mt-2"
+                    variant={product.status === 'construction' ? "outline" : (product.unlocked || product.is_redirect_only ? "default" : "secondary")}
+                    disabled={opening === product.id || product.status === 'construction'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (product.is_redirect_only) {
+                        if (product.sales_page_url) window.open(product.sales_page_url as string, "_blank");
+                      } else if (product.unlocked) {
+                        openProduct(product);
+                      } else {
+                        handleCardClick(product);
+                      }
+                    }}
+                  >
+                    {opening === product.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : product.status === 'construction' ? (
+                      "Em breve"
+                    ) : product.is_redirect_only ? (
+                      <><ArrowRight className="h-4 w-4" /> Acessar Agora</>
+                    ) : product.unlocked ? (
+                      <><ArrowRight className="h-4 w-4" /> Acessar</>
+                    ) : (
+                      <><Lock className="h-4 w-4" /> Desbloquear</>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+  );
+
   const greeting = useMemo(() => session?.name || session?.username || session?.email || "", [session]);
   const productSections = separateDashboardProducts(products);
 
@@ -853,112 +960,7 @@ export default function Dashboard() {
         ) : (
           <>
           <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-3">
-            {productSections.products.map((product) => (
-              <Card
-                key={product.id}
-                className={cn(
-                  "overflow-hidden transition-all duration-300",
-                  product.status === 'construction' ? "opacity-75 grayscale-[0.3]" : "cursor-pointer hover:shadow-lg"
-                )}
-                onClick={() => handleCardClick(product)}
-              >
-                <div className="relative aspect-video bg-muted">
-                  {isPropagandaMroProduct(product) && (
-                    <div className="shimmer-reflection absolute bottom-0 left-0 right-0 z-20 overflow-hidden bg-[#facc15] py-1 text-center shadow-md">
-                      <span className="relative z-10 text-[10px] font-black uppercase tracking-widest text-black">
-                        {PROPAGANDA_MRO_LABEL}
-                      </span>
-                    </div>
-                  )}
-                  {product.is_pinned && (
-                    <div className="absolute top-2 left-2 z-10">
-                      <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none px-2 py-0.5 shadow-lg font-black text-[10px] uppercase tracking-tighter">
-                        FIXADO
-                      </Badge>
-                    </div>
-                  )}
-                  {product.new_until && new Date(product.new_until) > new Date() && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <Badge className="bg-[#facc15] hover:bg-[#eab308] text-black border-none px-2 py-0.5 shadow-lg font-black text-[10px] uppercase tracking-tighter animate-pulse">
-                        NOVO
-                      </Badge>
-                    </div>
-                  )}
-                  {product.badge_text && (
-                    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
-                      <Badge className="bg-yellow-400 hover:bg-yellow-500 text-black border-none px-2 py-0.5 shadow-lg font-black text-[10px] uppercase tracking-tighter">
-                        {product.badge_text}
-                      </Badge>
-                    </div>
-                  )}
-                  {product.thumb_url ? (
-                    <img src={product.thumb_url} alt={product.title} className="h-full w-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center">
-                      <Package className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                  )}
-
-                  {!product.unlocked && product.status !== 'construction' && !product.is_redirect_only && (
-                    <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
-                      <Lock className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
-                  {product.status === 'construction' && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
-                      <div className="text-center p-4">
-                        <Settings className="h-8 w-8 text-white mx-auto mb-2 animate-spin-slow" />
-                        <p className="text-white font-black text-xs uppercase tracking-tighter">Em Construção</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <CardContent className="pt-4 space-y-2">
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                    <h2 className="font-semibold text-foreground">{product.title}</h2>
-                    {isPropagandaMroProduct(product) ? (
-                      <Badge className="shimmer-reflection relative shrink-0 overflow-hidden bg-[#facc15] text-black hover:bg-[#eab308] border-none px-2 py-0.5 font-black text-[10px] uppercase tracking-tighter">
-                        <span className="relative z-10">{PROPAGANDA_MRO_LABEL}</span>
-                      </Badge>
-                    ) : (
-                      <Badge variant={product.status === 'construction' ? "destructive" : (product.unlocked ? "default" : "secondary")}>
-                        {product.status === 'construction' ? "Em Construção" : (product.unlocked ? "Liberado" : "Bloqueado")}
-                      </Badge>
-                    )}
-                  </div>
-                  {product.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
-                  )}
-                  <Button
-                    className="w-full mt-2"
-                    variant={product.status === 'construction' ? "outline" : (product.unlocked || product.is_redirect_only ? "default" : "secondary")}
-                    disabled={opening === product.id || product.status === 'construction'}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (product.is_redirect_only) {
-                        if (product.sales_page_url) window.open(product.sales_page_url as string, "_blank");
-                      } else if (product.unlocked) {
-                        openProduct(product);
-                      } else {
-                        handleCardClick(product);
-                      }
-                    }}
-                  >
-                    {opening === product.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : product.status === 'construction' ? (
-                      "Em breve"
-                    ) : product.is_redirect_only ? (
-                      <><ArrowRight className="h-4 w-4" /> Acessar Agora</>
-                    ) : product.unlocked ? (
-                      <><ArrowRight className="h-4 w-4" /> Acessar</>
-                    ) : (
-                      <><Lock className="h-4 w-4" /> Desbloquear</>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {productSections.products.map(renderProductCard)}
           </div>
           {productSections.advertising.length > 0 && (
             <section aria-label="Propaganda MRO" className="mt-14 border-t border-border pt-8 space-y-5">
@@ -976,6 +978,13 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
+            </section>
+          )}
+          {productSections.lockedExtensions.length > 0 && (
+            <section aria-label="Extensão WhatsApp sem acesso" className="mt-10 border-t border-border pt-8">
+              <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-3">
+                {productSections.lockedExtensions.map(renderProductCard)}
+              </div>
             </section>
           )}
           </>
