@@ -12,6 +12,7 @@ export interface DashboardProductLike {
   slug?: string | null;
   title?: string | null;
   access_source?: string | null;
+  unlocked?: boolean;
 }
 
 /** Tira acentos, caixa alta e troca "-", "_" por espaço: "API-Oficial" vira "api oficial". */
@@ -28,8 +29,16 @@ export function isPropagandaMroProduct(p: DashboardProductLike): boolean {
 }
 
 export function separateDashboardProducts<T extends DashboardProductLike>(products: T[]) {
+  const normal = products.filter(product => !isPropagandaMroProduct(product) && !isZapmroExtension(product));
+  const extensions = products.filter(isZapmroExtension);
   return {
-    products: products.filter(product => !isPropagandaMroProduct(product)),
+    products: [...normal, ...extensions.filter(product => product.unlocked)],
     advertising: products.filter(isPropagandaMroProduct),
+    lockedExtensions: extensions.filter(product => !product.unlocked),
   };
+}
+
+export function isZapmroExtension(product: DashboardProductLike): boolean {
+  if (isPropagandaMroProduct(product)) return false;
+  return normalize(`${product.slug || ""} ${product.title || ""}`).includes("zapmro") || product.access_source === "zapmro";
 }
