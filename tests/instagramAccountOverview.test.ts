@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'bun:test';
 import { accountFollowerSummary, businessAnalysis, createAccountProfile } from '../src/lib/instagramAccountOverview';
 import type { ProfileSession } from '../src/types/instagram';
+import { normalizeInstagramUsername } from '../src/types/user';
 
 const saved = { profile: { ...createAccountProfile('loja', 'Loja'), dataSource: 'screenshot', followers: 120 }, initialSnapshot: { followers: 100 } } as ProfileSession;
 describe('Instagram sem novos prints', () => {
+  it('cadastra pelo link e salva somente o usuário sem @', () => {
+    expect(normalizeInstagramUsername('https://www.instagram.com/Minha.Loja/?igsh=abc')).toBe('minha.loja');
+  });
+  it('cadastra pelo @nome sem manter o @', () => {
+    expect(normalizeInstagramUsername('@Minha.Loja')).toBe('minha.loja');
+  });
+  it('cadastra pelo nome de usuário sozinho', () => {
+    expect(normalizeInstagramUsername('Minha.Loja')).toBe('minha.loja');
+  });
   it('preserva seguidores iniciais lidos do print e aguarda dados atuais', () => {
     expect(accountFollowerSummary(saved)).toEqual({ initial: 100, current: null, growth: null });
   });
