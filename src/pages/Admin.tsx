@@ -29,6 +29,7 @@ import PartnersPanel from '@/components/admin/PartnersPanel';
 import ZapmroFeesPanel from '@/components/admin/ZapmroFeesPanel';
 import ZapmroToolPanel from '@/components/admin/ZapmroToolPanel';
 import HubProductsPanel from '@/components/admin/HubProductsPanel';
+import AffiliatesPixPanel from '@/components/admin/AffiliatesPixPanel';
 import MergeLogsPanel from '@/components/admin/MergeLogsPanel';
 
 import MroToolPanel from '@/components/admin/MroToolPanel';
@@ -75,7 +76,7 @@ import { storageAssetUrl } from '@/lib/assetUrl';
 
 const PostsComIAAdmin = lazy(() => import('@/pages/PostsComIAAdmin'));
 
-type Tab = 'users' | 'calls' | 'tutorials' | 'zapmro' | 'zapmro_taxas' | 'estrutura' | 'tickets' | 'announcements' | 'pixel' | 'settings' | 'userlist' | 'whatsapp' | 'partners' | 'hub' | 'postscomia' | 'merges' | 'lovablack' | 'renddx_leads' | 'lotargrupos' | 'dump' | 'migracao' | 'tokens' | 'whitelabel' | 'igonlines';
+type Tab = 'users' | 'calls' | 'tutorials' | 'zapmro' | 'zapmro_taxas' | 'estrutura' | 'tickets' | 'announcements' | 'pixel' | 'settings' | 'userlist' | 'whatsapp' | 'partners' | 'hub' | 'postscomia' | 'merges' | 'lovablack' | 'renddx_leads' | 'lotargrupos' | 'dump' | 'migracao' | 'tokens' | 'whitelabel' | 'igonlines' | 'affiliates';
 type UserFilter = 'all' | 'instagram' | 'connected';
 
 const Admin = () => {
@@ -227,6 +228,7 @@ const Admin = () => {
   const tabs = [
     { id: 'users', label: 'Usuários', icon: <Users className="w-4 h-4" /> },
     { id: 'hub', label: 'Dashboard Produtos', icon: <Package className="w-4 h-4" /> },
+    { id: 'affiliates', label: 'Afiliados', icon: <UserPlus className="w-4 h-4" /> },
     { id: 'postscomia', label: 'Admin Posts com IA', icon: <Package className="w-4 h-4" /> },
     { id: 'merges', label: 'Unificações', icon: <ShieldCheck className="w-4 h-4" /> },
 
@@ -982,6 +984,7 @@ const Admin = () => {
 
         {/* Dashboard Produtos Tab */}
         {activeTab === 'hub' && <HubProductsPanel />}
+        {activeTab === 'affiliates' && <AffiliatesPixPanel />}
         {/* Unificações de Acesso (logs + desfazer) */}
         {activeTab === 'merges' && <MergeLogsPanel />}
 
