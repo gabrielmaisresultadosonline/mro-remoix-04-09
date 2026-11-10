@@ -2,6 +2,8 @@
 
 - Affiliate self-service reuses connected MRO credentials validated server-side for ownership, stores Pix separately in private VPS PostgreSQL rows and embeds the existing summary view, because no repeated password prompt or public affiliate file may expose payout details.
 
+- Dashboard presentation partitions official WhatsApp advertising from the product grid and reuses connected MRO credentials for return navigation, because advertising must remain distinct without changing entitlements or asking for another login.
+
 - Cadastro Rend uses its own PostgreSQL-backed admin Pixel settings and reports only successful group-link release through a scoped browser Pixel with regional blocking and opt-out checks; privacy and withdrawal share an in-page dialog with legacy deep-link support, because the quiz must preserve progress without removing disclosures or sharing customer identifiers.
 
 - MRO training themes share the existing module data and welcome settings, with scoped styling and a browser-only layout preference, because presentation changes must not fork tutorials or authentication.

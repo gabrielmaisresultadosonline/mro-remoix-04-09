@@ -1,5 +1,11 @@
 # Roadmap
 
+## Dashboard e acesso afiliados
+- [x] Reutilizar sessão MRO ao voltar dos afiliados ao dashboard
+- [x] Adicionar botão Seja um afiliado MRO
+- [x] Separar propaganda API Oficial abaixo dos produtos e aplicar fundo preto do login
+- [x] Conferir navegação e apresentação desktop/mobile com respostas simuladas; validação real na VPS depende da atualização
+
 ## AfiliadosX: sessão, Pix e resumo
 - [x] Reutilizar o acesso conectado sem pedir confirmação de senha
 - [x] Implementar salvamento privado da chave Pix no PostgreSQL e lista no /admin → Afiliados

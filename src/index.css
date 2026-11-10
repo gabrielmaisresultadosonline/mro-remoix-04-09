@@ -773,11 +773,16 @@
 @media (prefers-reduced-motion: reduce) { .mro-training-theme * { transition: none !important; animation: none !important; } }
 
 /* ===== /dashboard login: halftone + luz radial em loop ===== */
-.dash-login {
+.dash-login, .dash-member {
   --background: 0 0% 2%;
   --foreground: 0 0% 98%;
   --card: 0 0% 7%;
   --card-foreground: 0 0% 98%;
+  --muted: 0 0% 12%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 95%;
+  --accent: 0 0% 18%;
+  --accent-foreground: 0 0% 98%;
   --muted-foreground: 0 0% 64%;
   --primary: 48 96% 53%;
   --primary-foreground: 0 0% 5%;
@@ -787,6 +792,8 @@
   --dot: 48 30% 30%;
   --dot-lit: 48 96% 60%;
 }
+.dash-member > .dash-halftone { position: fixed; }
+.dash-member > header, .dash-member > main { position: relative; z-index: 1; }
 .dash-halftone, .dash-halftone::before, .dash-halftone::after { position: absolute; inset: 0; pointer-events: none; }
 .dash-halftone {
   background-image: radial-gradient(circle, hsl(var(--dot) / .35) 1.2px, transparent 1.6px);

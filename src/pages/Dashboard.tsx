@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { markHubReturn } from "@/lib/hubReturn";
-import { PROPAGANDA_MRO_LABEL, isPropagandaMroProduct } from "@/lib/dashboardProducts";
+import { PROPAGANDA_MRO_LABEL, isPropagandaMroProduct, separateDashboardProducts } from "@/lib/dashboardProducts";
+import { getAffiliateCredentials } from "@/lib/affiliateSession";
+import { getUserSession, logoutUser } from "@/lib/userStorage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,7 +80,12 @@ export interface HubProduct {
 export function getDashboardSession(): DashboardSession | null {
   try {
     const raw = localStorage.getItem(DASHBOARD_SESSION_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      const user = getUserSession().user;
+      const access = getAffiliateCredentials(user?.username);
+      if (!user || !access) return null;
+      return { username: user.username, email: user.email || null, name: null, password: access.password };
+    }
     const parsed = JSON.parse(raw) as DashboardSession;
     if (!parsed?.username && !parsed?.email) return null;
     return parsed;
@@ -295,6 +302,7 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem(DASHBOARD_SESSION_KEY);
+    void logoutUser();
     setSession(null);
     setProducts([]);
     setProfile(null);
@@ -676,6 +684,7 @@ export default function Dashboard() {
   };
 
   const greeting = useMemo(() => session?.name || session?.username || session?.email || "", [session]);
+  const productSections = separateDashboardProducts(products);
 
   if (!session) {
     return (
@@ -772,7 +781,8 @@ export default function Dashboard() {
 
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dash-member min-h-screen bg-background text-foreground relative isolate">
+      <div className="dash-halftone" aria-hidden="true" />
       {planExpired && (
         <PlanExpiredOverlay
           whatsappLink="/whatsapp"
@@ -785,11 +795,11 @@ export default function Dashboard() {
           }}
         />
       )}
-      <div className="bg-warning text-warning-foreground text-center py-2.5 px-4 text-sm font-medium">
+      <div className="relative z-10 bg-warning text-warning-foreground text-center py-2.5 px-4 text-sm font-medium">
         Estamos atualizando nossa área e incluindo novidades. Pode utilizar normalmente.
       </div>
       <header className="border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-foreground">Seus produtos</h1>
             <p className="text-sm text-muted-foreground">Olá, {greeting}</p>
@@ -806,6 +816,11 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <Button onClick={() => navigate("/afiliadosx")} className="w-full sm:w-auto font-bold">
+            <ArrowRight className="h-4 w-4" /> SEJA UM AFILIADO MRO
+          </Button>
+        </div>
         {/* Estado de carregamento com spinner */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -836,8 +851,9 @@ export default function Dashboard() {
         ) : products.length === 0 ? (
           <p className="text-center text-muted-foreground py-20">Nenhum produto disponível no momento.</p>
         ) : (
+          <>
           <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-3">
-            {products.map((product) => (
+            {productSections.products.map((product) => (
               <Card
                 key={product.id}
                 className={cn(
@@ -898,7 +914,7 @@ export default function Dashboard() {
                   )}
                 </div>
                 <CardContent className="pt-4 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
                     <h2 className="font-semibold text-foreground">{product.title}</h2>
                     {isPropagandaMroProduct(product) ? (
                       <Badge className="shimmer-reflection relative shrink-0 overflow-hidden bg-[#facc15] text-black hover:bg-[#eab308] border-none px-2 py-0.5 font-black text-[10px] uppercase tracking-tighter">
@@ -944,6 +960,25 @@ export default function Dashboard() {
               </Card>
             ))}
           </div>
+          {productSections.advertising.length > 0 && (
+            <section aria-label="Propaganda MRO" className="mt-14 border-t border-border pt-8 space-y-5">
+              <p className="text-xs font-bold uppercase text-muted-foreground">{PROPAGANDA_MRO_LABEL}</p>
+              {productSections.advertising.map(product => (
+                <div key={product.id} className={cn("grid gap-6 items-center", product.thumb_url && "md:grid-cols-[240px_1fr]")}>
+                  {product.thumb_url && <img src={product.thumb_url} alt="WhatsApp com API Oficial" loading="lazy" className="w-full max-w-sm aspect-video object-cover rounded-lg" />}
+                  <div className="space-y-3">
+                    <h2 className="text-xl font-bold">WhatsApp com API Oficial</h2>
+                    <Badge className="shimmer-reflection relative overflow-hidden bg-primary text-primary-foreground">{PROPAGANDA_MRO_LABEL}</Badge>
+                    {product.description && <p className="text-sm text-muted-foreground max-w-2xl">{product.description}</p>}
+                    <Button variant="outline" disabled={opening === product.id || product.status === 'construction'} onClick={() => handleCardClick(product)}>
+                      <ArrowRight className="h-4 w-4" />{product.status === 'construction' ? "Em breve" : "Conhecer WhatsApp com API Oficial"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+          </>
         )}
       </main>
 
