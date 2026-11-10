@@ -82,7 +82,7 @@ export default function MeuNegocioPage() {
   }
   useEffect(() => {
     mounted.current = true;
-    if (!isAuthenticated()) { navigate('/instagram/painel', { replace: true }); return; }
+    if (!isAuthenticated()) { navigate('/dashboard', { replace: true }); return; }
     setCloudSyncCallback(saveUserToCloud);
     async function load() {
       const current = getCurrentUser();

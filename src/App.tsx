@@ -9,7 +9,6 @@ import HubReturnButton from "@/components/HubReturnButton";
 import { getAdminData } from "./lib/adminConfig";
 import { trackPageView } from "./lib/facebookTracking";
 
-import Index from "./pages/Index";
 import MeuNegocioPage from "./pages/MeuNegocio";
 import RendaExtraPage from "./pages/RendaExtra";
 import RendaExtraAasPage from "./pages/RendaExtraAas";
@@ -284,7 +283,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<ToolSelector />} />
           <Route path="/instagram" element={<HubEntryGate><MeuNegocioPage /></HubEntryGate>} />
-          <Route path="/instagram/painel" element={<Index />} />
+          <Route path="/instagram/painel" element={<Navigate to="/dashboard" replace />} />
           <Route path="/meu-negocio" element={<MeuNegocioPage />} />
           <Route path="/renda-extra" element={<RendaExtraPage />} />
           <Route path="/renda-extra2" element={<Navigate to="/ferramentamropromo2" replace />} />

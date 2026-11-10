@@ -1,6 +1,6 @@
 # Architecture rules
 
-- Instagram onboarding reuses existing account limits and session persistence; private IG Online metrics validate MRO credentials and account ownership, while written business context feeds the existing strategy engine without replacing screenshot baselines or stored assets.
+- Instagram onboarding reuses existing account limits and session persistence; private IG Online metrics validate MRO credentials and account ownership, while written business context feeds the existing strategy engine without replacing screenshot baselines or stored assets. Legacy /instagram/painel redirects to /dashboard, the single client dashboard, so old links cannot reopen a separate login or panel.
 
 - Affiliate self-service reuses connected MRO credentials validated server-side for ownership, stores Pix separately in private VPS PostgreSQL rows and embeds the existing summary view, because no repeated password prompt or public affiliate file may expose payout details.
 
