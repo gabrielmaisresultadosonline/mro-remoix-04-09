@@ -10,7 +10,7 @@ import { IG_GALLERY_PUBLIC_PATH } from '@/lib/igGallery';
 
 interface GalleryImage {
   id: string; instagram_username: string; publication_id: string | null; image_index?: number | null; caption: string | null;
-  size_bytes: number; created_at: string; expires_at: string; url: string;
+  size_bytes: number; created_at: string; expires_at: string | null; url: string;
 }
 interface Summary { profiles: number; online: number; followers_total: number | null; growth_period: number | null; welcome_period: number; welcome_total: number }
 
@@ -143,7 +143,7 @@ const IgOnlinesGallery: React.FC = () => {
         </Button>
         <Input readOnly className="h-9 max-w-xs text-xs" value={`${window.location.origin}${IG_GALLERY_PUBLIC_PATH}`} onFocus={(e) => e.currentTarget.select()} />
       </div>
-      <p className="text-xs text-muted-foreground">As imagens ficam guardadas por 30 dias e depois são apagadas automaticamente.</p>
+      <p className="text-xs text-muted-foreground">As imagens e carrosséis permanecem no servidor até você excluí-los manualmente.</p>
 
       {shown.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">{loading ? 'Carregando…' : 'Nenhuma imagem recebida ainda. Veja a Documentação para conectar a extensão.'}</Card>
@@ -186,7 +186,7 @@ const IgOnlinesGallery: React.FC = () => {
             </div>
           )}
           <div className="mt-3 max-w-2xl text-center space-y-1" onClick={(e) => e.stopPropagation()}>
-            <div className="text-xs text-muted-foreground">@{open.instagram_username} · {new Date(open.created_at).toLocaleString('pt-BR')} · expira {new Date(open.expires_at).toLocaleDateString('pt-BR')}</div>
+            <div className="text-xs text-muted-foreground">@{open.instagram_username} · {new Date(open.created_at).toLocaleString('pt-BR')} · Sem expiração</div>
             {open.caption && <p className="whitespace-pre-wrap text-sm">{open.caption}</p>}
           </div>
         </div>

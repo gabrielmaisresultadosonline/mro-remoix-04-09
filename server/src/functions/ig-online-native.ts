@@ -17,7 +17,7 @@ import { pool, adminQuery } from "../db.js";
 import { hasValidAdminSession } from "../admin-session.js";
 import { loadBaselines, recordProfileReading, ownedInstagrams } from "./ig-profile-baseline.js";
 import { authenticateMroMetrics } from "./mro-tool-login-native.js";
-import { adminGallery, adminGalleryDelete, galleryUpload, handleGalleryGet } from "./ig-online-gallery.js";
+import { adminGallery, adminGalleryDelete, galleryUpload, handleGalleryGet, ownedGalleryImages } from "./ig-online-gallery.js";
 
 const PUBLIC_BASE = (process.env.PUBLIC_API_URL || "https://api.maisresultadosonline.com.br").replace(/\/$/, "") + "/functions/v1/ig-online-api";
 
@@ -540,19 +540,21 @@ async function userMetrics(body: Body) {
   const owned = await ownedInstagrams(username, requested.map(normalizeIG));
   const keys = [...owned];
   if (!keys.length) return [200, { success: true, profiles: [] }] as const;
-  const [baselines, sessions, metrics] = await Promise.all([
+  const [baselines, sessions, metrics, images] = await Promise.all([
     loadBaselines(keys),
     adminQuery<Row>(`SELECT instagram_username, followers_current, welcome_total, last_seen_at, metrics_updated_at
       FROM public.ig_online_sessions WHERE lower(instagram_username) = ANY($1::text[])`, [keys]),
     adminQuery<Row>(`SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_end, welcome_sent
       FROM public.ig_online_metrics WHERE lower(instagram_username) = ANY($1::text[])
       AND day >= current_date - 365 ORDER BY day ASC`, [keys]),
+    ownedGalleryImages(keys, PUBLIC_BASE),
   ]);
   return [200, { success: true, profiles: keys.map((ig) => {
     const baseline = baselines.get(ig);
     const s = sessions.find((row) => normalizeIG(row.instagram_username) === ig);
     return {
       instagram_username: ig,
+      images: images.filter(image => normalizeIG(image.instagram_username) === ig),
       initial_followers: baseline?.initial_followers ?? null,
       initial_captured_at: baseline?.initial_captured_at ?? null,
       current_followers: baseline?.current_followers ?? numOrNull(s?.followers_current),

@@ -1,5 +1,14 @@
 import type { InstagramProfile, ProfileAnalysis, ProfileSession } from '@/types/instagram';
 
+export interface AccountImage {
+  id: string;
+  imageUrl: string;
+  username: string;
+  headline?: string;
+  publication_id?: string | null;
+  image_index?: number | null;
+}
+
 export interface AccountMetrics {
   instagram_username: string;
   initial_followers: number | null;
@@ -9,6 +18,7 @@ export interface AccountMetrics {
   metrics_updated_at?: string | null;
   welcome_total: number;
   online: boolean;
+  images?: { id: string; instagram_username: string; url: string; caption: string | null; publication_id: string | null; image_index: number | null }[];
   metrics: { day: string; followers_end: number | null; welcome_sent: number }[];
 }
 
@@ -57,6 +67,24 @@ export function filterInstagramAccounts(accounts: ProfileSession[], query: strin
   return accounts.filter(a => normalize(a.profile.username).includes(term) || normalize(a.profile.fullName ?? '').includes(term));
 }
 
+export function accountImages(account: ProfileSession, metrics?: AccountMetrics): AccountImage[] {
+  const username = account.profile.username.toLowerCase();
+  const local: AccountImage[] = (account.creatives ?? []).filter(c => c.imageUrl).map(c => ({ ...c, username: account.profile.username }));
+  const remote: AccountImage[] = (metrics?.images ?? []).filter(i => i.instagram_username.toLowerCase() === username).map(i => ({ id: i.id, imageUrl: i.url, username: account.profile.username, headline: i.caption ?? undefined, publication_id: i.publication_id, image_index: i.image_index }));
+  const seen = new Set<string>();
+  return [...remote, ...local].filter(i => { if (seen.has(i.imageUrl)) return false; seen.add(i.imageUrl); return true; });
+}
+
+export function groupAccountImages(images: AccountImage[]) {
+  const groups = new Map<string, AccountImage[]>();
+  for (const image of images) {
+    const key = `${image.username.toLowerCase()}::${image.publication_id ?? image.id}`;
+    const group = groups.get(key) ?? [];
+    group.push(image); groups.set(key, group);
+  }
+  return [...groups.values()].map(group => group.sort((a, b) => (a.image_index ?? 0) - (b.image_index ?? 0)));
+}
+
 export function summarizeAccountGrowth(accounts: ProfileSession[], metrics: Record<string, AccountMetrics>) {
   const rows = accounts.map(a => ({ username: a.profile.username, ...accountFollowerSummary(a, metrics[a.profile.username]) }));
   const complete = rows.filter(r => r.initial !== null && r.current !== null);
@@ -69,6 +97,6 @@ export function summarizeAccountGrowth(accounts: ProfileSession[], metrics: Reco
     pending: rows.length - complete.length,
     welcome: accounts.reduce((total, a) => total + (metrics[a.profile.username]?.welcome_total ?? 0), 0),
     latest: accounts.map(a => metrics[a.profile.username]?.metrics_updated_at).filter((v): v is string => Boolean(v)).sort().pop() ?? null,
-    images: accounts.flatMap(a => (a.creatives ?? []).filter(c => c.imageUrl).map(c => ({ ...c, username: a.profile.username }))),
+    images: accounts.flatMap(a => accountImages(a, metrics[a.profile.username])),
   };
 }

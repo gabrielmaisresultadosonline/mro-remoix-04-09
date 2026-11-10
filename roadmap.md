@@ -1,5 +1,11 @@
 # Roadmap
 
+## Imagens por Instagram e permanência
+- [x] Vincular imagens da galeria às contas privadas e mostrar carrosséis no /instagram
+- [x] Desativar expiração de arquivos novos e existentes e atualizar documentação
+- [x] Testar isolamento por conta, ordem de carrosséis e permanência (20 testes e navegador com respostas simuladas)
+- [ ] Confirmar arquivos reais na VPS após atualização (depende do deploy)
+
 ## Pesquisa e Crescimentos Instagram
 - [x] Pesquisar contas por nome ou usuário
 - [x] Mostrar comparação inicial/atual, totais de boas-vindas e imagens salvas por conta ou todas
