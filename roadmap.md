@@ -1,5 +1,10 @@
 # Roadmap
 
+## Pesquisa e Crescimentos Instagram
+- [ ] Pesquisar contas por nome ou usuário
+- [ ] Mostrar comparação inicial/atual, totais de boas-vindas e imagens salvas por conta ou todas
+- [ ] Conferir filtros, totais e apresentação no computador/celular
+
 ## Retorno ao dashboard
 - [x] Redirecionar /instagram/painel antigo para /dashboard e corrigir os botões e o retorno sem sessão
 - [x] Verificar destinos antigos e retorno sem sessão no navegador, sem alterar contas ou PostgreSQL
