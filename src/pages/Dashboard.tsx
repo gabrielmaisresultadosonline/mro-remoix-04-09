@@ -914,7 +914,7 @@ export default function Dashboard() {
                   )}
                 </div>
                 <CardContent className="pt-4 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
                     <h2 className="font-semibold text-foreground">{product.title}</h2>
                     {isPropagandaMroProduct(product) ? (
                       <Badge className="shimmer-reflection relative shrink-0 overflow-hidden bg-[#facc15] text-black hover:bg-[#eab308] border-none px-2 py-0.5 font-black text-[10px] uppercase tracking-tighter">
@@ -964,7 +964,7 @@ export default function Dashboard() {
             <section aria-label="Propaganda MRO" className="mt-14 border-t border-border pt-8 space-y-5">
               <p className="text-xs font-bold uppercase text-muted-foreground">{PROPAGANDA_MRO_LABEL}</p>
               {productSections.advertising.map(product => (
-                <div key={product.id} className="grid gap-6 md:grid-cols-[240px_1fr] items-center">
+                <div key={product.id} className={cn("grid gap-6 items-center", product.thumb_url && "md:grid-cols-[240px_1fr]")}>
                   {product.thumb_url && <img src={product.thumb_url} alt="WhatsApp com API Oficial" loading="lazy" className="w-full max-w-sm aspect-video object-cover rounded-lg" />}
                   <div className="space-y-3">
                     <h2 className="text-xl font-bold">WhatsApp com API Oficial</h2>
