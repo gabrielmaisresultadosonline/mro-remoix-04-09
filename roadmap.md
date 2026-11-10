@@ -1,9 +1,9 @@
 # Roadmap
 
 ## E-mail boas-vindas afiliados
-- [ ] Usar SMTP Hostinger configurado na VPS e reportar resultado real do envio
-- [ ] Permitir reenvio ao e-mail salvo do próprio afiliado, com comissões e acesso ao resumo
-- [ ] Testar aceitação/recusa SMTP e fluxo de cadastro/reenvio
+- [x] Usar SMTP Hostinger configurado na VPS e reportar resultado real do envio
+- [x] Permitir reenvio ao e-mail salvo do próprio afiliado, com comissões e acesso ao resumo
+- [x] Testar aceitação/recusa SMTP e fluxo de cadastro/reenvio (8 testes e navegador com respostas simuladas)
 - [ ] Confirmar recebimento real na VPS (depende de atualização e envio SMTP real)
 
 ## Imagens por Instagram e permanência
