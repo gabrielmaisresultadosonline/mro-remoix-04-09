@@ -18,9 +18,45 @@ export const MOTION_RULES = `Você é a MRO CREATIVE ENGINE: diretora criativa, 
 Nunca crie animações genéricas ou textos simplesmente aparecendo. Cada criação tem: conceito próprio, direção de arte, roteiro, câmera virtual (push in, pull out, dolly zoom, shake, orbit, parallax, whip), tipografia cinética variada (slam, scramble, glitch, mask reveal, split, letter scatter/assembly, 3D flip, blur reveal, chromatic aberration), VFX (glow, bloom, light rays, aurora, partículas, sparks, grid em perspectiva, shockwave, RGB split, film grain, scanlines, vignette, light leaks, HUD), transições elaboradas (flash, blades diagonais, zoom, mask, particle) e sound design sintetizado com Web Audio API (whoosh, impact, boom, riser, glitch, pop, ping, drone, final chord) sincronizado aos impactos.
 Escolha cores coerentes com o tema (não use sempre neon azul/roxo). Cada formato tem composição própria; nenhum texto cortado, tudo dentro da área segura (Stories: evitar 12% topo e 18% base).`;
 
+function repairJson(src: string): string {
+  // Escape raw control chars inside strings, drop trailing commas, close truncated structures.
+  let out = "", inStr = false, esc = false;
+  const stack: string[] = [];
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (inStr) {
+      if (esc) { out += c; esc = false; continue; }
+      if (c === "\\") { out += c; esc = true; continue; }
+      if (c === '"') {
+        // A quote is a real terminator only if followed by a JSON delimiter.
+        const rest = src.slice(i + 1).match(/^\s*(.)/);
+        const nx = rest ? rest[1] : "";
+        if (!nx || ",:}]".includes(nx)) { inStr = false; out += c; } else out += '\\"';
+        continue;
+      }
+      if (c === "\n") { out += "\\n"; continue; }
+      if (c === "\r") { out += "\\r"; continue; }
+      if (c === "\t") { out += "\\t"; continue; }
+      out += c; continue;
+    }
+    if (c === '"') { inStr = true; out += c; continue; }
+    if (c === "{" || c === "[") stack.push(c === "{" ? "}" : "]");
+    else if (c === "}" || c === "]") stack.pop();
+    out += c;
+  }
+  if (inStr) out += '"';
+  out = out.replace(/,\s*$/, "");
+  while (stack.length) out += stack.pop();
+  return out.replace(/,(\s*[}\]])/g, "$1");
+}
 function extractJson(text: string) {
-  const m = text.match(/```json\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);
-  return JSON.parse(m ? m[1] : text);
+  const m = text.match(/```json\s*([\s\S]*?)(```|$)/) || text.match(/(\{[\s\S]*\}?)/);
+  const raw = (m ? m[1] : text).trim();
+  try { return JSON.parse(raw); } catch {
+    try { return JSON.parse(repairJson(raw)); } catch {
+      throw new Error("A IA devolveu um roteiro com formato inválido. Clique em gerar novamente.");
+    }
+  }
 }
 export function extractHtml(text: string) {
   const fenced = text.match(/```html\s*([\s\S]*?)```/i);
@@ -111,7 +147,7 @@ ${JSON.stringify({ ...direction, script }, null, 2)}
 Terceira etapa: transforme o roteiro em cenas cinematográficas detalhadas, preservando ideias, estilo e narração.
 Responda SOMENTE com JSON:
 {"scenes":[{"title":"","start":0,"duration":0,"text":"texto em tela","camera":"","vfx":"","sfx":""}]}
-As durações das cenas devem somar EXATAMENTE ${seconds}s, sem lacunas na timeline.`, { maxTokens: 7000, kind: "Cenas" }, onUsage);
+As durações das cenas devem somar EXATAMENTE ${seconds}s, sem lacunas na timeline.`, { maxTokens: 12000, kind: "Cenas" }, onUsage);
   const { scenes } = extractJson(scenesText);
   onProgress("scenes", "done");
 
