@@ -109,29 +109,49 @@ export async function editHtml(s: AiSettings, html: string, instruction: string,
 
 async function dataUrlToBlob(u: string) { return (await fetch(u)).blob(); }
 
+const IMAGE_MODELS = ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini", "dall-e-3"];
+let workingImageModel: string | null = null;
+
 export async function generateBackground(s: AiSettings, prompt: string, format: MotionFormat, facePhoto: string | null, onUsage: OnUsage) {
   if (!s.openaiKey) throw new Error("Imagens são geradas pela OpenAI: configure o token do ChatGPT (a Claude não gera imagens).");
-  const size = format === "stories" ? "1024x1536" : format === "youtube" ? "1536x1024" : "1024x1024";
   const full = `${prompt}. Cinematic, high detail, dramatic lighting, no text, no letters, no logos.`;
-  let r: Response;
-  if (facePhoto) {
-    const fd = new FormData();
-    fd.append("model", "gpt-image-1");
-    fd.append("prompt", `${full} Feature the person from the reference photo, keeping their face identity, as the protagonist.`);
-    fd.append("size", size);
-    fd.append("image", await dataUrlToBlob(facePhoto), "face.png");
-    r = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: { Authorization: `Bearer ${s.openaiKey}` }, body: fd });
-  } else {
-    r = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.openaiKey}` },
-      body: JSON.stringify({ model: "gpt-image-1", prompt: full, size, quality: "medium" }),
-    });
+  const order = workingImageModel ? [workingImageModel, ...IMAGE_MODELS.filter((m) => m !== workingImageModel)] : IMAGE_MODELS;
+  let lastErr = "";
+  for (const model of order) {
+    const dalle = model === "dall-e-3";
+    if (dalle && facePhoto) continue; // dall-e-3 cannot use a reference photo
+    const size = dalle ? (format === "stories" ? "1024x1792" : format === "youtube" ? "1792x1024" : "1024x1024")
+      : (format === "stories" ? "1024x1536" : format === "youtube" ? "1536x1024" : "1024x1024");
+    let r: Response;
+    if (facePhoto) {
+      const fd = new FormData();
+      fd.append("model", model);
+      fd.append("prompt", `${full} Feature the person from the reference photo, keeping their face identity, as the protagonist.`);
+      fd.append("size", size);
+      fd.append("image", await dataUrlToBlob(facePhoto), "face.png");
+      r = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: { Authorization: `Bearer ${s.openaiKey}` }, body: fd });
+    } else {
+      const body: any = dalle ? { model, prompt: full, size, response_format: "b64_json", n: 1 } : { model, prompt: full, size, quality: "medium" };
+      r = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.openaiKey}` }, body: JSON.stringify(body),
+      });
+    }
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      lastErr = d?.error?.message || `Imagem ${r.status}`;
+      // model missing / not allowed for this account / org not verified → try the next one
+      if ([400, 403, 404].includes(r.status) && /model|exist|access|verif|support|permission/i.test(lastErr)) continue;
+      throw new Error(lastErr);
+    }
+    const b64 = d?.data?.[0]?.b64_json;
+    const url = d?.data?.[0]?.url;
+    if (!b64 && !url) { lastErr = "A OpenAI não retornou imagem."; continue; }
+    workingImageModel = model;
+    const it = d.usage?.input_tokens ?? 0, ot = d.usage?.output_tokens ?? 0;
+    onUsage({ id: crypto.randomUUID(), at: Date.now(), provider: "openai", model, kind: facePhoto ? "Imagem com rosto" : "Imagem de fundo", inputTokens: it, outputTokens: ot, images: 1, searches: 0, costUsd: costFor(model, 0, 0, 1) });
+    return b64 ? `data:image/png;base64,${b64}` : url;
   }
-  const d = await r.json();
-  if (!r.ok) throw new Error(d?.error?.message || `Imagem ${r.status}`);
-  const it = d.usage?.input_tokens ?? 0, ot = d.usage?.output_tokens ?? 0;
-  onUsage({ id: crypto.randomUUID(), at: Date.now(), provider: "openai", model: "gpt-image-1", kind: facePhoto ? "Imagem com rosto" : "Imagem de fundo", inputTokens: it, outputTokens: ot, images: 1, searches: 0, costUsd: costFor("gpt-image-1", 0, 0, 1) });
-  return `data:image/png;base64,${d.data[0].b64_json}`;
+  throw new Error(`Sua conta OpenAI não liberou nenhum modelo de imagem${facePhoto ? " com foto de referência" : ""}. Último erro: ${lastErr}`);
 }
 
 export function renderHtml(html: string, bg?: string | null) {
