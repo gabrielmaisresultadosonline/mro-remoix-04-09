@@ -44,6 +44,7 @@ export default function MotionMro() {
   const [face, setFace] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
+  const [generationSteps, setGenerationSteps] = useState<GenerationStep[] | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [demo, setDemo] = useState<(typeof DEMOS)[number] | null>(DEMOS[0]);
   const [editText, setEditText] = useState("");
@@ -95,21 +96,32 @@ export default function MotionMro() {
     try { await fn(); } catch (e: any) { toast.error(e?.message || "Falha na geração"); } finally { setBusy(null); }
   }
 
-  const generate = (basePrompt = prompt) => run("Criando ideias, roteiro e cenas…", async () => {
-    if (!basePrompt.trim()) throw new Error("Descreva a ideia do motion.");
-    const plan = await generatePlan(settings, basePrompt, format, seconds, webSearch, onUsage);
-    let bg: string | null = null;
-    if (withImage) {
-      setBusy("Gerando imagem de fundo…");
-      try { bg = await generateBackground(settings, plan.imagePrompt || basePrompt, format, useFace ? face : null, onUsage); }
-      catch (e: any) { toast.warning(`Imagem de fundo não gerada (o motion continua sem ela): ${e?.message || e}`); }
+  const generate = (basePrompt = prompt) => run("Criando ideias e direção criativa…", async () => {
+    setGenerationSteps(createGenerationSteps(withImage));
+    const finishStage = (id: GenerationStageId) => setGenerationSteps((steps) => steps ? completeGenerationStep(steps, id) : steps);
+    try {
+      if (!basePrompt.trim()) throw new Error("Descreva a ideia do motion.");
+      const plan = await generatePlan(settings, basePrompt, format, seconds, webSearch, onUsage, (stage, status) => {
+        if (status === "done") finishStage(stage);
+        else setBusy(stage === "ideas" ? "Criando ideias e direção criativa…" : stage === "script" ? "Escrevendo o roteiro…" : "Criando as cenas…");
+      });
+      let bg: string | null = null;
+      if (withImage) {
+        setBusy("Gerando a imagem de fundo…");
+        try { bg = await generateBackground(settings, plan.imagePrompt || basePrompt, format, useFace ? face : null, onUsage); }
+        catch (e: any) { toast.warning(`Imagem de fundo não gerada (o motion continua sem ela): ${e?.message || e}`); }
+        finally { finishStage("image"); }
+      }
+      setBusy("Animando cenas, câmera, efeitos e sons…");
+      const html = await generateHtml(settings, plan, format, seconds, !!bg, onUsage);
+      finishStage("animation");
+      const m: SavedMotion = { id: crypto.randomUUID(), createdAt: Date.now(), prompt: basePrompt, format, seconds, plan, html, bg, history: [] };
+      setMotions((list) => [m, ...list]);
+      setCurrentId(m.id); setDemo(null); setFrameKey((k) => k + 1);
+      toast.success("Motion gerado! Confira a prévia.");
+    } finally {
+      setGenerationSteps(null);
     }
-    setBusy("Animando cenas, câmera, efeitos e sons…");
-    const html = await generateHtml(settings, plan, format, seconds, !!bg, onUsage);
-    const m: SavedMotion = { id: crypto.randomUUID(), createdAt: Date.now(), prompt: basePrompt, format, seconds, plan, html, bg, history: [] };
-    setMotions((list) => [m, ...list]);
-    setCurrentId(m.id); setDemo(null); setFrameKey((k) => k + 1);
-    toast.success("Motion gerado! Confira a prévia.");
   });
 
   const applyEdit = () => current && run("Aplicando sua edição…", async () => {
