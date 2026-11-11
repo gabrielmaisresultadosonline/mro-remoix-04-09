@@ -87,7 +87,7 @@ async function callModel(s: AiSettings, system: string, user: string, opts: { ma
     return text;
   }
   if (!s.claudeKey) throw new Error("Configure o token da Claude (Anthropic).");
-  const body: any = { model: s.model, max_tokens: opts.maxTokens, system, messages: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill.trimEnd() }] : [{ role: "user", content: user }] };
+  const body: any = { model: s.model, max_tokens: opts.maxTokens, system, messages: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill.trimEnd() }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : [{ role: "user", content: user }] };
   if (opts.webSearch) body.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -174,11 +174,11 @@ Responda SOMENTE com o código dentro de \`\`\`html.`;
 };
 
 async function completeHtml(s: AiSettings, user: string, kind: string, onUsage: OnUsage) {
-  let raw = await callModel(s, MOTION_RULES, user, { maxTokens: 32000, kind }, onUsage);
+  let raw = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind }, onUsage);
   for (let i = 0; i < 4 && !/<\/html>/i.test(raw); i++) {
-    if (!raw.trim()) raw = await callModel(s, MOTION_RULES, user, { maxTokens: 32000, kind }, onUsage);
+    if (!raw.trim()) raw = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind }, onUsage);
     else {
-      const more = await callModel(s, MOTION_RULES, user, { maxTokens: 32000, kind: kind + " (continuação)", prefill: raw }, onUsage);
+      const more = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind: kind + " (continuação)", prefill: raw }, onUsage);
       if (!more.trim()) break;
       raw = raw.trimEnd() + more.replace(/^```html\s*/i, "");
     }
