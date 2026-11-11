@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Clapperboard, Download, Film, KeyRound, Loader2, Pencil, RefreshCw, Sparkles, Trash2, Upload, Calculator, Image as ImageIcon, Globe, Play, Maximize2 } from "lucide-react";
 import { kvGet, kvSet, kvClear } from "@/lib/motion/store";
 import { MODEL_PRICES, summarizeUsage, type UsageEntry } from "@/lib/motion/pricing";
-import { FORMATS, generatePlan, generateHtml, editHtml, generateBackground, renderHtml, type AiSettings, type MotionFormat, type MotionPlan } from "@/lib/motion/ai";
+import { FORMATS, generatePlan, generateHtml, editHtml, generateBackground, fetchAccountModels, renderHtml, type AiSettings, type MotionFormat, type MotionPlan } from "@/lib/motion/ai";
 import { recordElement, download } from "@/lib/motion/recorder";
 
 interface SavedMotion { id: string; createdAt: number; prompt: string; format: MotionFormat; seconds: number; plan: MotionPlan; html: string; bg: string | null; history: string[]; }
