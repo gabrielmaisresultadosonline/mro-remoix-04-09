@@ -280,7 +280,7 @@ export default function MotionMro() {
               <Button size="sm" disabled={!!busy || !!recording} onClick={exportMp4}><Film className="h-4 w-4 mr-1" />{recording ? `Gravando ${recording.left}s` : "Gerar MP4"}</Button>
             </div>
             <div className="flex justify-center bg-background rounded-lg p-2">
-              <div ref={stageRef} className="relative w-full overflow-hidden rounded-md bg-background" style={{ aspectRatio: FORMATS[previewFormat].ratio, maxHeight: "78vh", maxWidth: previewFormat === "stories" ? "calc(78vh * 9 / 16)" : previewFormat === "square" ? "78vh" : "100%" }}>
+              <div ref={stageRef} className="relative overflow-hidden rounded-md bg-background" style={{ aspectRatio: FORMATS[previewFormat].ratio, width: `min(100%, calc(78vh * ${FORMATS[previewFormat].w} / ${FORMATS[previewFormat].h}))` }}>
                 {busy && !recording && <div className="absolute inset-0 z-10 grid place-items-center bg-background/80 text-sm"><div className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />{busy}<div className="text-xs text-muted-foreground mt-1">Pode levar de 1 a 3 minutos</div></div></div>}
                 {(srcDoc || src) && <iframe key={`${currentId || demo?.file}-${frameKey}`} title="Prévia do motion" className="absolute inset-0 h-full w-full border-0" srcDoc={srcDoc} src={src} sandbox="allow-scripts allow-same-origin" allow="autoplay" />}
               </div>
