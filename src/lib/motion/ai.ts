@@ -63,16 +63,17 @@ export function extractHtml(text: string) {
   let html = fenced ? fenced[1] : text;
   const start = html.search(/<!doctype html|<html/i);
   if (start > 0) html = html.slice(start);
+  html = html.replace(/^```html\s*/i, "").replace(/```\s*$/, "");
   const end = html.toLowerCase().lastIndexOf("</html>");
   if (end > 0) html = html.slice(0, end + 7);
   return html.trim();
 }
 
-async function callModel(s: AiSettings, system: string, user: string, opts: { maxTokens: number; webSearch?: boolean; kind: string }, onUsage: OnUsage) {
+async function callModel(s: AiSettings, system: string, user: string, opts: { maxTokens: number; webSearch?: boolean; kind: string; prefill?: string }, onUsage: OnUsage) {
   const provider = MODEL_PRICES[s.model]?.provider ?? s.customModels?.find((m) => m.id === s.model)?.provider ?? s.provider;
   if (provider === "openai") {
     if (!s.openaiKey) throw new Error("Configure o token da OpenAI (ChatGPT).");
-    const body: any = { model: s.model, instructions: system, input: user, max_output_tokens: opts.maxTokens };
+    const body: any = { model: s.model, instructions: system, input: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : user, max_output_tokens: opts.maxTokens };
     if (opts.webSearch) body.tools = [{ type: "web_search" }];
     const r = await fetch("https://api.openai.com/v1/responses", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.openaiKey}` }, body: JSON.stringify(body),
@@ -86,7 +87,7 @@ async function callModel(s: AiSettings, system: string, user: string, opts: { ma
     return text;
   }
   if (!s.claudeKey) throw new Error("Configure o token da Claude (Anthropic).");
-  const body: any = { model: s.model, max_tokens: opts.maxTokens, system, messages: [{ role: "user", content: user }] };
+  const body: any = { model: s.model, max_tokens: opts.maxTokens, system, messages: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill.trimEnd() }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : [{ role: "user", content: user }] };
   if (opts.webSearch) body.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -172,15 +173,31 @@ ${hasBg ? `- Use a imagem de fundo pela URL literal "{{BG_IMAGE}}" (ela será su
 Responda SOMENTE com o código dentro de \`\`\`html.`;
 };
 
+async function completeHtml(s: AiSettings, user: string, kind: string, onUsage: OnUsage) {
+  let raw = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind }, onUsage);
+  for (let i = 0; i < 4 && !/<\/html>/i.test(raw); i++) {
+    if (!raw.trim()) raw = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind }, onUsage);
+    else {
+      const more = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind: kind + " (continuação)", prefill: raw }, onUsage);
+      if (!more.trim()) break;
+      raw = raw.trimEnd() + more.replace(/^```html\s*/i, "");
+    }
+  }
+  const html = extractHtml(raw);
+  if (!/<html|<body|<canvas|<div/i.test(html) || !/<\/html>/i.test(html) || html.length < 500)
+    throw new Error("A IA não devolveu o motion completo (resposta vazia ou cortada). Clique em gerar novamente ou escolha outro modelo.");
+  return html;
+}
+
 export async function generateHtml(s: AiSettings, plan: MotionPlan, format: MotionFormat, seconds: number, hasBg: boolean, onUsage: OnUsage) {
   const ref = await referenceExcerpt(format);
   const user = `Direção criativa aprovada:\n${JSON.stringify(plan, null, 2)}\n\n${HTML_CONTRACT(format, seconds, hasBg)}\n\nTrecho de referência do padrão MRO (aprenda o nível de acabamento, não copie o texto):\n${ref}`;
-  return extractHtml(await callModel(s, MOTION_RULES, user, { maxTokens: 20000, kind: "Motion HTML" }, onUsage));
+  return completeHtml(s, user, "Motion HTML", onUsage);
 }
 
 export async function editHtml(s: AiSettings, html: string, instruction: string, format: MotionFormat, seconds: number, onUsage: OnUsage) {
   const user = `Edite este motion conforme o pedido: """${instruction}"""\nMantenha tudo que não foi pedido para mudar.\n${HTML_CONTRACT(format, seconds, html.includes("{{BG_IMAGE}}"))}\n\nCódigo atual:\n\`\`\`html\n${html}\n\`\`\``;
-  return extractHtml(await callModel(s, MOTION_RULES, user, { maxTokens: 20000, kind: "Edição" }, onUsage));
+  return completeHtml(s, user, "Edição", onUsage);
 }
 
 async function dataUrlToBlob(u: string) { return (await fetch(u)).blob(); }
