@@ -8,10 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Clapperboard, Download, Film, KeyRound, Loader2, Pencil, RefreshCw, Sparkles, Trash2, Upload, Calculator, Image as ImageIcon, Globe, Play, Maximize2 } from "lucide-react";
+import { Check, Clapperboard, Download, Film, KeyRound, Loader2, Pencil, RefreshCw, Sparkles, Trash2, Upload, Calculator, Image as ImageIcon, Globe, Play, Maximize2 } from "lucide-react";
 import { kvGet, kvSet, kvClear } from "@/lib/motion/store";
 import { MODEL_PRICES, summarizeUsage, type UsageEntry } from "@/lib/motion/pricing";
 import { FORMATS, generatePlan, generateHtml, editHtml, generateBackground, fetchAccountModels, renderHtml, type AiSettings, type MotionFormat, type MotionPlan } from "@/lib/motion/ai";
+import { completeGenerationStep, createGenerationSteps, generationPercent, type GenerationStageId, type GenerationStep } from "@/lib/motion/generationProgress";
 import { recordElement, download } from "@/lib/motion/recorder";
 
 interface SavedMotion { id: string; createdAt: number; prompt: string; format: MotionFormat; seconds: number; plan: MotionPlan; html: string; bg: string | null; history: string[]; }
@@ -43,6 +44,7 @@ export default function MotionMro() {
   const [face, setFace] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
+  const [generationSteps, setGenerationSteps] = useState<GenerationStep[] | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [demo, setDemo] = useState<(typeof DEMOS)[number] | null>(DEMOS[0]);
   const [editText, setEditText] = useState("");
@@ -94,21 +96,32 @@ export default function MotionMro() {
     try { await fn(); } catch (e: any) { toast.error(e?.message || "Falha na geração"); } finally { setBusy(null); }
   }
 
-  const generate = (basePrompt = prompt) => run("Criando ideias, roteiro e cenas…", async () => {
-    if (!basePrompt.trim()) throw new Error("Descreva a ideia do motion.");
-    const plan = await generatePlan(settings, basePrompt, format, seconds, webSearch, onUsage);
-    let bg: string | null = null;
-    if (withImage) {
-      setBusy("Gerando imagem de fundo…");
-      try { bg = await generateBackground(settings, plan.imagePrompt || basePrompt, format, useFace ? face : null, onUsage); }
-      catch (e: any) { toast.warning(`Imagem de fundo não gerada (o motion continua sem ela): ${e?.message || e}`); }
+  const generate = (basePrompt = prompt) => run("Criando ideias e direção criativa…", async () => {
+    setGenerationSteps(createGenerationSteps(withImage));
+    const finishStage = (id: GenerationStageId) => setGenerationSteps((steps) => steps ? completeGenerationStep(steps, id) : steps);
+    try {
+      if (!basePrompt.trim()) throw new Error("Descreva a ideia do motion.");
+      const plan = await generatePlan(settings, basePrompt, format, seconds, webSearch, onUsage, (stage, status) => {
+        if (status === "done") finishStage(stage);
+        else setBusy(stage === "ideas" ? "Criando ideias e direção criativa…" : stage === "script" ? "Escrevendo o roteiro…" : "Criando as cenas…");
+      });
+      let bg: string | null = null;
+      if (withImage) {
+        setBusy("Gerando a imagem de fundo…");
+        try { bg = await generateBackground(settings, plan.imagePrompt || basePrompt, format, useFace ? face : null, onUsage); }
+        catch (e: any) { toast.warning(`Imagem de fundo não gerada (o motion continua sem ela): ${e?.message || e}`); }
+        finally { finishStage("image"); }
+      }
+      setBusy("Animando cenas, câmera, efeitos e sons…");
+      const html = await generateHtml(settings, plan, format, seconds, !!bg, onUsage);
+      finishStage("animation");
+      const m: SavedMotion = { id: crypto.randomUUID(), createdAt: Date.now(), prompt: basePrompt, format, seconds, plan, html, bg, history: [] };
+      setMotions((list) => [m, ...list]);
+      setCurrentId(m.id); setDemo(null); setFrameKey((k) => k + 1);
+      toast.success("Motion gerado! Confira a prévia.");
+    } finally {
+      setGenerationSteps(null);
     }
-    setBusy("Animando cenas, câmera, efeitos e sons…");
-    const html = await generateHtml(settings, plan, format, seconds, !!bg, onUsage);
-    const m: SavedMotion = { id: crypto.randomUUID(), createdAt: Date.now(), prompt: basePrompt, format, seconds, plan, html, bg, history: [] };
-    setMotions((list) => [m, ...list]);
-    setCurrentId(m.id); setDemo(null); setFrameKey((k) => k + 1);
-    toast.success("Motion gerado! Confira a prévia.");
   });
 
   const applyEdit = () => current && run("Aplicando sua edição…", async () => {
@@ -216,6 +229,7 @@ export default function MotionMro() {
               <Button className="w-full font-bold" size="lg" disabled={!!busy} onClick={() => generate()}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}{busy || "Gerar motion"}
               </Button>
+              {generationSteps && <GenerationProgress steps={generationSteps} />}
             </TabsContent>
 
             <TabsContent value="keys" className="space-y-4 rounded-xl border border-border bg-card p-4">
@@ -300,7 +314,7 @@ export default function MotionMro() {
             </div>
             <div className="flex justify-center bg-background rounded-lg p-2">
               <div ref={stageRef} className="relative overflow-hidden rounded-md bg-background" style={{ aspectRatio: FORMATS[previewFormat].ratio, width: `min(100%, calc(78vh * ${FORMATS[previewFormat].w} / ${FORMATS[previewFormat].h}))` }}>
-                {busy && !recording && <div className="absolute inset-0 z-10 grid place-items-center bg-background/80 text-sm"><div className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />{busy}<div className="text-xs text-muted-foreground mt-1">Pode levar de 1 a 3 minutos</div></div></div>}
+                {busy && !recording && <div className="absolute inset-0 z-10 grid place-items-center bg-background/80 p-3 text-sm">{generationSteps ? <GenerationProgress steps={generationSteps} /> : <div className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />{busy}<div className="text-xs text-muted-foreground mt-1">Pode levar de 1 a 3 minutos</div></div>}</div>}
                 {(srcDoc || src) && <iframe key={`${currentId || demo?.file}-${frameKey}`} title="Prévia do motion" className="absolute inset-0 h-full w-full border-0" srcDoc={srcDoc} src={src} sandbox="allow-scripts" allow="autoplay" />}
               </div>
             </div>
@@ -347,6 +361,32 @@ export default function MotionMro() {
           <Button disabled={!!busy} onClick={applyEdit}>{busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Pencil className="h-4 w-4 mr-2" />}{busy || "Aplicar edição"}</Button>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function GenerationProgress({ steps }: { steps: GenerationStep[] }) {
+  const percent = generationPercent(steps);
+  const activeIndex = steps.findIndex((step) => step.status === "active");
+  const currentStep = activeIndex >= 0 ? activeIndex + 1 : steps.length;
+  return (
+    <div className="w-full max-w-md rounded-xl border border-primary/30 bg-card/95 p-4 text-left shadow-lg" aria-live="polite">
+      <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold">
+        <span>Criando seu motion</span>
+        <span className="text-primary">{percent}%</span>
+      </div>
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Progresso da criação do motion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+        <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">Etapa {currentStep} de {steps.length} · avança quando cada resposta é concluída</p>
+      <ol className="mt-3 space-y-2">
+        {steps.map((step, index) => (
+          <li key={step.id} className={`flex items-center gap-2 text-xs ${step.status === "pending" ? "text-muted-foreground" : "text-foreground"}`}>
+            {step.status === "done" ? <Check className="h-4 w-4 shrink-0 text-primary" /> : step.status === "active" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" /> : <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full border border-border text-[9px]">{index + 1}</span>}
+            <span className={step.status === "active" ? "font-semibold" : ""}>{step.label}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
