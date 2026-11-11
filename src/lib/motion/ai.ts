@@ -1,4 +1,4 @@
-import { costFor, MODEL_PRICES, type Provider, type UsageEntry } from "./pricing";
+import { costFor, MODEL_PRICES, type ModelInfo, type Provider, type UsageEntry } from "./pricing";
 
 export type MotionFormat = "stories" | "youtube" | "square";
 export const FORMATS: Record<MotionFormat, { label: string; w: number; h: number; ratio: string }> = {
