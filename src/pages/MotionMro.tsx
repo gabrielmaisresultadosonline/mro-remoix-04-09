@@ -13,6 +13,7 @@ import { kvGet, kvSet, kvClear } from "@/lib/motion/store";
 import { MODEL_PRICES, summarizeUsage, type UsageEntry } from "@/lib/motion/pricing";
 import { FORMATS, generatePlan, generateHtml, editHtml, generateBackground, fetchAccountModels, renderHtml, type AiSettings, type MotionFormat, type MotionPlan } from "@/lib/motion/ai";
 import { completeGenerationStep, createGenerationSteps, generationPercent, type GenerationStageId, type GenerationStep } from "@/lib/motion/generationProgress";
+import { stripCloudflareRum } from "@/lib/motion/demoHtml";
 import { recordElement, download } from "@/lib/motion/recorder";
 
 interface SavedMotion { id: string; createdAt: number; prompt: string; format: MotionFormat; seconds: number; plan: MotionPlan; html: string; bg: string | null; history: string[]; }
@@ -47,6 +48,7 @@ export default function MotionMro() {
   const [generationSteps, setGenerationSteps] = useState<GenerationStep[] | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [demo, setDemo] = useState<(typeof DEMOS)[number] | null>(DEMOS[0]);
+  const [demoHtml, setDemoHtml] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [recording, setRecording] = useState<{ left: number } | null>(null);
@@ -68,13 +70,25 @@ export default function MotionMro() {
   useEffect(() => { if (loaded) kvSet("usage", usage); }, [usage, loaded]);
   useEffect(() => { if (loaded) kvSet("usdBrl", usdBrl); }, [usdBrl, loaded]);
   useEffect(() => { if (loaded) kvSet("face", face); }, [face, loaded]);
+  useEffect(() => {
+    let active = true;
+    setDemoHtml(null);
+    if (!demo) return () => { active = false; };
+    fetch(`/motion-demos/${demo.file}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar esta demonstração.");
+        const html = stripCloudflareRum(await response.text());
+        if (active) setDemoHtml(html);
+      })
+      .catch((error) => { if (active) toast.error(error?.message || "Falha ao carregar a demonstração."); });
+    return () => { active = false; };
+  }, [demo]);
 
   const onUsage = (e: UsageEntry) => setUsage((u) => [e, ...u]);
   const current = motions.find((m) => m.id === currentId) || null;
   const totals = useMemo(() => summarizeUsage(usage), [usage]);
   const previewFormat = current ? current.format : demo?.format ?? format;
-  const srcDoc = current ? renderHtml(current.html, current.bg) : undefined;
-  const src = !current && demo ? `/motion-demos/${demo.file}` : undefined;
+  const srcDoc = current ? renderHtml(current.html, current.bg) : demoHtml ?? undefined;
 
   const allModels = useMemo(() => {
     const map = new Map<string, { provider: "openai" | "claude"; label: string }>();
@@ -155,7 +169,7 @@ export default function MotionMro() {
 
   async function exportHtml() {
     if (current) return download(renderHtml(current.html, current.bg), `${slug(current.plan.title)}.html`);
-    if (demo) download(await (await fetch(`/motion-demos/${demo.file}`)).text(), demo.file);
+    if (demo) download(stripCloudflareRum(await (await fetch(`/motion-demos/${demo.file}`)).text()), demo.file);
   }
 
   function onFace(file?: File) {
@@ -315,7 +329,7 @@ export default function MotionMro() {
             <div className="flex justify-center bg-background rounded-lg p-2">
               <div ref={stageRef} className="relative overflow-hidden rounded-md bg-background" style={{ aspectRatio: FORMATS[previewFormat].ratio, width: `min(100%, calc(78vh * ${FORMATS[previewFormat].w} / ${FORMATS[previewFormat].h}))` }}>
                 {busy && !recording && <div className="absolute inset-0 z-10 grid place-items-center bg-background/80 p-3 text-sm">{generationSteps ? <GenerationProgress steps={generationSteps} /> : <div className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />{busy}<div className="text-xs text-muted-foreground mt-1">Pode levar de 1 a 3 minutos</div></div>}</div>}
-                {(srcDoc || src) && <iframe key={`${currentId || demo?.file}-${frameKey}`} title="Prévia do motion" className="absolute inset-0 h-full w-full border-0" srcDoc={srcDoc} src={src} sandbox="allow-scripts" allow="autoplay" />}
+                {srcDoc && <iframe key={`${currentId || demo?.file}-${frameKey}`} title="Prévia do motion" className="absolute inset-0 h-full w-full border-0" srcDoc={srcDoc} sandbox="allow-scripts" allow="autoplay" />}
               </div>
             </div>
             {recording && <p className="text-xs text-center text-primary mt-2">Gravando… não mude de aba nem role a página.</p>}
