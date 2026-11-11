@@ -100,7 +100,8 @@ export default function MotionMro() {
     let bg: string | null = null;
     if (withImage) {
       setBusy("Gerando imagem de fundo…");
-      bg = await generateBackground(settings, plan.imagePrompt || basePrompt, format, useFace ? face : null, onUsage);
+      try { bg = await generateBackground(settings, plan.imagePrompt || basePrompt, format, useFace ? face : null, onUsage); }
+      catch (e: any) { toast.warning(`Imagem de fundo não gerada (o motion continua sem ela): ${e?.message || e}`); }
     }
     setBusy("Animando cenas, câmera, efeitos e sons…");
     const html = await generateHtml(settings, plan, format, seconds, !!bg, onUsage);
