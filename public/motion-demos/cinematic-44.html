@@ -1,0 +1,2233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MRO Inteligente - Cinematic Motion 4.3 Stories com Efeitos Sonoros</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+    background:#000;
+    color:white;
+    overflow:hidden;
+    font-family:Montserrat,sans-serif;
+}
+
+.stage{
+    position:relative;
+    /* Palco 9:16 real para Instagram Stories, sempre inteiro na viewport */
+    width:min(100vw, 56.25vh);
+    height:min(100vh, 177.7778vw);
+    aspect-ratio:9 / 16;
+    max-width:100vw;
+    max-height:100vh;
+    overflow:hidden;
+    margin:auto;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    isolation:isolate;
+    background:
+    radial-gradient(ellipse at 50% 48%,#092447 0%,#020812 55%,#000 100%);
+}
+
+.background-grid{
+    position:absolute;
+    inset:-50%;
+    background-image:
+    linear-gradient(rgba(0,140,255,.08) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,140,255,.08) 1px,transparent 1px);
+    background-size:65px 65px;
+    transform:perspective(600px) rotateX(55deg);
+    animation:gridMove 20s linear infinite;
+    z-index:-4;
+}
+
+@keyframes gridMove{
+    to{transform:perspective(600px) rotateX(55deg) translateY(200px)}
+}
+
+.glow{
+    position:absolute;
+    width:60vw;
+    height:60vw;
+    border-radius:50%;
+    background:#006dff;
+    filter:blur(150px);
+    opacity:.17;
+    z-index:-3;
+    animation:glowMove 9s ease-in-out infinite alternate;
+}
+
+@keyframes glowMove{
+    to{transform:scale(1.5);opacity:.3}
+}
+
+.glow2{
+    position:absolute;
+    width:35vw;
+    height:35vw;
+    right:-15%;
+    top:-15%;
+    background:#00baff;
+    filter:blur(130px);
+    opacity:.13;
+    z-index:-3;
+}
+
+#particles{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    overflow:hidden;
+    z-index:-2;
+}
+
+.particle{
+    position:absolute;
+    width:3px;
+    height:3px;
+    border-radius:50%;
+    background:#54c9ff;
+    box-shadow:0 0 12px #008cff;
+    animation:particleFloat var(--duration) linear infinite;
+}
+
+@keyframes particleFloat{
+    from{transform:translateY(100px);opacity:0}
+    20%{opacity:1}
+    to{transform:translate(var(--move),-110vh);opacity:0}
+}
+
+.energy-ring{
+    position:absolute;
+    width:300px;
+    height:300px;
+    border:1px solid rgba(0,160,255,.3);
+    border-radius:50%;
+    box-shadow:0 0 40px rgba(0,130,255,.15);
+    z-index:-1;
+    animation:ringRotate 18s linear infinite;
+}
+
+.energy-ring:before{
+    content:"";
+    position:absolute;
+    inset:30px;
+    border:1px dashed rgba(0,170,255,.4);
+    border-radius:50%;
+}
+
+@keyframes ringRotate{
+    to{transform:rotate(360deg) scale(1.2)}
+}
+
+/* FLASH */
+
+.flash{
+    position:absolute;
+    inset:0;
+    background:white;
+    opacity:0;
+    pointer-events:none;
+    z-index:40;
+}
+
+.flash.hit{animation:flashEffect .4s ease-out}
+
+@keyframes flashEffect{
+    0%{opacity:0}
+    15%{opacity:.55}
+    100%{opacity:0}
+}
+
+/* INTERFACE */
+
+.progress{
+    position:absolute;
+    top:0;
+    left:0;
+    height:3px;
+    width:0;
+    background:linear-gradient(90deg,#006dff,#00e5ff);
+    box-shadow:0 0 15px #00aaff;
+    z-index:50;
+}
+
+.counter{
+    position:absolute;
+    top:4%;
+    right:6%;
+    color:rgba(255,255,255,.55);
+    font-size:10px;
+    letter-spacing:3px;
+    font-weight:800;
+    z-index:50;
+}
+
+.brand{
+    position:absolute;
+    bottom:3.5%;
+    width:100%;
+    text-align:center;
+    color:rgba(255,255,255,.5);
+    letter-spacing:6px;
+    font-size:10px;
+    font-weight:800;
+    z-index:50;
+}
+
+.brand span{color:#168fff}
+
+/* =====================================
+   CÂMERA VIRTUAL
+===================================== */
+
+.camera-viewport{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform-origin:center center;
+    z-index:5;
+    will-change:transform;
+}
+
+#scene-container{
+    position:relative;
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.scene{
+    position:absolute;
+    width:100%;
+    max-width:1050px;
+    max-height:100%;
+    padding:clamp(12px, 3.2%, 30px);
+    text-align:center;
+    opacity:0;
+    visibility:hidden;
+    transform:scale(var(--fit-scale, 1));
+    transform-origin:center center;
+}
+
+.scene.active{
+    visibility:visible;
+    opacity:1;
+}
+
+.scene.leaving{
+    visibility:visible;
+    animation:sceneExit .5s ease-in forwards;
+}
+
+@keyframes sceneExit{
+    to{
+        opacity:0;
+        transform:scale(.96) translateY(-25px);
+        filter:blur(14px);
+    }
+}
+
+/* =====================================
+   ENTRADAS TIPOGRÁFICAS
+===================================== */
+
+.kicker{
+    color:#42baff;
+    font-size:clamp(10px,2vw,15px);
+    letter-spacing:5px;
+    font-weight:900;
+    margin-bottom:23px;
+    text-transform:uppercase;
+    opacity:0;
+    animation:kickerEnter .8s .1s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+@keyframes kickerEnter{
+    from{
+        opacity:0;
+        transform:translateY(-35px);
+        letter-spacing:15px;
+        filter:blur(12px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+        letter-spacing:5px;
+        filter:blur(0);
+    }
+}
+
+.headline{
+    font-family:Anton,sans-serif;
+    font-size:clamp(55px,11vw,135px);
+    line-height:.98;
+    text-transform:uppercase;
+    color:white;
+    letter-spacing:-1px;
+}
+
+.blue{
+    color:#139cff;
+    text-shadow:
+    0 0 20px rgba(0,140,255,.8),
+    0 0 65px rgba(0,100,255,.5);
+}
+
+.motion-line{
+    display:block;
+    margin:5px 0;
+    overflow:visible;
+}
+
+.motion-word{
+    display:inline-block;
+    opacity:0;
+    will-change:transform,opacity,filter;
+}
+
+.from-left{animation:enterLeft .9s cubic-bezier(.16,1,.3,1) both}
+.from-right{animation:enterRight .9s cubic-bezier(.16,1,.3,1) both}
+.from-top{animation:enterTop .9s cubic-bezier(.16,1,.3,1) both}
+.from-bottom{animation:enterBottom .9s cubic-bezier(.16,1,.3,1) both}
+.from-zoom{animation:zoomImpact .9s cubic-bezier(.16,1,.3,1) both}
+.from-dissolve{animation:dissolveIn 1.1s ease-out both}
+.from-tracking{animation:trackingIn 1.2s cubic-bezier(.16,1,.3,1) both}
+.from-flip{animation:flipIn 1s cubic-bezier(.16,1,.3,1) both}
+.from-blur{animation:blurIn 1.1s ease-out both}
+.from-rotate{animation:rotateIn .9s cubic-bezier(.16,1,.3,1) both}
+.from-mask{animation:maskIn 1s cubic-bezier(.77,0,.18,1) both}
+.from-elastic{animation:elasticIn 1.2s cubic-bezier(.16,1,.3,1) both}
+.from-glitch{animation:glitchIn .8s steps(1) both}
+.from-letter{animation:letterReveal 1.2s ease-out both}
+
+@keyframes enterLeft{
+    0%{opacity:0;transform:translateX(-180px) skewX(20deg);filter:blur(15px)}
+    70%{opacity:1;transform:translateX(8px) skewX(-3deg);filter:blur(0)}
+    100%{opacity:1;transform:translateX(0)}
+}
+
+@keyframes enterRight{
+    0%{opacity:0;transform:translateX(180px) skewX(-20deg);filter:blur(15px)}
+    70%{opacity:1;transform:translateX(-8px) skewX(3deg);filter:blur(0)}
+    100%{opacity:1;transform:translateX(0)}
+}
+
+@keyframes enterTop{
+    0%{opacity:0;transform:translateY(-120px) scale(.8);filter:blur(15px)}
+    70%{opacity:1;transform:translateY(8px) scale(1.05);filter:blur(0)}
+    100%{opacity:1;transform:translateY(0) scale(1)}
+}
+
+@keyframes enterBottom{
+    0%{opacity:0;transform:translateY(120px);filter:blur(15px)}
+    70%{opacity:1;transform:translateY(-8px);filter:blur(0)}
+    100%{opacity:1;transform:translateY(0)}
+}
+
+@keyframes zoomImpact{
+    0%{opacity:0;transform:scale(2.7);filter:blur(20px)}
+    65%{opacity:1;transform:scale(.88);filter:blur(0)}
+    100%{opacity:1;transform:scale(1)}
+}
+
+@keyframes dissolveIn{
+    from{opacity:0;filter:blur(30px);transform:scale(1.15)}
+    to{opacity:1;filter:blur(0);transform:scale(1)}
+}
+
+@keyframes trackingIn{
+    from{opacity:0;letter-spacing:35px;transform:scale(1.15);filter:blur(10px)}
+    to{opacity:1;letter-spacing:normal;transform:scale(1);filter:blur(0)}
+}
+
+@keyframes flipIn{
+    from{opacity:0;transform:perspective(500px) rotateX(-90deg)}
+    to{opacity:1;transform:perspective(500px) rotateX(0)}
+}
+
+@keyframes blurIn{
+    from{opacity:0;filter:blur(30px);transform:translateY(30px)}
+    to{opacity:1;filter:blur(0);transform:translateY(0)}
+}
+
+@keyframes rotateIn{
+    from{opacity:0;transform:rotate(-15deg) scale(.5);filter:blur(12px)}
+    to{opacity:1;transform:rotate(0) scale(1);filter:blur(0)}
+}
+
+@keyframes maskIn{
+    from{opacity:0;clip-path:inset(0 100% 0 0)}
+    to{opacity:1;clip-path:inset(0 0 0 0)}
+}
+
+@keyframes elasticIn{
+    0%{opacity:0;transform:scale(.3)}
+    60%{opacity:1;transform:scale(1.15)}
+    80%{transform:scale(.95)}
+    100%{opacity:1;transform:scale(1)}
+}
+
+@keyframes glitchIn{
+    0%{opacity:0;transform:translateX(-15px);filter:blur(5px)}
+    25%{opacity:1;transform:translateX(8px)}
+    50%{transform:translateX(-5px)}
+    75%{transform:translateX(3px);filter:blur(0)}
+    100%{opacity:1;transform:translateX(0)}
+}
+
+@keyframes letterReveal{
+    from{opacity:0;filter:blur(15px);letter-spacing:18px;transform:translateY(15px)}
+    to{opacity:1;filter:blur(0);letter-spacing:normal;transform:translateY(0)}
+}
+
+/* =====================================
+   SAÍDAS TIPOGRÁFICAS VARIADAS
+===================================== */
+
+.scene.leaving .motion-word:nth-child(6n+1){
+    animation:exitLeft .45s ease-in forwards;
+}
+
+.scene.leaving .motion-word:nth-child(6n+2){
+    animation:exitRight .45s ease-in forwards;
+}
+
+.scene.leaving .motion-word:nth-child(6n+3){
+    animation:exitTop .45s ease-in forwards;
+}
+
+.scene.leaving .motion-word:nth-child(6n+4){
+    animation:exitBottom .45s ease-in forwards;
+}
+
+.scene.leaving .motion-word:nth-child(6n+5){
+    animation:exitDissolve .5s ease-in forwards;
+}
+
+.scene.leaving .motion-word:nth-child(6n+6){
+    animation:exitZoom .45s ease-in forwards;
+}
+
+@keyframes exitLeft{
+    to{opacity:0;transform:translateX(-120px) skewX(15deg);filter:blur(15px)}
+}
+@keyframes exitRight{
+    to{opacity:0;transform:translateX(120px) skewX(-15deg);filter:blur(15px)}
+}
+@keyframes exitTop{
+    to{opacity:0;transform:translateY(-100px);filter:blur(15px)}
+}
+@keyframes exitBottom{
+    to{opacity:0;transform:translateY(100px);filter:blur(15px)}
+}
+@keyframes exitDissolve{
+    to{opacity:0;transform:scale(1.2);filter:blur(30px)}
+}
+@keyframes exitZoom{
+    to{opacity:0;transform:scale(.2);filter:blur(20px)}
+}
+
+/* =====================================
+   SUBTÍTULOS COM ANIMAÇÃO INDEPENDENTE
+===================================== */
+
+.description{
+    max-width:760px;
+    margin:26px auto 0;
+    color:rgba(255,255,255,.85);
+    font-size:clamp(14px,2vw,19px);
+    line-height:1.7;
+    font-weight:500;
+    opacity:0;
+    animation:descriptionRise 1s 1.1s ease-out forwards;
+}
+
+.description strong{color:white}
+
+@keyframes descriptionRise{
+    from{opacity:0;transform:translateY(40px);filter:blur(12px)}
+    to{opacity:1;transform:translateY(0);filter:blur(0)}
+}
+
+.scene.leaving .description{
+    animation:descriptionExit .4s forwards;
+}
+
+@keyframes descriptionExit{
+    to{opacity:0;transform:translateY(35px);filter:blur(12px)}
+}
+
+.separator{
+    width:100px;
+    height:3px;
+    background:linear-gradient(90deg,transparent,#008cff,transparent);
+    margin:22px auto;
+    box-shadow:0 0 15px #008cff;
+    animation:lineExpand .8s .5s ease-out both;
+}
+
+@keyframes lineExpand{
+    from{width:0;opacity:0}
+    to{width:100px;opacity:1}
+}
+
+/* =====================================
+   ÍCONES
+===================================== */
+
+.instagram-icon{
+    width:clamp(75px,13vw,135px);
+    height:clamp(75px,13vw,135px);
+    margin:0 auto 20px;
+    filter:drop-shadow(0 0 25px rgba(0,145,255,.6));
+    opacity:0;
+    animation:instagramEnter .9s .2s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+@keyframes instagramEnter{
+    from{opacity:0;transform:scale(0) rotate(-90deg);filter:blur(15px)}
+    to{opacity:1;transform:scale(1);filter:drop-shadow(0 0 25px #008cff)}
+}
+
+.icon-box{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:58px;
+    height:58px;
+    margin:0 auto 18px;
+    border-radius:17px;
+    color:#54bdff;
+    border:1px solid rgba(0,155,255,.5);
+    background:rgba(0,110,255,.13);
+    box-shadow:0 0 30px rgba(0,120,255,.2);
+    animation:elasticIn .9s .2s both;
+}
+
+.icon-box svg{
+    width:32px;
+    height:32px;
+    stroke:currentColor;
+    fill:none;
+    stroke-width:1.7;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+}
+
+/* =====================================
+   CARTÕES DE FUNCIONALIDADES
+===================================== */
+
+.feature-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:13px;
+    max-width:790px;
+    margin:24px auto 0;
+}
+
+.feature-card{
+    padding:17px 19px;
+    text-align:left;
+    border:1px solid rgba(0,153,255,.3);
+    background:linear-gradient(135deg,rgba(0,105,200,.22),rgba(0,0,0,.58));
+    border-radius:12px;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 10px 35px rgba(0,0,0,.3);
+    opacity:0;
+    animation:cardEnter .75s cubic-bezier(.16,1,.3,1) both;
+}
+
+.feature-card:nth-child(1){animation-delay:.3s}
+.feature-card:nth-child(2){animation-delay:.55s}
+
+@keyframes cardEnter{
+    from{opacity:0;transform:translateY(55px) scale(.85);filter:blur(12px)}
+    to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+}
+
+.feature-card:after{
+    content:"";
+    position:absolute;
+    top:0;
+    left:-100%;
+    width:100%;
+    height:100%;
+    background:linear-gradient(100deg,transparent,rgba(0,150,255,.17),transparent);
+    animation:shine 3s .8s infinite;
+}
+
+@keyframes shine{
+    50%,100%{left:120%}
+}
+
+.feature-number{
+    font-size:11px;
+    color:#32adff;
+    font-weight:900;
+    letter-spacing:3px;
+    margin-bottom:8px;
+    animation:enterLeft .6s .5s both;
+}
+
+.feature-title{
+    color:#fff;
+    font-weight:900;
+    font-size:clamp(13px,2vw,18px);
+    margin-bottom:8px;
+    animation:enterRight .65s .65s both;
+}
+
+.feature-text{
+    color:rgba(255,255,255,.78);
+    font-size:clamp(11px,1.4vw,14px);
+    line-height:1.6;
+    animation:dissolveIn .8s .9s both;
+}
+
+/* =====================================
+   MAPA DO BRASIL
+===================================== */
+
+.map-scene{
+    width:100%;
+    max-width:1050px;
+    padding:20px;
+    text-align:center;
+}
+
+.map-heading{
+    margin-bottom:15px;
+}
+
+.map-title{
+    font-family:Anton,sans-serif;
+    font-size:clamp(37px,7vw,75px);
+    line-height:1;
+    color:white;
+    opacity:0;
+    animation:enterTop .9s .2s both;
+}
+
+.map-title span{color:#159dff;text-shadow:0 0 35px #008cff}
+
+.map-subtitle{
+    color:#b8dfff;
+    font-size:clamp(12px,1.7vw,17px);
+    margin-top:13px;
+    opacity:0;
+    animation:descriptionRise .9s .7s both;
+}
+
+.map-layout{
+    display:grid;
+    grid-template-columns:1.2fr .8fr;
+    align-items:center;
+    gap:12px;
+    max-width:800px;
+    margin:0 auto;
+}
+
+.brazil-map{
+    width:100%;
+    max-height:390px;
+    overflow:visible;
+    filter:drop-shadow(0 0 20px rgba(0,130,255,.25));
+}
+
+.brazil-shape{
+    fill:rgba(0,115,255,.14);
+    stroke:#31b4ff;
+    stroke-width:2;
+    stroke-dasharray:8 4;
+    animation:mapDraw 3s ease-out forwards,mapPulse 3s 3s infinite alternate;
+}
+
+@keyframes mapDraw{
+    from{stroke-dashoffset:1200;fill:rgba(0,115,255,0)}
+    to{stroke-dashoffset:0;fill:rgba(0,115,255,.19)}
+}
+
+@keyframes mapPulse{
+    to{fill:rgba(0,150,255,.3);stroke:#82d9ff}
+}
+
+.map-state-line{
+    stroke:rgba(50,170,255,.23);
+    stroke-width:1;
+    fill:none;
+}
+
+.map-point{
+    fill:#6ce5ff;
+    stroke:#008cff;
+    stroke-width:2;
+    animation:mapPointPulse 1.8s ease-in-out infinite;
+    transform-box:fill-box;
+    transform-origin:center;
+}
+
+.map-point:nth-of-type(2n){animation-delay:.3s}
+.map-point:nth-of-type(3n){animation-delay:.6s}
+
+@keyframes mapPointPulse{
+    0%,100%{opacity:.7;transform:scale(.8)}
+    50%{opacity:1;transform:scale(1.8)}
+}
+
+.map-link{
+    stroke:#159cff;
+    stroke-width:1.5;
+    stroke-dasharray:5 6;
+    opacity:.6;
+    animation:mapLines 3s linear infinite;
+}
+
+@keyframes mapLines{
+    to{stroke-dashoffset:-55}
+}
+
+/* CONEXÕES VERMELHAS: pins e rotas animadas sobre o mapa original */
+.map-link-red{
+    fill:none;
+    stroke:#ff294f;
+    stroke-width:2.8;
+    stroke-linecap:round;
+    stroke-dasharray:7 8;
+    opacity:.95;
+    filter:drop-shadow(0 0 5px rgba(255,35,75,.9));
+    animation:redRouteFlow 2.1s linear infinite;
+}
+@keyframes redRouteFlow{to{stroke-dashoffset:-60}}
+.map-pin-halo{
+    fill:rgba(255,35,75,.15);
+    stroke:rgba(255,55,90,.85);
+    stroke-width:1.8;
+    transform-box:fill-box;
+    transform-origin:center;
+    animation:redPinPulse 1.5s ease-out infinite;
+}
+.map-pin-core{
+    fill:#ff294f;
+    stroke:#fff;
+    stroke-width:1.8;
+    filter:drop-shadow(0 0 7px #ff1748);
+}
+@keyframes redPinPulse{
+    0%{transform:scale(.55);opacity:.95}
+    100%{transform:scale(2.15);opacity:0}
+}
+.map-pin-group:nth-child(2n) .map-pin-halo{animation-delay:.35s}
+.map-pin-group:nth-child(3n) .map-pin-halo{animation-delay:.7s}
+
+/* Parallax discreto no mapa, sem alterar o enquadramento das demais cenas */
+.map-layout{transform-style:preserve-3d;animation:mapParallax 7s ease-in-out infinite alternate;}
+@keyframes mapParallax{
+    from{transform:translate3d(-3px,2px,0) rotateX(1deg)}
+    to{transform:translate3d(3px,-3px,0) rotateX(-1deg)}
+}
+
+.map-stat-panel{
+    display:flex;
+    flex-direction:column;
+    gap:13px;
+}
+
+.stat-card{
+    padding:17px 12px;
+    background:linear-gradient(140deg,rgba(0,100,220,.25),rgba(0,0,0,.7));
+    border:1px solid rgba(0,160,255,.4);
+    border-radius:14px;
+    text-align:center;
+    opacity:0;
+    animation:cardEnter .8s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+.stat-card:nth-child(2){animation-delay:.35s}
+.stat-card:nth-child(3){animation-delay:.65s}
+
+.stat-number{
+    font-family:Anton,sans-serif;
+    font-size:clamp(37px,6vw,67px);
+    color:#26aaff;
+    text-shadow:0 0 25px rgba(0,145,255,.65);
+    line-height:1.05;
+}
+
+.stat-label{
+    font-size:clamp(10px,1.5vw,13px);
+    font-weight:800;
+    color:white;
+    margin-top:7px;
+    line-height:1.4;
+}
+
+.map-caption{
+    font-size:10px;
+    color:rgba(255,255,255,.45);
+    margin-top:10px;
+}
+
+/* =====================================
+   DEPOIMENTOS ILUSTRATIVOS
+===================================== */
+
+.social-proof{
+    max-width:800px;
+    margin:20px auto 0;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+}
+
+.testimonial{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    text-align:left;
+    padding:14px;
+    background:linear-gradient(120deg,rgba(0,115,230,.18),rgba(0,0,0,.6));
+    border:1px solid rgba(0,150,255,.32);
+    border-radius:13px;
+    opacity:0;
+    animation:cardEnter .7s cubic-bezier(.16,1,.3,1) both;
+}
+
+.testimonial:nth-child(1){animation-delay:.3s}
+.testimonial:nth-child(2){animation-delay:.6s}
+.testimonial:nth-child(3){animation-delay:.9s}
+.testimonial:nth-child(4){animation-delay:1.2s}
+
+.avatar{
+    width:45px;
+    height:45px;
+    min-width:45px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-size:15px;
+    font-weight:900;
+    background:linear-gradient(135deg,#006aff,#00baff,#763dff);
+    box-shadow:0 0 15px rgba(0,140,255,.4);
+}
+
+.testimonial-text{
+    color:#e7f4ff;
+    font-size:clamp(10px,1.5vw,13px);
+    line-height:1.5;
+}
+
+.testimonial-text strong{
+    color:#46baff;
+    display:block;
+    margin-bottom:4px;
+    font-size:11px;
+}
+
+.testimonial-note{
+    color:rgba(255,255,255,.4);
+    font-size:9px;
+    margin-top:12px;
+    letter-spacing:1px;
+}
+
+/* FINAL */
+
+.final-glow{
+    position:absolute;
+    width:350px;
+    height:350px;
+    border-radius:50%;
+    background:#008cff;
+    filter:blur(120px);
+    opacity:.2;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    z-index:-1;
+}
+
+.final-logo{
+    font-family:Anton,sans-serif;
+    font-size:clamp(70px,15vw,170px);
+    color:white;
+    text-shadow:0 0 40px rgba(0,140,255,.5);
+}
+
+.final-logo span{color:#159cff}
+
+/* Ajustes do palco vertical: o projeto inteiro permanece em 9:16 */
+@media(max-aspect-ratio:9/16){
+    .stage{width:100vw;height:177.7778vw;max-height:100vh;}
+}
+@media(min-aspect-ratio:9/16){
+    .stage{height:100vh;width:56.25vh;max-width:100vw;}
+}
+@media(max-width:600px){
+    .scene{padding:clamp(10px,3vw,18px) clamp(10px,3vw,14px)}
+    .headline{font-size:clamp(36px,9.2vw,72px);line-height:.99}
+    .feature-grid{grid-template-columns:1fr 1fr;gap:7px;margin-top:14px}
+    .feature-card{padding:9px 8px}
+    .feature-number{font-size:9px;letter-spacing:1.5px}
+    .feature-title{font-size:clamp(10px,2.7vw,13px)}
+    .feature-text{font-size:clamp(9px,2.35vw,11px);line-height:1.4}
+    .description{font-size:clamp(10px,2.8vw,13px);line-height:1.45;margin-top:12px}
+    .map-scene{padding:8px 4px}
+    .map-layout{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:4px}
+    .brazil-map{max-height:34vh}
+    .map-title{font-size:clamp(31px,8vw,48px)}
+    .map-stat-panel{gap:6px}
+    .stat-card{padding:9px 5px}
+    .stat-number{font-size:clamp(24px,6vw,40px)}
+    .stat-label{font-size:clamp(8px,2vw,10px)}
+    .social-proof{gap:6px;margin-top:12px}
+    .testimonial{padding:7px;gap:6px}
+    .avatar{width:27px;height:27px;min-width:27px;font-size:9px}
+    .testimonial-text{font-size:8px;line-height:1.35}
+    .testimonial-text strong{font-size:9px}
+    .testimonial-note{font-size:7px;margin-top:7px}
+}
+
+@media(max-width:360px){
+    .headline{font-size:clamp(33px,8.8vw,46px)}
+    .map-layout{grid-template-columns:1fr .82fr}
+    .brazil-map{max-height:30vh}
+    .feature-grid{gap:5px}
+    .feature-card{padding:7px 6px}
+}
+
+@media(max-height:680px){
+    .scene{padding:8px}
+    .map-layout{max-height:48vh}
+    .brazil-map{max-height:27vh}
+    .feature-card{padding:8px}
+    .description{margin-top:9px}
+    .map-title{font-size:clamp(30px,6vw,42px)}
+}
+
+@media(prefers-reduced-motion:reduce){
+    .background-grid,.glow,.particle,.energy-ring,.map-layout,.map-link-red,.map-pin-halo{animation-duration:12s}
+}
+
+
+/* PARALLAX CONTÍNUO DO AMBIENTE — O FUNDO RESPIRA JUNTO COM A CÂMERA */
+.background-grid{animation:gridMove 16s linear infinite,gridParallax 9s ease-in-out infinite alternate}
+@keyframes gridParallax{from{translate:-1.2% -1%;scale:1}to{translate:1.2% 1%;scale:1.035}}
+.glow{animation:glowMove 8s ease-in-out infinite alternate,glowDrift 11s ease-in-out infinite alternate}
+@keyframes glowDrift{from{translate:-3% 2%}to{translate:4% -3%}}
+.energy-ring{animation:ringRotate 18s linear infinite,ringDrift 12s ease-in-out infinite alternate}
+@keyframes ringDrift{from{translate:-2% 1%}to{translate:3% -2%}}
+.scene.context-instagram:before{content:"";position:absolute;right:4%;top:8%;width:clamp(34px,7vw,66px);aspect-ratio:1;border:3px solid rgba(255,255,255,.16);border-radius:28%;background:radial-gradient(circle at 30% 100%,rgba(255,196,72,.17),transparent 48%),radial-gradient(circle at 80% 0%,rgba(205,55,160,.2),transparent 52%);box-shadow:0 0 32px rgba(190,70,180,.13);pointer-events:none;z-index:-1;animation:igFloat 5s ease-in-out infinite alternate}
+.scene.context-instagram:after{content:"INSTAGRAM";position:absolute;left:3%;bottom:14%;font-size:clamp(20px,5vw,42px);font-weight:900;letter-spacing:5px;color:rgba(110,160,255,.055);transform:rotate(-90deg);transform-origin:left bottom;pointer-events:none;z-index:-1}
+@keyframes igFloat{from{transform:translate3d(0,0,0) rotate(-7deg)}to{transform:translate3d(-9px,12px,0) rotate(8deg)}}
+.scene.context-instagram .headline,.scene.context-instagram .description{position:relative;z-index:1}
+/* ENTRADA DO MAPA-MÚNDI: foco de câmera no Brasil, não no centro do planeta */
+.world-map-scene{width:100%;max-width:1000px;text-align:center;perspective:1100px;transform-style:preserve-3d}
+.world-map-title{font-family:Anton,Impact,sans-serif;font-size:clamp(34px,7vw,68px);line-height:1.02;margin-bottom:10px}
+.world-map-subtitle{font-size:clamp(12px,2.5vw,17px);color:#c5e4ff;margin-bottom:12px}
+.world-map-stage{position:relative;width:100%;height:clamp(270px,64vw,510px);overflow:hidden;display:grid;place-items:center;transform-style:preserve-3d}
+.world-map-svg{width:118%;height:118%;overflow:visible;filter:drop-shadow(0 20px 28px #000a) drop-shadow(0 0 25px #087dff66);transform-origin:50% 50%}
+.world-land{fill:#0b2b52;stroke:#2b9eff;stroke-width:2;opacity:.92}
+.world-gridline{fill:none;stroke:#54baff;stroke-width:1;opacity:.15}
+.world-brazil{fill:#ffcf39;stroke:#fff2a0;stroke-width:2.6;filter:drop-shadow(0 0 12px #ffc928)}
+.world-route{fill:none;stroke:#ff3458;stroke-width:2.8;stroke-dasharray:8 9;filter:drop-shadow(0 0 6px #ff244f);animation:redRouteFlow 1.8s linear infinite}
+.world-pin{fill:#ff3157;stroke:#fff;stroke-width:2;filter:drop-shadow(0 0 8px #ff3157)}
+.world-target{position:absolute;left:53%;top:61%;width:12px;height:12px;border-radius:50%;background:#ffe35a;box-shadow:0 0 0 9px #ffe35a25,0 0 28px #ffe35a;opacity:0;animation:targetPulse 1.2s 1.5s infinite}
+@keyframes targetPulse{0%,100%{transform:scale(.8);opacity:.7}50%{transform:scale(1.4);opacity:1}}
+.world-map-caption{font-size:10px;letter-spacing:2px;color:#91caff}
+.world-map-scene .world-map-svg{animation:worldFloat 7s ease-in-out infinite alternate}
+@keyframes worldFloat{from{translate:-.5% .5%}to{translate:.7% -.6%}}
+
+/* =====================================================
+   CARROSSEL DE IMAGENS / SELEÇÃO AMARELA
+===================================================== */
+.carousel-headline{font-size:clamp(36px,7.3vw,77px);margin-bottom:14px}
+.carousel-demo-shell{position:relative;width:calc(100% + 6.4%);max-width:none;margin:14px -3.2% 18px;padding:13px 0 12px;background:linear-gradient(160deg,rgba(15,35,67,.95),rgba(2,9,25,.97));border:1px solid rgba(68,166,255,.5);border-radius:20px;box-shadow:0 20px 60px #0009,0 0 35px #007cff24;overflow:hidden}
+.carousel-demo-top,.carousel-demo-footer{display:flex;align-items:center;justify-content:space-between;padding:0 15px;font-size:10px;letter-spacing:1.3px;font-weight:800;color:#a8cfff}
+.carousel-demo-top{margin-bottom:13px}.demo-dot{width:8px;height:8px;background:#3cc9ff;border-radius:50%;box-shadow:0 0 12px #38cfff}.demo-top-icon{color:#ffd850}
+.carousel-demo-viewport{width:100%;overflow:hidden;position:relative;padding:10px 0 16px}
+.carousel-demo-track{display:flex;gap:12px;width:max-content;padding:0 8px;will-change:transform}
+.carousel-demo-card{width:clamp(112px,29vw,182px);height:clamp(180px,46vw,280px);border:2px solid #398ce280;border-radius:14px;flex:none;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:11px;background:radial-gradient(circle at 70% 35%,#185dbb77,transparent 65%),linear-gradient(155deg,#132e5e,#061022 70%);box-shadow:0 8px 20px #0007;transition:background .25s,border-color .25s,box-shadow .25s}
+.carousel-card-no{font-size:10px;font-weight:900;letter-spacing:2px;color:#a3cfff}
+.carousel-card-art{position:relative;flex:1;display:grid;place-items:center;overflow:hidden}
+.art-orbit{position:absolute;width:85%;aspect-ratio:1;border:2px solid #36bfff77;border-radius:50%;transform:rotateX(65deg) rotateZ(-20deg);box-shadow:0 0 22px #00aaff55}
+.art-circle{width:50%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 30% 25%,#a9efff,#0086f3 45%,#122c8d 75%);box-shadow:0 0 35px #00b7ff88}
+.art-spark{position:absolute;color:#b4f5ff;top:18%;right:12%;font-size:25px}
+.carousel-card-title{font-family:Anton,Impact,sans-serif;font-size:clamp(15px,3.7vw,23px);letter-spacing:.5px;line-height:1.15;color:white;overflow-wrap:anywhere}
+.carousel-card-bar{height:3px;width:45%;background:#31b9ff;border-radius:3px;margin-top:9px}
+.carousel-demo-card:nth-child(2n){background:radial-gradient(circle at 70% 35%,#2d53c677,transparent 65%),linear-gradient(155deg,#14295b,#070c22 70%)}
+.carousel-demo-card:nth-child(3n) .art-circle{background:radial-gradient(circle at 30% 25%,#d5f8ff,#6b59ef 45%,#092768 75%)}
+.carousel-demo-card.chosen{border-color:#ffe34e;background:radial-gradient(circle at 60% 35%,#ffd74999,transparent 70%),linear-gradient(155deg,#624a13,#251c0a);box-shadow:0 0 0 3px #ffdf4c55,0 0 38px #ffe14488;transform:scale(1.04);z-index:2}
+.carousel-demo-card.chosen .carousel-card-no,.carousel-demo-card.chosen .carousel-card-title{color:#fff4b0}.carousel-demo-card.chosen .carousel-card-bar{background:#ffdf49}.carousel-demo-card.chosen .art-circle{background:radial-gradient(circle at 30% 25%,#fff8b1,#ffcf2e 55%,#a45e05 85%);box-shadow:0 0 36px #ffda47aa}
+.carousel-demo-footer{font-size:9px;color:#80add3}.demo-pages{color:#2e92ed;letter-spacing:3px}
+.demo-mouse{position:absolute;width:39px;height:46px;z-index:8;opacity:0;filter:drop-shadow(0 4px 5px #000);pointer-events:none}
+.demo-click-ring{position:absolute;width:28px;height:28px;border:3px solid #ffe34e;border-radius:50%;transform:translate(-50%,-50%) scale(.2);opacity:0;pointer-events:none;z-index:7}
+.demo-click-ring.clicked{animation:demoClickRipple .7s ease-out forwards}@keyframes demoClickRipple{0%{opacity:1;transform:translate(-50%,-50%) scale(.2)}100%{opacity:0;transform:translate(-50%,-50%) scale(3.3)}}
+.demo-selected-label{position:absolute;bottom:32px;left:50%;transform:translate(-50%,12px);opacity:0;color:#ffdf4b;font-size:10px;font-weight:900;letter-spacing:1.5px;white-space:nowrap;text-shadow:0 0 12px #ffcd20;z-index:9}.demo-selected-label.visible{animation:demoLabel .45s ease-out forwards}@keyframes demoLabel{to{opacity:1;transform:translate(-50%,0)}}
+.carousel-description{font-size:clamp(12px,2.6vw,17px)}
+/* VOO DE DRONE EM PROFUNDIDADE, SOBRE O MAPA EXISTENTE */
+.drone-map-scene{perspective:900px;transform-style:preserve-3d}.drone-map-scene .map-layout{transform-style:preserve-3d}.drone-map-scene .brazil-map{transform-style:preserve-3d;filter:drop-shadow(0 12px 8px #00152c) drop-shadow(0 24px 13px #001022) drop-shadow(0 0 25px #0c9dff99)}
+.drone-map-scene .map-pin-core{filter:drop-shadow(0 0 9px #ff294f)}
+/* NOVA CENA: GRÁFICO QUE APARECE DEPOIS DA APROXIMAÇÃO */
+.dashboard-scene{width:min(94%,720px);margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}
+.dashboard-eyebrow{font-size:11px;letter-spacing:3px;color:#6abfff;font-weight:800}
+.dashboard-title{font-family:Anton,Impact,sans-serif;font-size:clamp(37px,8vw,78px);line-height:1.05;color:white;text-shadow:0 0 28px #008cff88}
+.dashboard-subtitle{max-width:560px;font-size:clamp(13px,2.8vw,19px);line-height:1.4;color:#d7ecff}
+.dashboard-chart{position:relative;width:100%;height:clamp(190px,49vw,320px);border:1px solid #247cd477;border-radius:18px;background:linear-gradient(180deg,#071f3eec,#030c1cf5);box-shadow:0 20px 50px #0008,0 0 35px #008cff24;overflow:hidden;padding:15px 16px 25px 38px;opacity:0;animation:chartPanelIn .8s .2s forwards}
+@keyframes chartPanelIn{from{opacity:0;transform:translateY(30px) scale(.92)}to{opacity:1;transform:translateY(0) scale(1)}}
+.chart-gridlines{position:absolute;inset:15px 16px 25px 38px;background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(25% - 1px),#2d70aa44 25%)}
+.chart-svg{position:relative;width:100%;height:100%;overflow:visible}.chart-line{stroke-dasharray:100;stroke-dashoffset:100;animation:chartDraw 3.4s .9s cubic-bezier(.25,.8,.25,1) forwards;filter:drop-shadow(0 0 7px #1daeff)}@keyframes chartDraw{to{stroke-dashoffset:0}}
+.chart-area{opacity:0;animation:chartAreaIn 1s 2.8s forwards}@keyframes chartAreaIn{to{opacity:1}}.chart-endpoint{opacity:0;animation:chartAreaIn .4s 3.6s forwards}
+.chart-y-labels{position:absolute;top:15px;bottom:30px;left:6px;display:flex;flex-direction:column;justify-content:space-between;font-size:9px;color:#8bb8df}.chart-x-labels{position:absolute;bottom:7px;left:38px;right:16px;display:flex;justify-content:space-between;font-size:9px;color:#80b4df;font-weight:800}
+.dashboard-metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%}.dashboard-metric{padding:16px 9px;border:1px solid #2679c58a;border-radius:13px;background:#0a2146aa;display:flex;flex-direction:column;gap:4px;opacity:0;animation:cardEnter .7s 3s forwards}.dashboard-metric:nth-child(2){animation-delay:3.3s}.dashboard-metric strong{font-family:Anton,Impact,sans-serif;font-size:clamp(31px,7vw,60px);color:#43bdff}.dashboard-metric small{font-size:10px;letter-spacing:1.1px;color:#fff;font-weight:800}
+.dashboard-disclaimer{font-size:9px;letter-spacing:.5px;color:#88a9c5;max-width:500px}
+@media(max-width:430px){.carousel-demo-shell{width:calc(100% + 6.4%);margin-left:-3.2%;}.carousel-demo-top,.carousel-demo-footer{font-size:8px}.dashboard-scene{gap:10px}.dashboard-chart{height:205px}.dashboard-metric{padding:12px 7px}.dashboard-disclaimer{font-size:8px}}
+
+
+
+/* CONTROLE DE ÁUDIO PERSISTENTE — necessário para liberar áudio no navegador */
+.sound-enable{
+    position:absolute;top:2.2%;left:50%;transform:translateX(-50%);z-index:9999;
+    display:flex;align-items:center;justify-content:center;gap:9px;min-height:38px;
+    border:1px solid rgba(75,190,255,.82);border-radius:999px;padding:9px 16px;
+    color:#eaf8ff;background:rgba(2,14,31,.94);backdrop-filter:blur(12px);
+    box-shadow:0 0 22px rgba(0,145,255,.28),inset 0 0 12px rgba(0,145,255,.08);
+    font:800 9px Montserrat,sans-serif;letter-spacing:1.1px;cursor:pointer;
+    transition:transform .25s,border-color .25s,background .25s;white-space:nowrap;
+}
+.sound-enable:hover{border-color:#63d9ff;transform:translateX(-50%) scale(1.035)}
+.sound-enable .sound-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#ffc94a;box-shadow:0 0 10px #ffc94a}
+.sound-enable.is-active{border-color:#4dffb5;background:rgba(2,34,30,.96);box-shadow:0 0 22px rgba(30,255,170,.22)}
+.sound-enable.is-active .sound-dot{background:#4dffb5;box-shadow:0 0 10px #4dffb5}
+.sound-enable:focus-visible{outline:2px solid #67dfff;outline-offset:4px}
+@media(max-width:430px){.sound-enable{top:1.4%;font-size:8px;padding:8px 12px;min-height:32px}}
+@media(prefers-reduced-motion:reduce){.sound-enable{transition:none}}
+
+</style>
+</head>
+
+<body>
+
+<div class="stage" id="stage">
+
+<button class="sound-enable" id="soundEnable" type="button" aria-label="Ativar efeitos sonoros">
+    <span class="sound-dot"></span><span id="soundEnableLabel">ATIVAR SOM</span>
+</button>
+
+<div class="background-grid"></div>
+<div class="glow"></div>
+<div class="glow2"></div>
+<div class="energy-ring"></div>
+
+<div id="particles"></div>
+
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter">00:00</div>
+<div class="flash" id="flash"></div>
+
+<div class="camera-viewport" id="camera">
+    <div id="scene-container"></div>
+</div>
+
+<div class="brand">MRO <span>INTELIGENTE</span></div>
+
+</div>
+
+<script>
+
+/* ==========================================
+   DURAÇÃO E CONFIGURAÇÃO
+========================================== */
+
+const scenes=[
+
+/* ABERTURA */
+
+{
+duration:3000,
+camera:"impact",
+focus:1,
+kicker:"CHEGOU A HORA",
+lines:[
+{html:"SEU",effect:"from-left"},
+{html:"INSTAGRAM",effect:"from-right",blue:true}
+]
+},
+
+{
+duration:3000,
+camera:"push",
+focus:1,
+kicker:"UMA NOVA FORMA DE CRESCER",
+lines:[
+{html:"MUITO MAIS",effect:"from-top"},
+{html:"ALCANCE.",effect:"from-elastic",blue:true}
+],
+description:"Encontre novas oportunidades para o seu negócio."
+},
+
+{
+duration:3000,
+camera:"left",
+focus:1,
+kicker:"INTELIGÊNCIA + ESTRATÉGIA",
+lines:[
+{html:"MAIS",effect:"from-left"},
+{html:"RESULTADOS.",effect:"from-glitch",blue:true}
+],
+description:"Tecnologia para conectar sua empresa ao público certo."
+},
+
+{
+duration:4000,
+camera:"orbit",
+focus:3,
+type:"instagram",
+kicker:"CONHEÇA A MRO INTELIGENTE",
+lines:[
+{html:"A MELHOR",effect:"from-top"},
+{html:"FERRAMENTA",effect:"from-left"},
+{html:"PARA",effect:"from-right",blue:true},
+{html:"INSTAGRAM.",effect:"from-zoom",blue:true}
+],
+description:"Uma plataforma completa para prospectar, atender e criar conteúdo."
+},
+
+/* APRESENTAÇÃO */
+
+{
+duration:3000,
+camera:"pull",
+focus:1,
+kicker:"UMA PLATAFORMA COMPLETA",
+lines:[
+{html:"O QUE VOCÊ",effect:"from-mask"},
+{html:"VAI RECEBER?",effect:"from-elastic",blue:true}
+],
+description:"Tudo para crescer no Instagram."
+},
+
+/* PROSPECÇÃO */
+
+{
+duration:5000,
+camera:"push",
+focus:2,
+kicker:"01 — PROSPECÇÃO INTELIGENTE",
+lines:[
+{html:"ENCONTRE",effect:"from-left"},
+{html:"O PÚBLICO",effect:"from-right"},
+{html:"CERTO.",effect:"from-zoom",blue:true}
+],
+cards:[
+["01","RASTREIA PÚBLICOS","Monitore seguidores, curtidores e comentaristas de concorrentes e páginas do seu nicho."],
+["02","MENSAGENS EM MASSA","Trabalhe com públicos rastreados, seguidores, contatos e listas personalizadas."]
+],
+description:"Mais possibilidades para encontrar potenciais clientes."
+},
+
+/* ATENDIMENTO */
+
+{
+duration:5000,
+camera:"right",
+focus:1,
+kicker:"02 — ATENDIMENTO E VENDAS",
+lines:[
+{html:"ATENDIMENTO",effect:"from-top"},
+{html:"INTELIGENTE.",effect:"from-zoom",blue:true}
+],
+cards:[
+["03","AGENTE DE IA","Integrado ao ChatGPT, responde mensagens e conduz conversas conforme seu prompt."],
+["04","CRM KANBAN","Organize leads, acompanhe oportunidades e saiba quem precisa de atenção."]
+],
+description:"Do primeiro contato ao acompanhamento comercial."
+},
+
+/* PRESENÇA */
+
+{
+duration:5000,
+camera:"up",
+focus:1,
+kicker:"03 — PRESENÇA E CONEXÕES",
+lines:[
+{html:"SEU PERFIL",effect:"from-left"},
+{html:"EM MOVIMENTO.",effect:"from-right",blue:true}
+],
+cards:[
+["05","STORIES DIÁRIOS","Programe conteúdos para publicação nos horários definidos por você."],
+["06","BOAS-VINDAS","Envie uma mensagem personalizada para iniciar o relacionamento com novos seguidores."]
+],
+description:"Mantenha sua presença e comece novas conversas."
+},
+
+/* ESTRATÉGIA */
+
+{
+duration:5000,
+camera:"down",
+focus:1,
+kicker:"04 — INTERAÇÃO E ESTRATÉGIA",
+lines:[
+{html:"MAIS AÇÕES.",effect:"from-left"},
+{html:"MAIS ESTRATÉGIA.",effect:"from-glitch",blue:true}
+],
+cards:[
+["07","INTERAÇÕES","Ações de seguir, curtir e deixar de seguir em públicos e perfis estratégicos."],
+["08","INTELIGÊNCIA MRO","Analise seu perfil e nicho. Gere ideias, scripts de vendas e estratégias personalizadas."]
+],
+description:"Ferramentas para trabalhar sua presença e suas oportunidades comerciais."
+},
+
+/* CONTEÚDO */
+
+{
+duration:3400,
+camera:"impact",
+focus:1,
+type:"creative",
+icon:"spark",
+kicker:"CRIAÇÃO DE CONTEÚDO COM IA",
+lines:[
+{html:"SEU MÊS",effect:"from-top"},
+{html:"INTEIRO.",effect:"from-elastic",blue:true}
+],
+description:"Gere uma estratégia completa de conteúdo a partir do seu nicho e dos seus objetivos. Organize temas e publicações em um calendário."
+},
+
+{
+duration:6200,
+camera:"left",
+focus:1,
+type:"carousel-demo",
+icon:"layout",
+kicker:"DESIGN E COMUNICAÇÃO",
+lines:[
+{html:"CARROSSÉIS",effect:"from-mask"},
+{html:"PROFISSIONAIS.",effect:"from-right",blue:true}
+],
+description:"Crie sequências de slides com textos e artes alinhados ao seu posicionamento, prontos para publicar."
+},
+
+{
+duration:3400,
+camera:"right",
+focus:1,
+type:"creative",
+icon:"image",
+kicker:"CRIATIVIDADE SEM LIMITES",
+lines:[
+{html:"POSTS E",effect:"from-top"},
+{html:"CRIATIVOS.",effect:"from-zoom",blue:true}
+],
+description:"Produza posts individuais e peças para suas redes sociais a partir dos temas que você escolher."
+},
+
+{
+duration:3400,
+camera:"orbit",
+focus:1,
+type:"creative",
+icon:"user",
+kicker:"SUA IDENTIDADE VISUAL",
+lines:[
+{html:"COM SUA FOTO",effect:"from-left"},
+{html:"OU SEM ELA.",effect:"from-letter",blue:true}
+],
+description:"Crie artes utilizando sua própria imagem ou conteúdos sem sua foto. Tudo personalizado para seu perfil, nicho e público."
+},
+
+{
+duration:3400,
+camera:"pull",
+focus:1,
+type:"creative",
+icon:"clock",
+kicker:"AUTOMAÇÃO DE PUBLICAÇÕES",
+lines:[
+{html:"PROGRAME.",effect:"from-top"},
+{html:"PUBLIQUE.",effect:"from-zoom",blue:true}
+],
+description:"Agende suas publicações para os dias e horários definidos por você. Seu planejamento organizado em um só lugar."
+},
+
+/* ALCANCE NACIONAL — FRASE EM CENA PRÓPRIA */
+{
+duration:2300,
+camera:"push",
+type:"map-intro",
+kicker:"NOSSA PRESENÇA",
+title:"ATENDEMOS EM",
+subtitle:"TODO O BRASIL"
+},
+
+/* VISÃO GLOBAL E MERGULHO DE CÂMERA ATÉ O BRASIL */
+{
+duration:4300,
+camera:"world-map",
+type:"world-map",
+kicker:"CONECTANDO NEGÓCIOS EM TODO O PAÍS",
+title:"DO BRASIL PARA O BRASIL",
+subtitle:"Uma rede de oportunidades que atravessa fronteiras.",
+},
+
+/* BRASIL — REDE DE CONEXÕES E PRESENÇA */
+{
+duration:6800,
+camera:"map",
+type:"map",
+kicker:"UMA REDE QUE SE ESPALHA PELO BRASIL",
+title:"BRASIL CONECTADO",
+subtitle:"Empresários utilizando a tecnologia MRO para trabalhar seu Instagram.",
+stats:[
+["1.800+","EMPRESÁRIOS EM UTILIZAÇÃO"],
+["BRASIL","PRESENÇA NACIONAL"],
+["MRO","TECNOLOGIA E ESTRATÉGIA"]
+]
+},
+
+/* TELA DE DADOS APÓS O VOO SOBRE O BRASIL */
+{
+duration:6500,
+camera:"stats-dashboard",
+type:"stats-dashboard",
+kicker:"INTELIGÊNCIA EM MOVIMENTO",
+title:"BRASIL EM EXPANSÃO",
+subtitle:"Mais de 1.800 empresários utilizando a tecnologia MRO.",
+stats:["1.800+","BRASIL","MRO"]
+},
+
+/* PROVA SOCIAL */
+
+{
+duration:6000,
+camera:"social",
+type:"social",
+kicker:"TECNOLOGIA PARA O DIA A DIA",
+title:"MAIS ORGANIZAÇÃO.",
+subtitle:"Diferentes benefícios para quem quer trabalhar melhor seu Instagram.",
+testimonials:[
+["A","PROSPECÇÃO","Encontre públicos alinhados ao seu negócio."],
+["B","ATENDIMENTO","Organize as conversas e acompanhe seus leads."],
+["C","CONTEÚDO","Planeje publicações e mantenha seu perfil ativo."],
+["D","ESTRATÉGIA","Tenha ferramentas para planejar e executar melhor."]
+]
+},
+
+/* FINAL */
+
+{
+duration:4000,
+camera:"final",
+type:"final",
+kicker:"SEU INSTAGRAM PODE IR MAIS LONGE",
+title:"MRO",
+subtitle:"A melhor ferramenta para Instagram.",
+description:"PROSPECÇÃO • INTELIGÊNCIA ARTIFICIAL • CONTEÚDO • ESTRATÉGIA"
+}
+
+];
+
+/* ==========================================
+   VETORES E ÍCONES
+========================================== */
+
+const instagramSVG=`
+<svg class="instagram-icon" viewBox="0 0 100 100" fill="none">
+<defs>
+<linearGradient id="igGradient" x1="0" y1="100" x2="100" y2="0">
+<stop stop-color="#0055FF"/>
+<stop offset=".5" stop-color="#00B7FF"/>
+<stop offset="1" stop-color="#9B5CFF"/>
+</linearGradient>
+</defs>
+<rect x="8" y="8" width="84" height="84" rx="24" stroke="url(#igGradient)" stroke-width="7"/>
+<circle cx="50" cy="50" r="20" stroke="url(#igGradient)" stroke-width="7"/>
+<circle cx="75" cy="26" r="5" fill="#39BFFF"/>
+</svg>`;
+
+const icons={
+spark:'<path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-2-5.8L4 11l6-2.2L12 3Z"/>',
+layout:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>',
+image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+user:'<circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>',
+clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+};
+
+
+const worldMap=`
+<svg class="world-map-svg" viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mapa-múndi estilizado com Brasil em destaque">
+<defs><radialGradient id="worldOcean"><stop stop-color="#0b3970"/><stop offset="1" stop-color="#020a18"/></radialGradient></defs>
+<rect x="0" y="0" width="1000" height="560" rx="26" fill="url(#worldOcean)"/>
+<g class="world-gridline"><path d="M0 140H1000M0 280H1000M0 420H1000M250 0V560M500 0V560M750 0V560"/><ellipse cx="500" cy="280" rx="420" ry="220"/><ellipse cx="500" cy="280" rx="260" ry="220"/></g>
+<g class="world-land">
+<path d="M85 105L135 60 205 55 245 82 300 75 340 112 320 150 275 168 250 205 210 220 175 190 130 188 105 150Z"/>
+<path d="M245 220L290 235 320 280 305 330 280 390 250 455 220 420 205 360 215 300Z"/>
+<path d="M430 95L480 70 535 85 560 120 530 145 490 140 465 170 430 150Z"/>
+<path d="M470 180L520 155 570 175 600 225 575 280 550 330 515 365 485 330 470 270 445 225Z"/>
+<path d="M555 85L625 55 710 65 760 95 835 100 900 145 880 185 820 190 790 225 735 210 700 175 650 185 615 150 570 145Z"/>
+<path d="M760 285L815 275 855 305 845 350 805 370 770 340Z"/>
+<path d="M885 410L920 395 945 420 930 455 895 450Z"/>
+</g>
+<path class="world-brazil" d="M285 260L310 250 332 265 348 290 340 318 350 345 332 370 320 405 295 420 278 395 260 380 250 350 258 325 245 300 260 278Z"/>
+<g><path class="world-route" d="M295 330Q420 200 515 255T700 175"/><path class="world-route" d="M295 330Q350 420 500 380T800 330"/><path class="world-route" d="M295 330Q200 230 150 160"/><circle class="world-pin" cx="295" cy="330" r="8"/><circle class="world-pin" cx="515" cy="255" r="6"/><circle class="world-pin" cx="700" cy="175" r="6"/><circle class="world-pin" cx="800" cy="330" r="6"/><circle class="world-pin" cx="150" cy="160" r="6"/></g>
+</svg>`;
+
+/* ==========================================
+   MAPA VETORIAL DO BRASIL
+========================================== */
+
+const brazilMap=`
+<svg class="brazil-map" viewBox="0 0 500 510"
+xmlns="http://www.w3.org/2000/svg">
+
+<defs>
+<radialGradient id="mapFill">
+<stop offset="0%" stop-color="#168cff" stop-opacity=".5"/>
+<stop offset="100%" stop-color="#003c91" stop-opacity=".12"/>
+</radialGradient>
+</defs>
+
+<!-- CONTORNO ILUSTRATIVO DO BRASIL -->
+
+<path class="brazil-shape"
+d="M192 20
+L230 35 L257 31 L275 53
+L305 60 L325 85 L355 92
+L370 115 L400 126 L425 160
+L410 185 L430 210 L414 238
+L390 250 L382 278 L360 292
+L355 322 L328 340 L317 374
+L290 388 L278 420 L253 436
+L236 470 L205 457 L188 432
+L157 425 L138 402 L110 390
+L94 360 L68 342 L61 315
+L39 294 L49 264 L32 235
+L50 210 L45 183 L75 163
+L82 130 L105 108 L119 78
+L147 69 L158 43 L180 36 Z"/>
+
+<!-- LINHAS REGIONAIS ILUSTRATIVAS -->
+
+<g class="map-state-line">
+<path d="M120 110L340 160L410 185"/>
+<path d="M70 230L250 220L390 250"/>
+<path d="M80 300L250 310L355 322"/>
+<path d="M145 80L170 250L157 425"/>
+<path d="M260 35L250 220L278 420"/>
+<path d="M350 100L320 230L290 388"/>
+</g>
+
+<!-- CONEXÕES -->
+
+<g fill="none">
+<path class="map-link" d="M150 110Q240 180 290 245"/>
+<path class="map-link" d="M290 245Q200 310 125 330"/>
+<path class="map-link" d="M290 245Q340 300 350 360"/>
+<path class="map-link" d="M150 110Q280 100 370 185"/>
+<path class="map-link" d="M125 330Q200 390 235 435"/>
+</g>
+
+<!-- ROTAS VERMELHAS CONECTANDO OS PINS -->
+<g fill="none">
+<path class="map-link-red" d="M150 110Q220 70 250 90"/>
+<path class="map-link-red" d="M250 90Q305 95 320 140"/>
+<path class="map-link-red" d="M320 140Q365 145 370 185"/>
+<path class="map-link-red" d="M370 185Q345 220 290 245"/>
+<path class="map-link-red" d="M290 245Q225 250 180 270"/>
+<path class="map-link-red" d="M180 270Q145 300 125 330"/>
+<path class="map-link-red" d="M125 330Q170 390 235 435"/>
+<path class="map-link-red" d="M290 245Q315 290 300 330"/>
+<path class="map-link-red" d="M300 330Q345 345 350 360"/>
+<path class="map-link-red" d="M220 160Q245 195 290 245"/>
+<path class="map-link-red" d="M95 260Q130 260 180 270"/>
+</g>
+
+<!-- PINS VERMELHOS PULSANTES -->
+<g class="map-pin-group"><circle class="map-pin-halo" cx="150" cy="110" r="8"/><circle class="map-pin-core" cx="150" cy="110" r="5"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="250" cy="90" r="8"/><circle class="map-pin-core" cx="250" cy="90" r="5"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="320" cy="140" r="8"/><circle class="map-pin-core" cx="320" cy="140" r="5"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="370" cy="185" r="8"/><circle class="map-pin-core" cx="370" cy="185" r="5"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="290" cy="245" r="9"/><circle class="map-pin-core" cx="290" cy="245" r="6"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="180" cy="270" r="8"/><circle class="map-pin-core" cx="180" cy="270" r="5"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="125" cy="330" r="8"/><circle class="map-pin-core" cx="125" cy="330" r="5"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="300" cy="330" r="8"/><circle class="map-pin-core" cx="300" cy="330" r="5"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="350" cy="360" r="8"/><circle class="map-pin-core" cx="350" cy="360" r="5"/></g>
+<g class="map-pin-group"><circle class="map-pin-halo" cx="235" cy="435" r="8"/><circle class="map-pin-core" cx="235" cy="435" r="5"/></g>
+
+<!-- PONTOS LUMINOSOS REPRESENTATIVOS -->
+
+<g>
+<circle class="map-point" cx="150" cy="110" r="5"/>
+<circle class="map-point" cx="290" cy="245" r="6"/>
+<circle class="map-point" cx="125" cy="330" r="5"/>
+<circle class="map-point" cx="350" cy="360" r="5"/>
+<circle class="map-point" cx="235" cy="435" r="5"/>
+<circle class="map-point" cx="370" cy="185" r="5"/>
+<circle class="map-point" cx="220" cy="160" r="4"/>
+<circle class="map-point" cx="180" cy="270" r="4"/>
+<circle class="map-point" cx="300" cy="330" r="4"/>
+<circle class="map-point" cx="95" cy="260" r="4"/>
+<circle class="map-point" cx="250" cy="90" r="4"/>
+<circle class="map-point" cx="320" cy="140" r="4"/>
+</g>
+
+</svg>`;
+
+/* ==========================================
+   PARTÍCULAS
+========================================== */
+
+const particleContainer=document.getElementById("particles");
+
+for(let i=0;i<85;i++){
+    const p=document.createElement("div");
+    p.className="particle";
+    p.style.left=Math.random()*100+"%";
+    p.style.top=Math.random()*100+"%";
+    p.style.setProperty("--duration",(4+Math.random()*8)+"s");
+    p.style.setProperty("--move",(Math.random()*200-100)+"px");
+    p.style.animationDelay=(-Math.random()*10)+"s";
+    particleContainer.appendChild(p);
+}
+
+/* ==========================================
+   TIPOGRAFIA DINÂMICA
+========================================== */
+
+function renderHeadline(lines){
+
+    return lines.map((line,index)=>{
+
+        const delay=(.18+index*.24).toFixed(2);
+
+        const content=line.blue
+        ? `<span class="blue">${line.html}</span>`
+        : line.html;
+
+        return `
+        <span class="motion-line">
+        <span class="motion-word ${line.effect}"
+        style="animation-delay:${delay}s">
+        ${content}
+        </span>
+        </span>`;
+
+    }).join("");
+}
+
+/* ==========================================
+   CRIAR CENAS
+========================================== */
+
+const container=document.getElementById("scene-container");
+
+function createScene(data){
+
+    let html=`<div class="scene">`;
+
+    if(data.type==="map-intro"){
+        html+=`<div class="map-intro-scene"><div class="kicker">${data.kicker}</div><div class="dashboard-title">${data.title}</div><div class="world-map-subtitle" style="font-size:clamp(27px,6vw,58px);font-weight:900;color:#42baff;text-shadow:0 0 28px #078cff">${data.subtitle}</div><div class="separator" style="margin:24px auto"></div><div class="world-map-caption">MRO INTELIGENTE • PRESENÇA NACIONAL</div></div>`;
+    }
+    else if(data.type==="world-map"){
+        html+=`<div class="world-map-scene"><div class="kicker">${data.kicker}</div><div class="world-map-title">${data.title}</div><div class="world-map-subtitle">${data.subtitle}</div><div class="world-map-stage">${worldMap}<span class="world-target"></span></div><div class="world-map-caption">CÂMERA EM MERGULHO • DESTINO: BRASIL</div></div>`;
+    }
+    else if(data.type==="carousel-demo"){
+        html+=`<div class="kicker">${data.kicker}</div>
+        <div class="headline carousel-headline">${renderHeadline(data.lines)}</div>
+        <div class="carousel-demo-shell">
+          <div class="carousel-demo-top"><span class="demo-dot"></span><span>EDITOR DE CARROSSÉIS</span><span class="demo-top-icon">✦ IA</span></div>
+          <div class="carousel-demo-viewport"><div class="carousel-demo-track">
+            ${[1,2,3,4,5,6,7].map((n)=>`<div class="carousel-demo-card" data-slide="${n}"><div class="carousel-card-no">0${n} / 07</div><div class="carousel-card-art"><span class="art-orbit"></span><span class="art-circle"></span><span class="art-spark">✦</span></div><div class="carousel-card-title">${["ESTRATÉGIA","ALCANCE","CONTEÚDO","RESULTADOS","CONEXÕES","IDEIAS","CRESCIMENTO"][n-1]}</div><div class="carousel-card-bar"></div></div>`).join("")}
+          </div></div>
+          <div class="carousel-demo-footer"><span>DESLIZE PARA ESCOLHER</span><span class="demo-pages">● ● ● ● ● ● ●</span></div>
+          <svg class="demo-mouse" viewBox="0 0 50 60" aria-hidden="true"><path d="M8 3 8 44 18 35 26 55 36 50 27 30 41 30Z" fill="white" stroke="#10192c" stroke-width="3" stroke-linejoin="round"/></svg>
+          <span class="demo-click-ring"></span><div class="demo-selected-label">SLIDE SELECIONADO ✓</div>
+        </div>
+        <div class="description carousel-description">${data.description}</div>`;
+    }
+    else if(data.type==="stats-dashboard"){
+        html+=`<div class="dashboard-scene"><div class="kicker">${data.kicker}</div><div class="dashboard-eyebrow">MRO • INTELIGÊNCIA NACIONAL</div><div class="dashboard-title">${data.title}</div><div class="dashboard-subtitle">${data.subtitle}</div><div class="dashboard-chart"><div class="chart-gridlines"></div><div class="chart-y-labels"><span>100%</span><span>75%</span><span>50%</span><span>25%</span></div><svg class="chart-svg" viewBox="0 0 600 280" preserveAspectRatio="none" aria-label="Gráfico de linha ilustrativo em crescimento"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#159bff" stop-opacity=".44"/><stop offset="1" stop-color="#159bff" stop-opacity="0"/></linearGradient></defs><path class="chart-area" d="M20 245 L100 218 L175 230 L255 168 L325 184 L410 108 L485 126 L580 36 L580 280 L20 280Z" fill="url(#chartFill)"/><path class="chart-line" d="M20 245 L100 218 L175 230 L255 168 L325 184 L410 108 L485 126 L580 36" fill="none" stroke="#36c8ff" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" pathLength="100"/><circle class="chart-endpoint" cx="580" cy="36" r="9" fill="#ffe45c" stroke="white" stroke-width="3"/></svg><div class="chart-x-labels"><span>INÍCIO</span><span>EVOLUÇÃO</span><span>EXPANSÃO</span></div></div><div class="dashboard-metrics"><div class="dashboard-metric"><strong>1.800+</strong><small>EMPRESÁRIOS</small></div><div class="dashboard-metric"><strong>BRASIL</strong><small>PRESENÇA NACIONAL</small></div></div><div class="dashboard-disclaimer">GRÁFICO ANIMADO ILUSTRATIVO — NÃO REPRESENTA DADOS HISTÓRICOS AUDITADOS</div></div>`;
+    }
+    else if(data.type==="map"){
+
+        html+=`
+        <div class="map-scene">
+
+            <div class="map-heading">
+                <div class="kicker">${data.kicker}</div>
+                <div class="map-title">${data.title}</div>
+                <div class="map-subtitle">${data.subtitle}</div>
+            </div>
+
+            <div class="map-layout">
+
+                ${brazilMap}
+
+                <div class="map-stat-panel">
+                    ${data.stats.map(s=>`
+                        <div class="stat-card">
+                            <div class="stat-number">${s[0]}</div>
+                            <div class="stat-label">${s[1]}</div>
+                        </div>
+                    `).join("")}
+                </div>
+
+            </div>
+
+            <div class="map-caption">
+                REPRESENTAÇÃO VISUAL ILUSTRATIVA DA PRESENÇA NACIONAL
+            </div>
+
+        </div>`;
+    }
+
+    else if(data.type==="social"){
+
+        html+=`
+        <div class="kicker">${data.kicker}</div>
+
+        <div class="headline" style="font-size:clamp(45px,9vw,100px)">
+            <span class="motion-word from-left"
+            style="animation-delay:.2s">
+            MAIS
+            </span>
+            <span class="motion-word from-right blue"
+            style="animation-delay:.5s">
+            ORGANIZAÇÃO.
+            </span>
+        </div>
+
+        <div class="description">${data.subtitle}</div>
+
+        <div class="social-proof">
+            ${data.testimonials.map(t=>`
+                <div class="testimonial">
+                    <div class="avatar">${t[0]}</div>
+                    <div class="testimonial-text">
+                        <strong>${t[1]}</strong>
+                        ${t[2]}
+                    </div>
+                </div>
+            `).join("")}
+        </div>
+
+        <div class="testimonial-note">
+            EXEMPLOS ILUSTRATIVOS DE BENEFÍCIOS — NÃO SÃO DEPOIMENTOS REAIS
+        </div>
+        `;
+    }
+
+    else if(data.type==="final"){
+
+        html+=`
+        <div class="final-glow"></div>
+        <div class="kicker">${data.kicker}</div>
+        <div class="final-logo">
+            <span class="motion-word from-zoom">MRO</span>
+        </div>
+        <div class="headline" style="font-size:clamp(30px,6vw,65px)">
+            <span class="motion-word from-mask blue"
+            style="animation-delay:.7s">
+            INTELIGENTE
+            </span>
+        </div>
+        <div class="description">${data.subtitle}</div>
+        <div class="separator"></div>
+        <div class="description" style="font-size:12px;letter-spacing:2px">
+            ${data.description}
+        </div>
+        `;
+    }
+
+    else{
+
+        html+=`<div class="kicker">${data.kicker}</div>`;
+
+        if(data.type==="instagram"){
+            html+=instagramSVG;
+        }
+
+        if(data.type==="creative"){
+            html+=`
+            <div class="icon-box">
+            <svg viewBox="0 0 24 24">
+            ${icons[data.icon]}
+            </svg>
+            </div>`;
+        }
+
+        html+=`<div class="headline">${renderHeadline(data.lines)}</div>`;
+
+        if(data.cards){
+
+            html+=`<div class="feature-grid">`;
+
+            data.cards.forEach(card=>{
+
+                html+=`
+                <div class="feature-card">
+                    <div class="feature-number">${card[0]}</div>
+                    <div class="feature-title">${card[1]}</div>
+                    <div class="feature-text">${card[2]}</div>
+                </div>`;
+
+            });
+
+            html+=`</div>`;
+        }
+
+        if(data.description){
+            html+=`
+            <div class="separator"></div>
+            <div class="description">${data.description}</div>`;
+        }
+    }
+
+    html+=`</div>`;
+
+    container.innerHTML=html;
+
+    return container.firstElementChild;
+}
+
+
+/* ============================================================
+   MOTOR DE EFEITOS SONOROS — SOMENTE SFX, SEM MÚSICA
+   Sons procedurais sincronizados com texto, ícones, cards,
+   movimentos de câmera, carrossel, mapa, pins e estatísticas.
+   O navegador exige um clique inicial do usuário para liberar áudio.
+============================================================ */
+const soundButton=document.getElementById("soundEnable");
+const soundButtonLabel=document.getElementById("soundEnableLabel");
+let soundEnabled=false;
+let audioContext=null;
+let masterSoundGain=null;
+let noiseBuffer=null;
+let soundTimers=[];
+let soundSceneToken=0;
+
+function ensureAudio(){
+    if(audioContext)return audioContext;
+    const AudioCtor=window.AudioContext||window.webkitAudioContext;
+    if(!AudioCtor)return null;
+    audioContext=new AudioCtor();
+    masterSoundGain=audioContext.createGain();
+    masterSoundGain.gain.value=.82;
+    const limiter=audioContext.createDynamicsCompressor();
+    limiter.threshold.value=-18;limiter.knee.value=16;limiter.ratio.value=5;
+    limiter.attack.value=.004;limiter.release.value=.22;
+    masterSoundGain.connect(limiter);limiter.connect(audioContext.destination);
+    const length=Math.max(1,Math.floor(audioContext.sampleRate*2));
+    noiseBuffer=audioContext.createBuffer(1,length,audioContext.sampleRate);
+    const channel=noiseBuffer.getChannelData(0);
+    for(let i=0;i<length;i++)channel[i]=(Math.random()*2-1)*.82;
+    return audioContext;
+}
+function audioNow(){return audioContext?audioContext.currentTime:0;}
+function tone(freq=440,duration=.18,volume=.12,type="sine",endFreq=null,delay=0){
+    if(!soundEnabled||!ensureAudio()||audioContext.state!="running")return;
+    const t=audioNow()+Math.max(0,delay),osc=audioContext.createOscillator(),gain=audioContext.createGain();
+    osc.type=type;osc.frequency.setValueAtTime(Math.max(20,freq),t);
+    if(endFreq!==null)osc.frequency.exponentialRampToValueAtTime(Math.max(20,endFreq),t+duration);
+    gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),t+.012);
+    gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    osc.connect(gain);gain.connect(masterSoundGain);osc.start(t);osc.stop(t+duration+.03);
+}
+function noiseSweep(duration=.48,volume=.13,low=180,high=2600,delay=0,filterType="lowpass"){
+    if(!soundEnabled||!ensureAudio()||!noiseBuffer||audioContext.state!="running")return;
+    const t=audioNow()+Math.max(0,delay),src=audioContext.createBufferSource();src.buffer=noiseBuffer;
+    const filter=audioContext.createBiquadFilter();filter.type=filterType;
+    filter.frequency.setValueAtTime(Math.max(80,low),t);filter.frequency.exponentialRampToValueAtTime(Math.max(100,high),t+duration*.82);filter.Q.value=.72;
+    const gain=audioContext.createGain();gain.gain.setValueAtTime(.0001,t);
+    gain.gain.linearRampToValueAtTime(volume,t+duration*.2);gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    src.connect(filter);filter.connect(gain);gain.connect(masterSoundGain);src.start(t);src.stop(t+duration+.035);
+}
+function sfxWhoosh(power=1){noiseSweep(.58,.15*power,130,4200,0,"bandpass");tone(105,.52,.065*power,"sine",42,.015);}
+function sfxImpact(power=1){tone(76,.44,.19*power,"sine",31);tone(43,.34,.105*power,"triangle",25,.018);noiseSweep(.2,.06*power,650,1700,.01,"lowpass");}
+function sfxClick(){tone(1180,.075,.09,"triangle",610);tone(1840,.05,.032,"sine",1120,.018);}
+function sfxText(){noiseSweep(.12,.035,850,3000,0,"highpass");tone(560,.095,.025,"sine",760,.012);}
+function sfxCard(){tone(230,.18,.07,"triangle",390);tone(690,.11,.025,"sine",980,.035);}
+function sfxDigital(){tone(740,.15,.055,"sine",1160);tone(1480,.105,.022,"sine",980,.025);}
+function sfxSparkle(){[880,1175,1568].forEach((n,i)=>tone(n,.18,.025,"sine",n*1.04,i*.055));}
+function sfxDroneDive(){noiseSweep(1.5,.2,85,2600,0,"bandpass");tone(94,1.28,.115,"sawtooth",39,.02);tone(188,.95,.045,"sine",68,.12);}
+function sfxChartRise(){[392,494,587,740,880,1046].forEach((n,i)=>tone(n,.28,.045,"sine",n*1.015,i*.145));tone(108,.56,.11,"sine",52,.82);}
+function sfxSwipe(){noiseSweep(.34,.09,240,2500,0,"bandpass");}
+function clearSoundTimers(){soundTimers.forEach(clearTimeout);soundTimers=[];soundSceneToken++;}
+function scheduleSound(fn,delay){const token=soundSceneToken;const timer=setTimeout(()=>{if(soundEnabled&&token===soundSceneToken)fn();},Math.max(0,delay));soundTimers.push(timer);}
+function updateSoundButton(){
+    if(!soundButton||!soundButtonLabel)return;
+    soundButton.classList.toggle("is-active",soundEnabled);
+    soundButton.setAttribute("aria-pressed",soundEnabled?"true":"false");
+    soundButton.setAttribute("aria-label",soundEnabled?"Silenciar efeitos sonoros":"Ativar efeitos sonoros");
+    soundButtonLabel.textContent=soundEnabled?"EFEITOS SONOROS: LIGADOS · SILENCIAR":"ATIVAR EFEITOS SONOROS";
+}
+async function toggleSound(){
+    const ctx=ensureAudio();if(!ctx){if(soundButtonLabel)soundButtonLabel.textContent="ÁUDIO NÃO SUPORTADO";return;}
+    if(soundEnabled){soundEnabled=false;clearSoundTimers();try{masterSoundGain.gain.setTargetAtTime(.0001,ctx.currentTime,.025);}catch(e){}updateSoundButton();return;}
+    try{
+        await ctx.resume();
+        if(ctx.state!=="running")throw new Error("AudioContext não iniciou");
+        masterSoundGain.gain.cancelScheduledValues(ctx.currentTime);masterSoundGain.gain.setTargetAtTime(.82,ctx.currentTime,.025);
+        soundEnabled=true;updateSoundButton();
+        // Confirmação audível para o usuário saber que o áudio foi liberado.
+        sfxClick();setTimeout(()=>{if(soundEnabled)sfxSparkle();},100);
+        // Se o vídeo já estiver rodando, cria um pequeno ambiente de entrada na cena atual.
+        setTimeout(()=>{if(soundEnabled){sfxWhoosh(.55);sfxCard();}},240);
+    }catch(err){soundEnabled=false;updateSoundButton();if(soundButtonLabel)soundButtonLabel.textContent="CLIQUE PARA LIBERAR O SOM";}
+}
+if(soundButton){soundButton.addEventListener("click",toggleSound);updateSoundButton();}
+
+function playSceneSound(data,index){
+    if(!soundEnabled)return;
+    clearSoundTimers();
+    const type=data.type||"standard";
+    // Toda cena recebe um efeito de entrada, sem trilha musical.
+    if(type==="world-map"){
+        sfxDroneDive();scheduleSound(()=>sfxWhoosh(1.25),1050);scheduleSound(()=>sfxImpact(.95),Math.max(1800,data.duration*.72));
+        return;
+    }
+    if(type==="map"){
+        sfxWhoosh(1.35);scheduleSound(()=>sfxImpact(.95),180);
+        for(let i=0;i<12;i++)scheduleSound(()=>sfxDigital(),520+i*260);
+        scheduleSound(()=>sfxWhoosh(.7),data.duration*.62);
+        return;
+    }
+    if(type==="stats-dashboard"){
+        sfxImpact(.82);scheduleSound(sfxChartRise,520);
+        for(let i=0;i<7;i++)scheduleSound(()=>sfxDigital(),1050+i*360);
+        return;
+    }
+    if(type==="carousel-demo"){
+        sfxWhoosh(.8);scheduleSound(()=>sfxSwipe(),500);scheduleSound(()=>sfxSwipe(),1700);scheduleSound(()=>sfxSwipe(),3100);
+        return;
+    }
+    if(type==="map-intro"){
+        sfxWhoosh(.9);scheduleSound(()=>sfxImpact(.55),450);scheduleSound(()=>sfxSparkle(),980);
+        return;
+    }
+    if(type==="final"){
+        sfxWhoosh(1.2);scheduleSound(()=>sfxImpact(1.12),270);scheduleSound(()=>sfxSparkle(),780);
+        return;
+    }
+    // Entrada da câmera/fundo.
+    if(data.camera==="impact"){sfxWhoosh(.9);scheduleSound(()=>sfxImpact(.78),130);}
+    else if(data.camera==="push"||data.camera==="pull"||data.camera==="orbit"||data.camera==="left"||data.camera==="right"||data.camera==="up"||data.camera==="down")sfxWhoosh(.62);
+    else sfxSwipe();
+    // Cada linha de texto recebe um pequeno som no instante aproximado de entrada.
+    (data.lines||[]).forEach((line,i)=>{
+        const delay=180+i*240;
+        scheduleSound(()=>{if(line.effect==="from-zoom"||line.effect==="from-elastic"||line.effect==="from-glitch")sfxCard();else sfxText();},delay);
+    });
+    // Ícones, cards e vetores recebem detalhes sonoros individuais.
+    if(data.icon)scheduleSound(sfxSparkle,620);
+    if(data.type==="instagram")scheduleSound(sfxDigital,700);
+    if(data.cards){data.cards.forEach((_,i)=>scheduleSound(()=>sfxCard(),1150+i*430));}
+    if(data.type==="social")for(let i=0;i<4;i++)scheduleSound(()=>sfxCard(),850+i*560);
+    if(data.description)scheduleSound(()=>noiseSweep(.22,.035,500,1900,0,"highpass"),Math.min(1800,900+(data.lines||[]).length*170));
+}
+
+/* ==========================================
+   CÂMERA CINEMATOGRÁFICA SEGURA
+========================================== */
+
+const stage=document.getElementById("stage");
+const camera=document.getElementById("camera");
+
+let cameraAnimations=[];
+
+function clearCamera(){
+
+    cameraAnimations.forEach(a=>a.cancel());
+    cameraAnimations=[];
+
+    camera.style.transform="translate(0,0) scale(1)";
+}
+
+function safeZoom(target,maxZoom=1.075){
+
+    const stageRect=stage.getBoundingClientRect();
+    const rect=target.getBoundingClientRect();
+
+    const margin=45;
+
+    const availableW=stageRect.width-margin*2;
+    const availableH=stageRect.height-margin*2;
+
+    return Math.max(.98,Math.min(
+        maxZoom,
+        availableW/rect.width,
+        availableH/rect.height
+    ));
+}
+
+function focusPosition(target,scale){
+
+    const sr=stage.getBoundingClientRect();
+    const r=target.getBoundingClientRect();
+
+    const cx=sr.left+sr.width/2;
+    const cy=sr.top+sr.height/2;
+
+    const tx=r.left+r.width/2;
+    const ty=r.top+r.height/2;
+
+    const maxX=sr.width*.022;
+    const maxY=sr.height*.022;
+
+    return {
+        x:Math.max(-maxX,Math.min(maxX,(cx-tx)*(scale-1))),
+        y:Math.max(-maxY,Math.min(maxY,(cy-ty)*(scale-1)))
+    };
+}
+
+function runCamera(data,scene){
+
+    clearCamera();
+
+    if(data.camera==="map"){
+        runMapCamera(data,scene);
+        return;
+    }
+    if(data.camera==="world-map"){
+        runWorldMapCamera(data,scene);
+        return;
+    }
+
+    const duration=data.duration;
+
+    const words=scene.querySelectorAll(".motion-word");
+
+    const focus=Math.min(data.focus||0,words.length-1);
+
+    const first=words[focus]||scene.querySelector(".headline")||scene;
+    const second=words.length>1?words[(focus+1)%words.length]:first;
+
+    const z1=safeZoom(first,1.07);
+    const z2=safeZoom(second,1.07);
+
+    const p1=focusPosition(first,z1);
+    const p2=focusPosition(second,z2);
+
+    const driftX=stage.clientWidth*.009;
+    const driftY=stage.clientHeight*.007;
+    const frames=[
+        {offset:0,transform:"translate3d(0,0,0) scale(1)"},
+        {offset:.18,transform:`translate3d(${p1.x-driftX}px,${p1.y+driftY}px,0) scale(${z1})`},
+        {offset:.34,transform:`translate3d(${p1.x+driftX}px,${p1.y-driftY}px,0) scale(${z1*1.008})`},
+        {offset:.51,transform:`translate3d(${(p1.x+p2.x)*.42}px,${(p1.y+p2.y)*.42}px,0) scale(${(z1+z2)/2})`},
+        {offset:.69,transform:`translate3d(${p2.x+driftX}px,${p2.y-driftY}px,0) scale(${z2})`},
+        {offset:.84,transform:`translate3d(${p2.x-driftX}px,${p2.y+driftY}px,0) scale(${z2*1.008})`},
+        {offset:1,transform:`translate3d(${p2.x*.18}px,${p2.y*.18}px,0) scale(1.025)`}
+    ];
+
+    const animation=camera.animate(frames,{
+        duration,
+        easing:"cubic-bezier(.45,0,.25,1)",
+        fill:"forwards"
+    });
+
+    cameraAnimations.push(animation);
+}
+
+/* ==========================================
+   MOVIMENTO ESPECIAL DO MAPA
+========================================== */
+
+function runMapCamera(data,scene){
+    scene.classList.add("drone-map-scene");
+    const map=scene.querySelector(".brazil-map");
+    if(!map)return;
+    // A trajetória parte de cima do território e avança em diagonal, como um drone.
+    const animation=camera.animate([
+        {offset:0,transform:"translate3d(-5px,-38px,-180px) rotateX(15deg) rotateY(-5deg) scale(.72)",opacity:.18},
+        {offset:.16,transform:"translate3d(-2px,-18px,0) rotateX(8deg) rotateY(-3deg) scale(.96)",opacity:1},
+        {offset:.38,transform:"translate3d(12px,-42px,0) rotateX(13deg) rotateY(4deg) scale(1.22)",opacity:1},
+        {offset:.62,transform:"translate3d(-18px,-72px,0) rotateX(17deg) rotateY(-4deg) scale(1.55)",opacity:1},
+        {offset:.82,transform:"translate3d(10px,-95px,0) rotateX(12deg) rotateY(3deg) scale(1.92)",opacity:1},
+        {offset:1,transform:"translate3d(22px,-120px,0) rotateX(5deg) rotateY(0deg) scale(2.25)",opacity:.78}
+    ],{duration:data.duration,easing:"cubic-bezier(.42,0,.18,1)",fill:"forwards"});
+    cameraAnimations.push(animation);
+    map.animate([
+        {transform:"translate3d(-12px,-30px,0) scale(.78) rotateX(8deg)",opacity:0,filter:"blur(12px)"},
+        {transform:"translate3d(0,0,0) scale(1.04) rotateX(0deg)",opacity:1,filter:"blur(0px)",offset:.32},
+        {transform:"translate3d(5px,-8px,0) scale(1.08) rotateX(2deg)",opacity:1,filter:"blur(0px)"}
+    ],{duration:2300,easing:"cubic-bezier(.16,1,.3,1)",fill:"forwards"});
+}
+
+function runWorldMapCamera(data,scene){
+    const map=scene.querySelector(".world-map-svg");
+    if(!map)return;
+    // Brasil está no quadrante inferior-esquerdo do mapa: deslocamos o quadro para lá.
+    const animation=camera.animate([
+      {offset:0,transform:"translate3d(0,18px,-180px) scale(.76) rotateX(12deg)",opacity:.25},
+      {offset:.2,transform:"translate3d(-8px,0,0) scale(.92) rotateX(7deg)",opacity:1},
+      {offset:.42,transform:"translate3d(12px,-10px,0) scale(1.08) rotateX(4deg)",opacity:1},
+      {offset:.68,transform:"translate3d(30px,-34px,0) scale(1.42) rotateX(2deg)",opacity:1},
+      {offset:.86,transform:"translate3d(72px,-82px,0) scale(2.08) rotateX(0deg)",opacity:1},
+      {offset:1,transform:"translate3d(118px,-130px,0) scale(2.85) rotateX(-2deg)",opacity:0}
+    ],{duration:data.duration,easing:"cubic-bezier(.38,0,.16,1)",fill:"forwards"});
+    cameraAnimations.push(animation);
+    map.animate([
+      {transform:"scale(.82) translate3d(0,12px,0)",filter:"blur(8px)"},
+      {transform:"scale(1) translate3d(0,0,0)",filter:"blur(0px)",offset:.25},
+      {transform:"scale(1.05) translate3d(-1%,1%,0)",filter:"blur(0px)"}
+    ],{duration:data.duration,easing:"cubic-bezier(.3,0,.2,1)",fill:"forwards"});
+}
+
+
+/* CARROSSEL: DESLIZAMENTO, CURSOR E CLIQUE SIMULADO */
+function runCarouselDemo(scene,data){
+    const track=scene.querySelector(".carousel-demo-track");
+    const cards=[...scene.querySelectorAll(".carousel-demo-card")];
+    const mouse=scene.querySelector(".demo-mouse");
+    const ring=scene.querySelector(".demo-click-ring");
+    const label=scene.querySelector(".demo-selected-label");
+    const viewport=scene.querySelector(".carousel-demo-viewport");
+    if(!track||!cards.length)return;
+    const target=cards[3];
+    const step=cards[1].offsetLeft-cards[0].offsetLeft;
+    const viewportW=viewport.clientWidth;
+    const centerTarget=target.offsetLeft+target.offsetWidth/2-viewportW/2;
+    const maxMove=track.scrollWidth-viewportW;
+    const finalX=-Math.max(0,Math.min(centerTarget,maxMove));
+    const scroll=track.animate([
+      {offset:0,transform:"translateX(0)"},
+      {offset:.22,transform:`translateX(${-Math.min(step*1.1,maxMove)}px)`},
+      {offset:.48,transform:`translateX(${-Math.min(step*2.3,maxMove)}px)`},
+      {offset:.68,transform:`translateX(${finalX}px)`},
+      {offset:1,transform:`translateX(${finalX}px)`}
+    ],{duration:data.duration,fill:"forwards",easing:"cubic-bezier(.4,0,.2,1)"});
+    const cursorX=viewport.offsetLeft+viewportW/2;
+    const cursorY=viewport.offsetTop+viewport.clientHeight*.52;
+    mouse.style.left=cursorX+"px";mouse.style.top=cursorY+"px";
+    ring.style.left=cursorX+"px";ring.style.top=cursorY+"px";
+    mouse.animate([{offset:0,opacity:0,transform:"translate(115px,95px) scale(1.2)"},{offset:.65,opacity:0,transform:"translate(115px,95px) scale(1.2)"},{offset:.79,opacity:1,transform:"translate(0,0) scale(1)"},{offset:.85,opacity:1,transform:"translate(0,0) scale(.8)"},{offset:.9,opacity:1,transform:"translate(0,0) scale(1)"},{offset:1,opacity:1,transform:"translate(0,0) scale(1)"}],{duration:data.duration,fill:"forwards"});
+    const clickAt=data.duration*.84;
+    // Sons de movimento acompanham os deslocamentos do carrossel.
+    scheduleSound(()=>sfxSwipe(),data.duration*.22);
+    scheduleSound(()=>sfxSwipe(),data.duration*.48);
+    scheduleSound(()=>sfxSwipe(),data.duration*.68);
+    scheduleSound(sfxClick,clickAt);
+    const t=setTimeout(()=>{if(!scene.isConnected)return;target.classList.add("chosen");ring.classList.add("clicked");label.classList.add("visible");},clickAt);
+    scene._carouselTimeout=t;
+}
+
+/* ==========================================
+   FLASH
+========================================== */
+
+const flash=document.getElementById("flash");
+
+function triggerFlash(){
+
+    flash.classList.remove("hit");
+
+    void flash.offsetWidth;
+
+    flash.classList.add("hit");
+}
+
+/* ==========================================
+   TIMELINE
+========================================== */
+
+const timeline=[];
+let cursor=0;
+
+scenes.forEach((scene,index)=>{
+
+    timeline.push({
+        index,
+        start:cursor,
+        end:cursor+scene.duration
+    });
+
+    cursor+=scene.duration;
+
+});
+
+const actualDuration=cursor;
+
+const progress=document.getElementById("progress");
+const counter=document.getElementById("counter");
+
+let currentScene=null;
+let currentIndex=-1;
+let startTime=0;
+let running=false;
+let finished=false;
+
+/* ==========================================
+   TROCA DE CENAS
+========================================== */
+
+function fitSceneToStage(scene){
+    if(!scene)return;
+    scene.style.setProperty("--fit-scale","1");
+    const stageRect=stage.getBoundingClientRect();
+    const contentW=Math.max(scene.scrollWidth,scene.getBoundingClientRect().width);
+    const contentH=Math.max(scene.scrollHeight,scene.getBoundingClientRect().height);
+    const safeW=Math.max(1,stageRect.width-28);
+    const safeH=Math.max(1,stageRect.height-110);
+    const fit=Math.min(1,safeW/contentW,safeH/contentH);
+    scene.style.setProperty("--fit-scale",String(Math.max(.68,fit)));
+}
+
+function showScene(index){
+
+    if(index===currentIndex)return;
+
+    if(currentScene){
+        if(currentScene._carouselTimeout)clearTimeout(currentScene._carouselTimeout);
+        currentScene.classList.remove("active");
+        currentScene.classList.add("leaving");
+    }
+
+    clearCamera();
+
+    currentIndex=index;
+
+    const data=scenes[index];
+    playSceneSound(data,index);
+
+    currentScene=createScene(data);
+    const sceneCopy=[data.kicker,data.title,data.subtitle,data.description,...(data.lines||[]).map(x=>x.html)].join(" ").toLowerCase();
+    if(sceneCopy.includes("instagram")||data.type==="instagram")currentScene.classList.add("context-instagram");
+
+    requestAnimationFrame(()=>{
+
+        currentScene.classList.add("active");
+        fitSceneToStage(currentScene);
+
+        requestAnimationFrame(()=>{
+            fitSceneToStage(currentScene);
+            if(data.type!=="stats-dashboard")runCamera(data,currentScene);
+            if(data.type==="carousel-demo")runCarouselDemo(currentScene,data);
+        });
+
+    });
+
+    if(data.type==="world-map"||data.type==="map-intro"||data.type==="map"){
+        camera.style.filter="saturate(1.08) contrast(1.04)";
+    } else { camera.style.filter="none"; }
+
+    if(index===0||index===4||index===9||index===14){
+        triggerFlash();
+    }
+}
+
+/* ==========================================
+   EXECUÇÃO
+========================================== */
+
+function animate(now){
+
+    if(!running||finished)return;
+
+    const time=Math.min(now-startTime,actualDuration);
+
+    progress.style.width=(time/actualDuration*100)+"%";
+
+    const seconds=Math.floor(time/1000);
+
+    const total=Math.ceil(actualDuration/1000);
+
+    counter.textContent=
+        "00:"+String(seconds).padStart(2,"0")+
+        " / 00:"+String(total).padStart(2,"0");
+
+    const current=timeline.find(
+        s=>time>=s.start&&time<s.end
+    );
+
+    if(current){
+        showScene(current.index);
+    }
+
+    if(time>=actualDuration){
+        finishMotion();
+        return;
+    }
+
+    requestAnimationFrame(animate);
+}
+
+/* ==========================================
+   FINALIZAÇÃO
+========================================== */
+
+function finishMotion(){
+
+    if(finished)return;
+
+    finished=true;
+    running=false;
+    clearSoundTimers();
+
+    progress.style.width="100%";
+
+    const total=Math.floor(actualDuration/1000);
+
+    counter.textContent=
+        "00:"+String(total).padStart(2,"0")+
+        " / 00:"+String(total).padStart(2,"0");
+
+    // Retorno ao enquadramento normal.
+    clearCamera();
+
+    if(currentScene){
+        currentScene.classList.remove("leaving");
+        currentScene.classList.add("active");
+    }
+
+    console.log("MRO CINEMATIC MOTION 4.0 FINALIZADO");
+}
+
+/* ==========================================
+   INICIALIZAÇÃO
+========================================== */
+
+function startMotion(){
+
+    if(running||finished)return;
+
+    running=true;
+    startTime=performance.now();
+
+    requestAnimationFrame(animate);
+}
+
+window.addEventListener("load",startMotion);
+
+/* Reajusta a cena atual se a janela/orientação mudar durante a prévia. */
+let resizeTimer;
+window.addEventListener("resize",()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{
+        if(currentScene){
+            fitSceneToStage(currentScene);
+        }
+    },100);
+});
+
+</script>
+
+</body>
+</html>
