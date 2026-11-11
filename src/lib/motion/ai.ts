@@ -147,7 +147,7 @@ ${JSON.stringify({ ...direction, script }, null, 2)}
 Terceira etapa: transforme o roteiro em cenas cinematográficas detalhadas, preservando ideias, estilo e narração.
 Responda SOMENTE com JSON:
 {"scenes":[{"title":"","start":0,"duration":0,"text":"texto em tela","camera":"","vfx":"","sfx":""}]}
-As durações das cenas devem somar EXATAMENTE ${seconds}s, sem lacunas na timeline.`, { maxTokens: 7000, kind: "Cenas" }, onUsage);
+As durações das cenas devem somar EXATAMENTE ${seconds}s, sem lacunas na timeline.`, { maxTokens: 12000, kind: "Cenas" }, onUsage);
   const { scenes } = extractJson(scenesText);
   onProgress("scenes", "done");
 
