@@ -66,16 +66,56 @@ async function callModel(s: AiSettings, system: string, user: string, opts: { ma
   return text;
 }
 
-export async function generatePlan(s: AiSettings, prompt: string, format: MotionFormat, seconds: number, webSearch: boolean, onUsage: OnUsage): Promise<MotionPlan> {
+export type MotionPlanStage = "ideas" | "script" | "scenes";
+export type MotionPlanProgress = (stage: MotionPlanStage, status: "start" | "done") => void;
+
+export async function generatePlan(
+  s: AiSettings,
+  prompt: string,
+  format: MotionFormat,
+  seconds: number,
+  webSearch: boolean,
+  onUsage: OnUsage,
+  onProgress: MotionPlanProgress = () => {},
+): Promise<MotionPlan> {
   const f = FORMATS[format];
-  const user = `Pedido do cliente: """${prompt}"""
-Formato: ${f.label} (${f.w}x${f.h}). Duração total EXATA: ${seconds} segundos.
+  const request = `Pedido do cliente: """${prompt}"""
+Formato: ${f.label} (${f.w}x${f.h}). Duração total EXATA: ${seconds} segundos.`;
+
+  onProgress("ideas", "start");
+  const ideasText = await callModel(s, MOTION_RULES, `${request}
 ${webSearch ? "Pesquise na internet referências, dados e tendências atuais sobre o tema antes de criar." : ""}
-Crie a direção criativa. Responda SOMENTE com JSON:
-{"title":"","concept":"","ideas":["3 a 5 ideias criativas"],"palette":["#hex"...4-6],"style":"linguagem visual (ex: Quantum Molten + Glitch)","script":"roteiro/narração completo","scenes":[{"title":"","start":0,"duration":0,"text":"texto em tela","camera":"","vfx":"","sfx":""}],"imagePrompt":"prompt em inglês para imagem de fundo cinematográfica, sem textos"}
-As durações das cenas devem somar ${seconds}s.`;
-  const text = await callModel(s, MOTION_RULES, user, { maxTokens: 6000, webSearch, kind: "Roteiro e cenas" }, onUsage);
-  return extractJson(text);
+Primeira etapa: crie SOMENTE as ideias e a direção criativa. Ainda não escreva roteiro nem cenas.
+Responda SOMENTE com JSON:
+{"title":"","concept":"","ideas":["3 a 5 ideias criativas"],"palette":["#hex"...4-6],"style":"linguagem visual (ex: Quantum Molten + Glitch)","imagePrompt":"prompt em inglês para imagem de fundo cinematográfica, sem textos"}`, { maxTokens: 3500, webSearch, kind: "Ideias" }, onUsage);
+  const direction = extractJson(ideasText);
+  onProgress("ideas", "done");
+
+  onProgress("script", "start");
+  const scriptText = await callModel(s, MOTION_RULES, `${request}
+
+Direção criativa aprovada:
+${JSON.stringify(direction, null, 2)}
+
+Segunda etapa: escreva o roteiro/narração completo, mantendo exatamente essa direção criativa. Ainda não detalhe as cenas.
+Responda SOMENTE com JSON: {"script":"roteiro/narração completo"}`, { maxTokens: 5000, kind: "Roteiro" }, onUsage);
+  const { script } = extractJson(scriptText);
+  onProgress("script", "done");
+
+  onProgress("scenes", "start");
+  const scenesText = await callModel(s, MOTION_RULES, `${request}
+
+Direção criativa e roteiro aprovados:
+${JSON.stringify({ ...direction, script }, null, 2)}
+
+Terceira etapa: transforme o roteiro em cenas cinematográficas detalhadas, preservando ideias, estilo e narração.
+Responda SOMENTE com JSON:
+{"scenes":[{"title":"","start":0,"duration":0,"text":"texto em tela","camera":"","vfx":"","sfx":""}]}
+As durações das cenas devem somar EXATAMENTE ${seconds}s, sem lacunas na timeline.`, { maxTokens: 7000, kind: "Cenas" }, onUsage);
+  const { scenes } = extractJson(scenesText);
+  onProgress("scenes", "done");
+
+  return { ...direction, script, scenes };
 }
 
 async function referenceExcerpt(format: MotionFormat) {
