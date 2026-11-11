@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Clapperboard, Download, Film, KeyRound, Loader2, Pencil, RefreshCw, Sparkles, Trash2, Upload, Calculator, Image as ImageIcon, Globe, Play, Maximize2 } from "lucide-react";
 import { kvGet, kvSet, kvClear } from "@/lib/motion/store";
 import { MODEL_PRICES, summarizeUsage, type UsageEntry } from "@/lib/motion/pricing";
-import { FORMATS, generatePlan, generateHtml, editHtml, generateBackground, renderHtml, type AiSettings, type MotionFormat, type MotionPlan } from "@/lib/motion/ai";
+import { FORMATS, generatePlan, generateHtml, editHtml, generateBackground, fetchAccountModels, renderHtml, type AiSettings, type MotionFormat, type MotionPlan } from "@/lib/motion/ai";
 import { recordElement, download } from "@/lib/motion/recorder";
 
 interface SavedMotion { id: string; createdAt: number; prompt: string; format: MotionFormat; seconds: number; plan: MotionPlan; html: string; bg: string | null; history: string[]; }
@@ -74,7 +74,20 @@ export default function MotionMro() {
   const srcDoc = current ? renderHtml(current.html, current.bg) : undefined;
   const src = !current && demo ? `/motion-demos/${demo.file}` : undefined;
 
-  const providerModels = Object.entries(MODEL_PRICES).filter(([, p]) => p.provider === settings.provider);
+  const allModels = useMemo(() => {
+    const map = new Map<string, { provider: "openai" | "claude"; label: string }>();
+    Object.entries(MODEL_PRICES).forEach(([id, p]) => map.set(id, { provider: p.provider, label: p.label }));
+    (settings.customModels || []).forEach((m) => map.set(m.id, { provider: m.provider, label: m.label }));
+    if (settings.model && !map.has(settings.model)) map.set(settings.model, { provider: settings.provider, label: settings.model });
+    return Array.from(map.entries());
+  }, [settings.customModels, settings.model, settings.provider]);
+  const providerModels = allModels.filter(([, p]) => p.provider === settings.provider);
+  const [customId, setCustomId] = useState("");
+  const loadModels = () => run("Buscando modelos da sua conta…", async () => {
+    const list = await fetchAccountModels(settings);
+    setSettings((s) => ({ ...s, customModels: list }));
+    toast.success(`${list.length} modelos encontrados.`);
+  });
 
   async function run(label: string, fn: () => Promise<void>) {
     setBusy(label);
@@ -180,9 +193,9 @@ export default function MotionMro() {
                 </div>
                 <div className="space-y-1">
                   <Label>IA</Label>
-                  <Select value={settings.model} onValueChange={(model) => setSettings((s) => ({ ...s, model, provider: MODEL_PRICES[model].provider }))}>
+                  <Select value={settings.model} onValueChange={(model) => setSettings((s) => ({ ...s, model, provider: allModels.find(([id]) => id === model)?.[1].provider ?? s.provider }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{Object.entries(MODEL_PRICES).map(([id, p]) => <SelectItem key={id} value={id}>{p.label}</SelectItem>)}</SelectContent>
+                    <SelectContent>{allModels.map(([id, p]) => <SelectItem key={id} value={id}>{p.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
@@ -219,6 +232,11 @@ export default function MotionMro() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{providerModels.map(([id, p]) => <SelectItem key={id} value={id}>{p.label}</SelectItem>)}</SelectContent>
                 </Select>
+                <Button variant="secondary" className="w-full" disabled={!!busy} onClick={loadModels}>Buscar modelos da minha conta (Opus, Sonnet, GPT…)</Button>
+                <div className="flex gap-2">
+                  <Input value={customId} onChange={(e) => setCustomId(e.target.value.trim())} placeholder="ou digite o ID exato do modelo" />
+                  <Button variant="outline" disabled={!customId} onClick={() => { const provider = customId.toLowerCase().startsWith("claude") ? "claude" as const : "openai" as const; setSettings((s) => ({ ...s, provider, model: customId, customModels: [...(s.customModels || []).filter((m) => m.id !== customId), { id: customId, provider, label: customId }] })); setCustomId(""); }}>Usar</Button>
+                </div>
               </div>
               <Button variant="outline" className="w-full" onClick={async () => { if (confirm("Apagar tokens, motions e custos deste navegador?")) { await kvClear(); location.reload(); } }}><Trash2 className="h-4 w-4 mr-2" />Apagar tudo do navegador</Button>
             </TabsContent>
@@ -239,7 +257,7 @@ export default function MotionMro() {
               <div className="max-h-72 overflow-auto space-y-1 text-xs">
                 {usage.map((u) => (
                   <div key={u.id} className="flex justify-between gap-2 border-b border-border py-1">
-                    <span className="truncate">{new Date(u.at).toLocaleString("pt-BR")} · {u.kind} · {MODEL_PRICES[u.model]?.label || u.model}</span>
+                    <span className="truncate">{new Date(u.at).toLocaleString("pt-BR")} · {u.kind} · {allModels.find(([id]) => id === u.model)?.[1].label || u.model}</span>
                     <span className="whitespace-nowrap text-muted-foreground">{fmt(u.inputTokens + u.outputTokens)} tk · {money(u.costUsd)}</span>
                   </div>
                 ))}
@@ -282,7 +300,7 @@ export default function MotionMro() {
             <div className="flex justify-center bg-background rounded-lg p-2">
               <div ref={stageRef} className="relative overflow-hidden rounded-md bg-background" style={{ aspectRatio: FORMATS[previewFormat].ratio, width: `min(100%, calc(78vh * ${FORMATS[previewFormat].w} / ${FORMATS[previewFormat].h}))` }}>
                 {busy && !recording && <div className="absolute inset-0 z-10 grid place-items-center bg-background/80 text-sm"><div className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />{busy}<div className="text-xs text-muted-foreground mt-1">Pode levar de 1 a 3 minutos</div></div></div>}
-                {(srcDoc || src) && <iframe key={`${currentId || demo?.file}-${frameKey}`} title="Prévia do motion" className="absolute inset-0 h-full w-full border-0" srcDoc={srcDoc} src={src} sandbox="allow-scripts allow-same-origin" allow="autoplay" />}
+                {(srcDoc || src) && <iframe key={`${currentId || demo?.file}-${frameKey}`} title="Prévia do motion" className="absolute inset-0 h-full w-full border-0" srcDoc={srcDoc} src={src} sandbox="allow-scripts" allow="autoplay" />}
               </div>
             </div>
             {recording && <p className="text-xs text-center text-primary mt-2">Gravando… não mude de aba nem role a página.</p>}

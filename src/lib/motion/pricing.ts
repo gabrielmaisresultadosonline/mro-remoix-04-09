@@ -12,12 +12,22 @@ export const MODEL_PRICES: Record<string, { provider: Provider; label: string; i
 export const IMAGE_PRICE_USD = 0.07; // gpt-image-1, medium quality (approx.)
 export const WEB_SEARCH_PRICE_USD = 0.01; // per search call (approx.)
 
+export interface ModelInfo { id: string; provider: Provider; label: string }
+/** Price for any model id, including ones fetched from the account (estimated by family). */
+export function priceFor(model: string) {
+  if (MODEL_PRICES[model]) return MODEL_PRICES[model];
+  const m = model.toLowerCase();
+  const provider: Provider = m.startsWith("claude") ? "claude" : "openai";
+  const [input, output] = m.includes("opus") ? [15, 75] : m.includes("haiku") ? [1, 5] : m.includes("sonnet") ? [3, 15]
+    : m.includes("nano") ? [0.05, 0.4] : m.includes("mini") ? [0.25, 2] : provider === "openai" ? [1.25, 10] : [3, 15];
+  return { provider, label: model, input, output };
+}
 export interface UsageEntry {
   id: string; at: number; provider: Provider; model: string; kind: string;
   inputTokens: number; outputTokens: number; images: number; searches: number; costUsd: number;
 }
 export function costFor(model: string, inputTokens: number, outputTokens: number, images = 0, searches = 0) {
-  const p = MODEL_PRICES[model];
+  const p = priceFor(model);
   const tokens = p ? (inputTokens * p.input + outputTokens * p.output) / 1_000_000 : 0;
   return tokens + images * IMAGE_PRICE_USD + searches * WEB_SEARCH_PRICE_USD;
 }
