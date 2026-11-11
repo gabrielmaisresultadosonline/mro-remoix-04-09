@@ -10,7 +10,7 @@ export const FORMATS: Record<MotionFormat, { label: string; w: number; h: number
 export interface MotionScene { title: string; start: number; duration: number; text: string; camera: string; vfx: string; sfx: string; }
 export interface MotionPlan { title: string; concept: string; ideas: string[]; palette: string[]; style: string; script: string; scenes: MotionScene[]; imagePrompt: string; }
 
-export interface AiSettings { provider: Provider; model: string; openaiKey: string; claudeKey: string; }
+export interface AiSettings { provider: Provider; model: string; openaiKey: string; claudeKey: string; customModels?: ModelInfo[]; }
 
 type OnUsage = (e: UsageEntry) => void;
 
@@ -33,7 +33,7 @@ export function extractHtml(text: string) {
 }
 
 async function callModel(s: AiSettings, system: string, user: string, opts: { maxTokens: number; webSearch?: boolean; kind: string }, onUsage: OnUsage) {
-  const provider = MODEL_PRICES[s.model]?.provider ?? s.provider;
+  const provider = MODEL_PRICES[s.model]?.provider ?? s.customModels?.find((m) => m.id === s.model)?.provider ?? s.provider;
   if (provider === "openai") {
     if (!s.openaiKey) throw new Error("Configure o token da OpenAI (ChatGPT).");
     const body: any = { model: s.model, instructions: system, input: user, max_output_tokens: opts.maxTokens };
@@ -58,7 +58,7 @@ async function callModel(s: AiSettings, system: string, user: string, opts: { ma
     body: JSON.stringify(body),
   });
   const d = await r.json();
-  if (!r.ok) throw new Error(d?.error?.message || `Claude ${r.status}`);
+  if (!r.ok) throw new Error(r.status === 404 ? `Modelo "${s.model}" não existe na sua conta Anthropic. Clique em "Buscar modelos da minha conta" em Tokens e escolha um da lista.` : d?.error?.message || `Claude ${r.status}`);
   const text = (d.content || []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n");
   const searches = d.usage?.server_tool_use?.web_search_requests ?? 0;
   const it = d.usage?.input_tokens ?? 0, ot = d.usage?.output_tokens ?? 0;
@@ -136,4 +136,28 @@ export async function generateBackground(s: AiSettings, prompt: string, format: 
 
 export function renderHtml(html: string, bg?: string | null) {
   return bg ? html.split("{{BG_IMAGE}}").join(bg) : html;
+}
+
+/** Lists the models actually available to the user's keys (e.g. newest Opus versions). */
+export async function fetchAccountModels(s: AiSettings): Promise<ModelInfo[]> {
+  const out: ModelInfo[] = [];
+  const errors: string[] = [];
+  if (s.claudeKey) {
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/models?limit=100", { headers: { "x-api-key": s.claudeKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" } });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error?.message || `Claude ${r.status}`);
+      for (const m of d.data || []) out.push({ id: m.id, provider: "claude", label: m.display_name || m.id });
+    } catch (e: any) { errors.push(`Claude: ${e.message}`); }
+  }
+  if (s.openaiKey) {
+    try {
+      const r = await fetch("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${s.openaiKey}` } });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error?.message || `OpenAI ${r.status}`);
+      for (const m of d.data || []) if (/^(gpt|o\d|chatgpt)/i.test(m.id) && !/(audio|realtime|tts|transcribe|image|embedding|search)/i.test(m.id)) out.push({ id: m.id, provider: "openai", label: m.id });
+    } catch (e: any) { errors.push(`OpenAI: ${e.message}`); }
+  }
+  if (!out.length) throw new Error(errors.join(" · ") || "Configure pelo menos um token.");
+  return out;
 }
