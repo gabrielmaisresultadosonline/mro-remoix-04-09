@@ -594,7 +594,7 @@ async function adminProfileDetail(body: Body) {
   return [200, {
     success: true, session: withOnline(session),
     metrics: metrics.map((m) => ({
-      ...m, followers_start: numOrNull(m.followers_start), followers_end: numOrNull(m.followers_end),
+      ...m, followers_start: numOrNull(m.followers_start), followers_end: numOrNull(m.followers_end), followers_gained: Number(m.followers_gained ?? 0),
       welcome_sent: Number(m.welcome_sent ?? 0), likes_sent: Number(m.likes_sent ?? 0), follows_sent: Number(m.follows_sent ?? 0),
       unfollows_sent: Number(m.unfollows_sent ?? 0), ai_replies_sent: Number(m.ai_replies_sent ?? 0),
       ai_people_replied: Number(m.ai_people_replied ?? 0), mass_sent: Number(m.mass_sent ?? 0),
