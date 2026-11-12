@@ -121,15 +121,17 @@ export default function MotionMro() {
         if (status === "done") finishStage(stage);
         else setBusy(stage === "ideas" ? "Criando ideias e direção criativa…" : stage === "script" ? "Escrevendo o roteiro…" : "Criando as cenas…");
       });
+      // Image and animation run at the same time, so the total wait is the slower of the two, not the sum.
+      setBusy(withImage ? "Gerando imagem e animando cenas ao mesmo tempo…" : "Animando cenas, câmera, efeitos e sons…");
+      const htmlPromise = generateHtml(settings, plan, format, seconds, withImage, onUsage);
+      htmlPromise.catch(() => {});
       let bg: string | null = null;
       if (withImage) {
-        setBusy("Gerando a imagem de fundo…");
         try { bg = await generateBackground(settings, plan.imagePrompt || basePrompt, format, useFace ? face : null, onUsage); }
         catch (e: any) { toast.warning(`Imagem de fundo não gerada (o motion continua sem ela): ${e?.message || e}`); }
         finally { finishStage("image"); }
       }
-      setBusy("Animando cenas, câmera, efeitos e sons…");
-      const html = await generateHtml(settings, plan, format, seconds, !!bg, onUsage);
+      const html = await htmlPromise;
       finishStage("animation");
       const m: SavedMotion = { id: crypto.randomUUID(), createdAt: Date.now(), prompt: basePrompt, format, seconds, plan, html, bg, history: [] };
       setMotions((list) => [m, ...list]);
