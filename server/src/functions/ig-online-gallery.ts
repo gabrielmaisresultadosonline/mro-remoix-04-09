@@ -136,8 +136,8 @@ export async function galleryUpload(ig: string, body: Body) {
 const fileUrl = (base: string, id: unknown) => `${base}?file=${id}`;
 
 /** Only accepts server-validated owned usernames; never expose account names in public_gallery. */
-export async function ownedGalleryImages(owned: string[], base: string) {
-  if (!owned.length) return [];
+export async function ownedGalleryImages(owned: string[], base: string): Promise<(Row & { url: string })[]> {
+  if (!owned.length) return [] as (Row & { url: string })[];
   const rows = await adminQuery<Row>(
     `SELECT id, instagram_username, publication_id, image_index, caption, created_at
        FROM public.ig_online_gallery WHERE lower(instagram_username) = ANY($1::text[])
