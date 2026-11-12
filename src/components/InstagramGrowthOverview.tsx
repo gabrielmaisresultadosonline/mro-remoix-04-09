@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContaine
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InstagramAccountImages } from '@/components/InstagramAccountImages';
+import { InstagramActivityPanel } from '@/components/InstagramActivityPanel';
 import { accountUsageSummary, summarizeAccountGrowth, type AccountMetrics } from '@/lib/instagramAccountOverview';
 import type { ProfileSession } from '@/types/instagram';
 

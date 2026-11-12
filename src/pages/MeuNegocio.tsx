@@ -12,6 +12,7 @@ import { StrategyGenerator } from '@/components/StrategyGenerator';
 import { StrategyDisplay } from '@/components/StrategyDisplay';
 import { InstagramGrowthOverview } from '@/components/InstagramGrowthOverview';
 import { InstagramAccountImages } from '@/components/InstagramAccountImages';
+import { InstagramActivityPanel } from '@/components/InstagramActivityPanel';
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser, getRegisteredIGs, isAuthenticated, addRegisteredIG, loadUserFromCloud, saveUserToCloud, syncIGsFromSquare, updateUserEmail } from '@/lib/userStorage';
 import { getSession, addProfile, setActiveProfile, addStrategy, saveSession, getArchivedProfiles, initializeFromCloud, setCloudSyncCallback, restoreProfileFromArchive } from '@/lib/storage';
