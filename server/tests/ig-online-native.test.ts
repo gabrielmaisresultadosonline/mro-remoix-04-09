@@ -1,7 +1,7 @@
 /**
  * Teste de integração do IG Online nativo contra um PostgreSQL real.
  * Uso: IG_TEST_DATABASE_URL=postgres://... npx tsx tests/ig-online-native.test.ts
- * (o banco precisa das migrações 019–021 e das tabelas mro_tool_* / teste002_users).
+ * (o banco precisa das migrações 019–021 e 032 e das tabelas mro_tool_* / teste002_users).
  */
 import assert from "node:assert/strict";
 process.env.DATABASE_URL = process.env.IG_TEST_DATABASE_URL ?? process.env.DATABASE_URL;

@@ -220,32 +220,50 @@ export function parseFollowers(raw: unknown): number | null | undefined {
   return n >= 0 && n <= 1e10 ? n : undefined;
 }
 
+const ACTIVITY_COUNTERS = [
+  { key: "likes_sent", aliases: ["likes_sent", "likes", "curtidas"] },
+  { key: "follows_sent", aliases: ["follows_sent", "followed", "followed_count", "seguidos", "seguiu"] },
+  { key: "unfollows_sent", aliases: ["unfollows_sent", "unfollowed", "deixou_de_seguir"] },
+  { key: "ai_replies_sent", aliases: ["ai_replies_sent", "ai_replies", "respostas_ia"] },
+  { key: "ai_people_replied", aliases: ["ai_people_replied", "ai_people", "pessoas_respondidas_ia"] },
+  { key: "mass_sent", aliases: ["mass_sent", "mass_messages", "mensagens_massa"] },
+] as const;
+
+export function readIncrements(body: Body) {
+  const output: Record<string, number> = {};
+  for (const counter of ACTIVITY_COUNTERS) {
+    const alias = counter.aliases.find(key => body[key] !== undefined);
+    const value = Number(alias ? body[alias] : 0);
+    if (!Number.isInteger(value) || value < 0 || value > 100000) {
+      return { error: `${counter.key} deve ser inteiro entre 0 e 100000` };
+    }
+    output[counter.key] = value;
+  }
+  return { counters: output };
+}
+
 async function actionMetrics(body: Body) {
   const ig = normalizeIG(body.instagram ?? body.instagram_username);
   if (!ig || !IG_RE.test(ig)) return [400, { success: false, error: "Instagram inválido" }] as const;
-  // Aceita nomes alternativos e textos como "1.520", "1,5 mil", "12.3K" enviados pela extensão.
   const rawF = body.followers ?? body.followers_count ?? body.follower_count ?? body.seguidores;
   const parsedF = parseFollowers(rawF);
   const followers = parsedF ?? null;
   if (parsedF === undefined) {
     console.warn(`[ig-online] metrics @${ig}: valor de seguidores ilegível (${String(rawF).slice(0, 40)}) — ignorado`);
-  } else if (rawF === undefined) {
-    console.info(`[ig-online] metrics @${ig}: recebido sem campo de seguidores (welcome_sent=${String(body.welcome_sent ?? 0)})`);
   }
-  // Seguindo e publicações (opcionais) — completam a referência inicial do perfil.
   const following = parseFollowers(body.following ?? body.following_count ?? body.seguindo) ?? null;
   const posts = parseFollowers(body.posts ?? body.posts_count ?? body.media_count ?? body.publicacoes) ?? null;
-  // Seguidores GANHOS desde o último envio (incremento), como o contador da extensão.
-  const rawG = body.followers_gained ?? body.new_followers ?? body.seguidores_ganhos ?? 0;
-  const gained = Number(rawG);
+  const gained = Number(body.followers_gained ?? body.new_followers ?? body.seguidores_ganhos ?? 0);
   if (!Number.isInteger(gained) || gained < 0 || gained > 100000)
     return [400, { success: false, error: "followers_gained deve ser inteiro entre 0 e 100000" }] as const;
-  const fields = Object.keys(body).filter((k) => k !== "action").sort().join(",").slice(0, 300);
-  console.info(`[ig-online] metrics @${ig}: campos=${fields} followers=${followers ?? "-"} gained=${gained} welcome=${String(body.welcome_sent ?? 0)}`);
-  const rawW = body.welcome_sent ?? 0;
-  const welcome = Number(rawW);
+  const welcome = Number(body.welcome_sent ?? 0);
   if (!Number.isInteger(welcome) || welcome < 0 || welcome > 10000)
     return [400, { success: false, error: "welcome_sent deve ser inteiro entre 0 e 10000" }] as const;
+  const parsedCounters = readIncrements(body);
+  if (parsedCounters.error) return [400, { success: false, error: parsedCounters.error }] as const;
+  const a = parsedCounters.counters!;
+  const fields = Object.keys(body).filter((k) => k !== "action").sort().join(",").slice(0, 300);
+  console.info(`[ig-online] metrics @${ig}: campos=${fields} followers=${followers ?? "-"} gained=${gained} welcome=${welcome} likes=${a.likes_sent} follows=${a.follows_sent} unfollows=${a.unfollows_sent} ai=${a.ai_replies_sent}/${a.ai_people_replied} mass=${a.mass_sent}`);
   const sessionEvent = body.session === "start" || body.session === "end" ? body.session : null;
   const requestId = clean(body.request_id, 80) || null;
   const day = spDay(new Date());
@@ -256,53 +274,57 @@ async function actionMetrics(body: Body) {
         "INSERT INTO public.ig_online_metric_requests (request_id, instagram_username) VALUES ($1,$2) ON CONFLICT DO NOTHING",
         [requestId, ig],
       );
-      if (r.rowCount === 0) return true; // já processada: não soma de novo
+      if (r.rowCount === 0) return true;
     }
     const s = await ensureSession(c, ig);
     await c.query(
       `UPDATE public.ig_online_sessions SET
-         metrics_updated_at = now(), last_seen_at = now(),
-         welcome_total = welcome_total + $2,
-         followers_current = COALESCE($3, followers_current),
-         followers_initial = COALESCE(followers_initial, $3),
+         metrics_updated_at = now(), last_seen_at = now(), welcome_total = welcome_total + $2,
+         followers_current = COALESCE($3, followers_current), followers_initial = COALESCE(followers_initial, $3),
          session_started_at = CASE WHEN $4 = 'start' THEN now() ELSE session_started_at END,
          session_ended_at = CASE WHEN $4 = 'start' THEN NULL WHEN $4 = 'end' THEN now() ELSE session_ended_at END,
-         followers_gained_total = followers_gained_total + $5,
-         last_metrics_fields = $6
+         followers_gained_total = followers_gained_total + $5, last_metrics_fields = $6,
+         likes_total = likes_total + $7, follows_total = follows_total + $8,
+         unfollows_total = unfollows_total + $9, ai_replies_total = ai_replies_total + $10,
+         ai_people_total = ai_people_total + $11, mass_sent_total = mass_sent_total + $12
        WHERE id = $1`,
-      [s.id, welcome, followers, sessionEvent, gained, fields],
+      [s.id, welcome, followers, sessionEvent, gained, fields, a.likes_sent, a.follows_sent, a.unfollows_sent, a.ai_replies_sent, a.ai_people_replied, a.mass_sent],
     );
+    const values = [ig, day, welcome, followers, gained, a.likes_sent, a.follows_sent, a.unfollows_sent, a.ai_replies_sent, a.ai_people_replied, a.mass_sent];
     const upd = await c.query(
       `UPDATE public.ig_online_metrics SET updated_at = now(), welcome_sent = welcome_sent + $3,
          followers_end = COALESCE($4, followers_end), followers_start = COALESCE(followers_start, $4),
-         followers_gained = followers_gained + $5
-       WHERE lower(instagram_username) = $1 AND day = $2`,
-      [ig, day, welcome, followers, gained],
+         followers_gained = followers_gained + $5, likes_sent = likes_sent + $6,
+         follows_sent = follows_sent + $7, unfollows_sent = unfollows_sent + $8,
+         ai_replies_sent = ai_replies_sent + $9, ai_people_replied = ai_people_replied + $10,
+         mass_sent = mass_sent + $11
+       WHERE lower(instagram_username) = $1 AND day = $2`, values,
     );
     if (upd.rowCount === 0) {
       await c.query(
-        `INSERT INTO public.ig_online_metrics (instagram_username, day, followers_start, followers_end, welcome_sent, followers_gained)
-         VALUES ($1,$2,$3,$3,$4,$5)
+        `INSERT INTO public.ig_online_metrics
+          (instagram_username, day, followers_start, followers_end, welcome_sent, followers_gained,
+           likes_sent, follows_sent, unfollows_sent, ai_replies_sent, ai_people_replied, mass_sent)
+         VALUES ($1,$2,$4,$4,$3,$5,$6,$7,$8,$9,$10,$11)
          ON CONFLICT (lower(instagram_username), day) DO UPDATE SET
            welcome_sent = public.ig_online_metrics.welcome_sent + EXCLUDED.welcome_sent,
            followers_gained = public.ig_online_metrics.followers_gained + EXCLUDED.followers_gained,
            followers_end = COALESCE(EXCLUDED.followers_end, public.ig_online_metrics.followers_end),
-           updated_at = now()`,
-        [ig, day, followers, welcome, gained],
+           likes_sent = public.ig_online_metrics.likes_sent + EXCLUDED.likes_sent,
+           follows_sent = public.ig_online_metrics.follows_sent + EXCLUDED.follows_sent,
+           unfollows_sent = public.ig_online_metrics.unfollows_sent + EXCLUDED.unfollows_sent,
+           ai_replies_sent = public.ig_online_metrics.ai_replies_sent + EXCLUDED.ai_replies_sent,
+           ai_people_replied = public.ig_online_metrics.ai_people_replied + EXCLUDED.ai_people_replied,
+           mass_sent = public.ig_online_metrics.mass_sent + EXCLUDED.mass_sent,
+           updated_at = now()`, values,
       );
     }
     return false;
   });
-  // Referência central compartilhada com /instagram/painel: a primeira leitura
-  // cria a referência inicial (nunca sobrescrita); as demais viram "atual".
   if (!duplicate && followers !== null) {
-    try {
-      await recordProfileReading(ig, null, { followers, following, posts }, "extensao");
-    } catch (err) {
-      console.warn(`[ig-online] baseline @${ig} não gravada`, (err as Error).message);
-    }
+    try { await recordProfileReading(ig, null, { followers, following, posts }, "extensao"); }
+    catch (err) { console.warn(`[ig-online] baseline @${ig} não gravada`, (err as Error).message); }
   }
-  // Limpeza leve dos ids antigos (7 dias) sem bloquear a resposta.
   if (Math.random() < 0.01)
     void adminQuery("DELETE FROM public.ig_online_metric_requests WHERE created_at < now() - interval '7 days'").catch(() => undefined);
   return [200, { success: true, day, duplicate, ...(await getBlock(ig)) }] as const;

@@ -13,6 +13,7 @@ import path from "node:path";
 import type { Request, Response } from "express";
 import { adminQuery } from "../db.js";
 import { env } from "../env.js";
+import { recordCreative } from "./ig-online-creatives.js";
 
 type Body = Record<string, unknown>;
 type Row = Record<string, unknown>;
