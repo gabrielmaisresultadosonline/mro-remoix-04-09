@@ -649,28 +649,36 @@ async function userMetrics(body: Body) {
   if (!keys.length) return [200, { success: true, profiles: [] }] as const;
   const [baselines, sessions, metrics, images] = await Promise.all([
     loadBaselines(keys),
-    adminQuery<Row>(`SELECT instagram_username, followers_current, welcome_total, last_seen_at, metrics_updated_at
+    adminQuery<Row>(`SELECT instagram_username, followers_current, welcome_total, likes_total, follows_total,
+      unfollows_total, ai_replies_total, ai_people_total, mass_sent_total, last_seen_at, metrics_updated_at
       FROM public.ig_online_sessions WHERE lower(instagram_username) = ANY($1::text[])`, [keys]),
-    adminQuery<Row>(`SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_end, welcome_sent
+    adminQuery<Row>(`SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_end, welcome_sent,
+      likes_sent, follows_sent, unfollows_sent, ai_replies_sent, ai_people_replied, mass_sent
       FROM public.ig_online_metrics WHERE lower(instagram_username) = ANY($1::text[])
       AND day >= current_date - 365 ORDER BY day ASC`, [keys]),
     ownedGalleryImages(keys, PUBLIC_BASE),
   ]);
+  const creatives = await creativesForAccounts(keys, images);
   return [200, { success: true, profiles: keys.map((ig) => {
     const baseline = baselines.get(ig);
     const s = sessions.find((row) => normalizeIG(row.instagram_username) === ig);
     return {
       instagram_username: ig,
       images: images.filter(image => normalizeIG(image.instagram_username) === ig),
+      creatives: creatives.filter(creative => normalizeIG(creative.instagram_username) === ig),
       initial_followers: baseline?.initial_followers ?? null,
       initial_captured_at: baseline?.initial_captured_at ?? null,
       current_followers: baseline?.current_followers ?? numOrNull(s?.followers_current),
-      welcome_total: Number(s?.welcome_total ?? 0),
-      last_seen_at: iso(s?.last_seen_at),
-      metrics_updated_at: baseline?.current_updated_at ?? iso(s?.metrics_updated_at),
+      welcome_total: Number(s?.welcome_total ?? 0), likes_total: Number(s?.likes_total ?? 0),
+      follows_total: Number(s?.follows_total ?? 0), unfollows_total: Number(s?.unfollows_total ?? 0),
+      ai_replies_total: Number(s?.ai_replies_total ?? 0), ai_people_total: Number(s?.ai_people_total ?? 0),
+      mass_sent_total: Number(s?.mass_sent_total ?? 0),
+      last_seen_at: iso(s?.last_seen_at), metrics_updated_at: baseline?.current_updated_at ?? iso(s?.metrics_updated_at),
       online: Boolean(s?.last_seen_at && Date.now() - new Date(String(s.last_seen_at)).getTime() < ONLINE_WINDOW_MS),
       metrics: metrics.filter((m) => normalizeIG(m.instagram_username) === ig).map((m) => ({
         day: m.day, followers_end: numOrNull(m.followers_end), welcome_sent: Number(m.welcome_sent ?? 0),
+        likes_sent: Number(m.likes_sent ?? 0), follows_sent: Number(m.follows_sent ?? 0), unfollows_sent: Number(m.unfollows_sent ?? 0),
+        ai_replies_sent: Number(m.ai_replies_sent ?? 0), ai_people_replied: Number(m.ai_people_replied ?? 0), mass_sent: Number(m.mass_sent ?? 0),
       })),
     };
   }) }] as const;
