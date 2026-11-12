@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { pickFallbackModel } from "../src/lib/motion/ai";
 
 describe("pickFallbackModel", () => {
