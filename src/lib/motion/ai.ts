@@ -77,14 +77,14 @@ export function cancelMotionGeneration() { motionAbort?.abort(new DOMException("
 const log = (kind: string, message: string, extra: Partial<MotionLogEvent> = {}) => motionLogger?.({ at: Date.now(), kind, message, ...extra });
 const IDLE_MS = 120000;
 
-async function* sse(r: Response, signal: AbortSignal, onIdle: () => void) {
+async function* sse(r: Response, signal: AbortSignal) {
   const reader = r.body!.getReader(); const dec = new TextDecoder(); let buf = "";
-  let timer = setTimeout(onIdle, IDLE_MS);
+  const stop = () => reader.cancel().catch(() => {});
+  signal.addEventListener("abort", stop);
   try {
     while (true) {
       const { value, done } = await reader.read();
-      clearTimeout(timer); if (done) break; if (signal.aborted) break;
-      timer = setTimeout(onIdle, IDLE_MS);
+      if (done || signal.aborted) break;
       buf += dec.decode(value, { stream: true });
       let i;
       while ((i = buf.indexOf("\n\n")) >= 0) {
@@ -94,16 +94,39 @@ async function* sse(r: Response, signal: AbortSignal, onIdle: () => void) {
         try { yield JSON.parse(data); } catch { /* ignore */ }
       }
     }
-  } finally { clearTimeout(timer); }
+  } finally { signal.removeEventListener("abort", stop); }
 }
 
-async function callModel(s: AiSettings, system: string, user: string, opts: { maxTokens: number; webSearch?: boolean; kind: string; prefill?: string }, onUsage: OnUsage) {
+/** Picks the closest Claude model the account really has (same family first, newest first). */
+export function pickFallbackModel(current: string, available: string[]): string | null {
+  const ids = available.filter((id) => id !== current && /^claude/i.test(id));
+  if (!ids.length) return null;
+  const fam = (id: string) => (/opus/i.test(id) ? "opus" : /sonnet/i.test(id) ? "sonnet" : /haiku/i.test(id) ? "haiku" : /fable/i.test(id) ? "fable" : "other");
+  const want = fam(current);
+  const ver = (id: string) => (id.match(/\d+/g) || []).filter((n) => n.length < 6).map(Number);
+  const newer = (a: string, b: string) => { const x = ver(a), y = ver(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (y[i] ?? 0) - (x[i] ?? 0); if (d) return d; } return 0; };
+  const same = ids.filter((id) => fam(id) === want).sort(newer);
+  if (same.length) return same[0];
+  const order = ["sonnet", "opus", "fable", "haiku", "other"];
+  return [...ids].sort((a, b) => order.indexOf(fam(a)) - order.indexOf(fam(b)) || newer(a, b))[0];
+}
+
+class ModelNotFoundError extends Error {}
+const claudeFallback = new Map<string, string>();
+
+async function callModelOnce(s: AiSettings, system: string, user: string, opts: { maxTokens: number; webSearch?: boolean; kind: string; prefill?: string }, onUsage: OnUsage) {
   const provider = MODEL_PRICES[s.model]?.provider ?? s.customModels?.find((m) => m.id === s.model)?.provider ?? s.provider;
   const ctrl = new AbortController(); motionAbort = ctrl;
   let idle = false;
-  const onIdle = () => { idle = true; log(opts.kind, "Sem resposta da IA há 2 minutos — cancelando para não travar."); ctrl.abort(); };
   const t0 = Date.now(); let text = ""; let lastLog = 0;
-  const progress = () => { const now = Date.now(); if (now - lastLog > 1500) { lastLog = now; log(opts.kind, `Recebendo… ${text.length.toLocaleString("pt-BR")} caracteres (${Math.round((now - t0) / 1000)}s)`, { chars: text.length, tokens: Math.round(text.length / 3.5) }); } };
+  // Watchdog: only real content counts as activity (Claude keeps sending "ping" events even when stuck).
+  let lastActivity = Date.now(); let connected = false;
+  const touch = () => { lastActivity = Date.now(); };
+  const watchdog = setInterval(() => {
+    const limit = connected ? IDLE_MS : 90000;
+    if (Date.now() - lastActivity > limit) { idle = true; log(opts.kind, connected ? "Sem novos dados da IA há 2 minutos — cancelando para não travar." : "A IA não respondeu em 90s — cancelando para não travar."); ctrl.abort(); }
+  }, 2000);
+  const progress = () => { touch(); const now = Date.now(); if (now - lastLog > 1500) { lastLog = now; log(opts.kind, `Recebendo… ${text.length.toLocaleString("pt-BR")} caracteres (${Math.round((now - t0) / 1000)}s)`, { chars: text.length, tokens: Math.round(text.length / 3.5) }); } };
   log(opts.kind, `Enviando pedido para ${s.model}${opts.prefill ? " (continuação)" : ""}…`);
   try {
     if (provider === "openai") {
@@ -114,9 +137,10 @@ async function callModel(s: AiSettings, system: string, user: string, opts: { ma
       if (opts.webSearch) body.tools = [{ type: "web_search" }];
       const r = await fetch("https://api.openai.com/v1/responses", { method: "POST", signal: ctrl.signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.openaiKey}` }, body: JSON.stringify(body) });
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d?.error?.message || `OpenAI ${r.status}`); }
-      log(opts.kind, "Conectado. A IA está pensando…");
+      connected = true; touch(); log(opts.kind, "Conectado. A IA está pensando…");
       let it = 0, ot = 0, searches = 0;
-      for await (const ev of sse(r, ctrl.signal, onIdle)) {
+      for await (const ev of sse(r, ctrl.signal)) {
+        touch();
         if (ev.type === "response.output_text.delta") { text += ev.delta || ""; progress(); }
         else if (ev.type === "response.web_search_call.searching") log(opts.kind, "Pesquisando na internet…");
         else if (ev.type === "response.reasoning_summary_text.delta" || ev.type === "response.in_progress") progress();
@@ -129,24 +153,49 @@ async function callModel(s: AiSettings, system: string, user: string, opts: { ma
       const body: any = { model: s.model, max_tokens: opts.maxTokens, stream: true, system, messages: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill.trimEnd() }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : [{ role: "user", content: user }] };
       if (opts.webSearch) body.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
       const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: ctrl.signal, headers: { "Content-Type": "application/json", "x-api-key": s.claudeKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify(body) });
-      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(r.status === 404 ? `Modelo "${s.model}" não existe na sua conta Anthropic. Clique em "Buscar modelos da minha conta" em Tokens e escolha um da lista.` : d?.error?.message || `Claude ${r.status}`); }
-      log(opts.kind, "Conectado. A IA está pensando…");
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        const detail = d?.error?.message ? `${d.error.type ? d.error.type + ": " : ""}${d.error.message}` : `HTTP ${r.status}`;
+        log(opts.kind, `Claude recusou o pedido (${r.status}): ${detail}`);
+        if (r.status === 404) throw new ModelNotFoundError(`Modelo "${s.model}" não foi encontrado na sua conta Anthropic (${detail}).`);
+        throw new Error(r.status === 529 ? "A Claude está sobrecarregada agora. Tente de novo em alguns minutos." : `Claude ${r.status}: ${detail}`);
+      }
+      connected = true; touch(); log(opts.kind, "Conectado. A IA está pensando…");
       let it = 0, ot = 0, searches = 0;
-      for await (const ev of sse(r, ctrl.signal, onIdle)) {
+      for await (const ev of sse(r, ctrl.signal)) {
+        if (ev.type === "ping") continue;
+        touch();
         if (ev.type === "message_start") it = ev.message?.usage?.input_tokens ?? 0;
         else if (ev.type === "content_block_start" && ev.content_block?.type === "server_tool_use") log(opts.kind, "Pesquisando na internet…");
         else if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") { text += ev.delta.text || ""; progress(); }
         else if (ev.type === "message_delta") { ot = ev.usage?.output_tokens ?? ot; searches = ev.usage?.server_tool_use?.web_search_requests ?? searches; if (ev.delta?.stop_reason === "max_tokens") log(opts.kind, "Resposta atingiu o limite de tamanho; vou pedir a continuação."); }
-        else if (ev.type === "error") throw new Error(ev.error?.message || "Falha na Claude");
+        else if (ev.type === "error") throw new Error(ev.error?.type === "overloaded_error" ? "A Claude ficou sobrecarregada no meio da resposta. Tente de novo em alguns minutos." : ev.error?.message || "Falha na Claude");
       }
       onUsage({ id: crypto.randomUUID(), at: Date.now(), provider, model: s.model, kind: opts.kind, inputTokens: it, outputTokens: ot, images: 0, searches, costUsd: costFor(s.model, it, ot, 0, searches) });
     }
   } catch (e: any) {
     if (ctrl.signal.aborted) throw new Error(idle ? "A IA ficou 2 minutos sem responder e a geração foi interrompida. Tente de novo ou troque de modelo." : "Geração cancelada.");
     log(opts.kind, `Erro: ${e?.message || e}`); throw e;
-  } finally { if (motionAbort === ctrl) motionAbort = null; }
+  } finally { clearInterval(watchdog); if (motionAbort === ctrl) motionAbort = null; }
+  if (!text.trim()) log(opts.kind, "A IA terminou sem devolver texto.");
   log(opts.kind, `Concluído em ${Math.round((Date.now() - t0) / 1000)}s · ${text.length.toLocaleString("pt-BR")} caracteres.`, { chars: text.length });
   return text;
+}
+
+async function callModel(s: AiSettings, system: string, user: string, opts: { maxTokens: number; webSearch?: boolean; kind: string; prefill?: string }, onUsage: OnUsage): Promise<string> {
+  const mapped = claudeFallback.get(s.model);
+  const settings = mapped ? { ...s, model: mapped } : s;
+  try { return await callModelOnce(settings, system, user, opts, onUsage); }
+  catch (e) {
+    if (!(e instanceof ModelNotFoundError)) throw e;
+    let ids: string[] = [];
+    try { ids = (await fetchAccountModels({ ...settings, openaiKey: "" })).map((m) => m.id); } catch { /* ignore */ }
+    const alt = pickFallbackModel(settings.model, ids);
+    if (!alt) throw new Error(`${e.message} Clique em "Buscar modelos da minha conta" em Tokens e escolha um da lista.`);
+    log(opts.kind, `Trocando automaticamente para ${alt}, que existe na sua conta.`);
+    claudeFallback.set(s.model, alt);
+    return callModelOnce({ ...settings, model: alt }, system, user, opts, onUsage);
+  }
 }
 
 export type MotionPlanStage = "ideas" | "script" | "scenes";
