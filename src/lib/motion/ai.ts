@@ -109,6 +109,8 @@ async function callModel(s: AiSettings, system: string, user: string, opts: { ma
     if (provider === "openai") {
       if (!s.openaiKey) throw new Error("Configure o token da OpenAI (ChatGPT).");
       const body: any = { model: s.model, instructions: system, stream: true, input: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : user, max_output_tokens: opts.maxTokens };
+      // Reasoning models (gpt-5 / o-series) can "think" for minutes before writing; keep it short — we only need code.
+      if (/^(gpt-5|o\d)/i.test(s.model)) body.reasoning = { effort: "low" };
       if (opts.webSearch) body.tools = [{ type: "web_search" }];
       const r = await fetch("https://api.openai.com/v1/responses", { method: "POST", signal: ctrl.signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.openaiKey}` }, body: JSON.stringify(body) });
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d?.error?.message || `OpenAI ${r.status}`); }
@@ -168,7 +170,7 @@ Formato: ${f.label} (${f.w}x${f.h}). Duração total EXATA: ${seconds} segundos.
 ${webSearch ? "Pesquise na internet referências, dados e tendências atuais sobre o tema antes de criar." : ""}
 Primeira etapa: crie SOMENTE as ideias e a direção criativa. Ainda não escreva roteiro nem cenas.
 Responda SOMENTE com JSON:
-{"title":"","concept":"","ideas":["3 a 5 ideias criativas"],"palette":["#hex"...4-6],"style":"linguagem visual (ex: Quantum Molten + Glitch)","imagePrompt":"prompt em inglês para imagem de fundo cinematográfica, sem textos"}`, { maxTokens: 3500, webSearch, kind: "Ideias" }, onUsage);
+{"title":"","concept":"","ideas":["3 a 5 ideias criativas"],"palette":["#hex"...4-6],"style":"linguagem visual (ex: Quantum Molten + Glitch)","imagePrompt":"prompt em inglês para imagem de fundo cinematográfica, sem textos"}`, { maxTokens: 1500, webSearch, kind: "Ideias" }, onUsage);
   const direction = extractJson(ideasText);
   onProgress("ideas", "done");
 
@@ -179,7 +181,8 @@ Direção criativa aprovada:
 ${JSON.stringify(direction, null, 2)}
 
 Segunda etapa: escreva o roteiro/narração completo, mantendo exatamente essa direção criativa. Ainda não detalhe as cenas.
-Responda SOMENTE com JSON: {"script":"roteiro/narração completo"}`, { maxTokens: 5000, kind: "Roteiro" }, onUsage);
+Seja direto: no máximo 120 palavras.
+Responda SOMENTE com JSON: {"script":"roteiro/narração completo"}`, { maxTokens: 1500, kind: "Roteiro" }, onUsage);
   const { script } = extractJson(scriptText);
   onProgress("script", "done");
 
@@ -192,7 +195,7 @@ ${JSON.stringify({ ...direction, script }, null, 2)}
 Terceira etapa: transforme o roteiro em cenas cinematográficas detalhadas, preservando ideias, estilo e narração.
 Responda SOMENTE com JSON:
 {"scenes":[{"title":"","start":0,"duration":0,"text":"texto em tela","camera":"","vfx":"","sfx":""}]}
-As durações das cenas devem somar EXATAMENTE ${seconds}s, sem lacunas na timeline.`, { maxTokens: 12000, kind: "Cenas" }, onUsage);
+As durações das cenas devem somar EXATAMENTE ${seconds}s, sem lacunas na timeline. Use de 4 a 8 cenas e campos curtos (até 15 palavras cada).`, { maxTokens: 3500, kind: "Cenas" }, onUsage);
   const { scenes } = extractJson(scenesText);
   onProgress("scenes", "done");
 
@@ -201,7 +204,7 @@ As durações das cenas devem somar EXATAMENTE ${seconds}s, sem lacunas na timel
 
 async function referenceExcerpt(format: MotionFormat) {
   const file = format === "stories" ? "/motion-demos/quantum-stories.html" : "/motion-demos/quantum-molten.html";
-  try { return (await (await fetch(file)).text()).slice(0, 14000); } catch { return ""; }
+  try { return (await (await fetch(file)).text()).slice(0, 6000); } catch { return ""; }
 }
 
 const HTML_CONTRACT = (format: MotionFormat, seconds: number, hasBg: boolean) => {
@@ -214,16 +217,17 @@ const HTML_CONTRACT = (format: MotionFormat, seconds: number, hasBg: boolean) =>
 - Sons sintetizados via Web Audio API sincronizados às cenas; tente iniciar o AudioContext automaticamente e também no primeiro clique. Pequeno botão de som no canto (ocultável com ?clean=1).
 - Canvas para partículas, camadas de luz, grain, vignette; mínimo de 6 técnicas de VFX e 4 movimentos de câmera diferentes.
 ${hasBg ? `- Use a imagem de fundo pela URL literal "{{BG_IMAGE}}" (ela será substituída) com parallax/Ken Burns e overlays.` : ""}
+- Código COMPACTO: no máximo ~30 mil caracteres, sem comentários, reutilize funções genéricas (uma função de partículas, uma de tipografia, uma de transição) parametrizadas por cena em vez de repetir código.
 Responda SOMENTE com o código dentro de \`\`\`html.`;
 };
 
 async function completeHtml(s: AiSettings, user: string, kind: string, onUsage: OnUsage) {
-  let raw = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind }, onUsage);
-  for (let i = 0; i < 2 && !/<\/html>/i.test(raw); i++) {
-    log(kind, `Motion veio incompleto; pedindo continuação ${i + 1} de 2…`);
-    if (!raw.trim()) raw = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind }, onUsage);
+  let raw = await callModel(s, MOTION_RULES, user, { maxTokens: 14000, kind }, onUsage);
+  for (let i = 0; i < 1 && !/<\/html>/i.test(raw); i++) {
+    log(kind, "Motion veio incompleto; pedindo uma continuação para fechar o código…");
+    if (!raw.trim()) raw = await callModel(s, MOTION_RULES, user, { maxTokens: 14000, kind }, onUsage);
     else {
-      const more = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind: kind + " (continuação)", prefill: raw }, onUsage);
+      const more = await callModel(s, MOTION_RULES, user, { maxTokens: 8000, kind: kind + " (continuação)", prefill: raw }, onUsage);
       if (!more.trim()) break;
       raw = raw.trimEnd() + more.replace(/^```html\s*/i, "");
     }
@@ -292,8 +296,10 @@ export async function generateBackground(s: AiSettings, prompt: string, format: 
   throw new Error(`Sua conta OpenAI não liberou nenhum modelo de imagem${facePhoto ? " com foto de referência" : ""}. Último erro: ${lastErr}`);
 }
 
+const EMPTY_IMAGE = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 export function renderHtml(html: string, bg?: string | null) {
-  return bg ? html.split("{{BG_IMAGE}}").join(bg) : html;
+  // If the background failed (it is generated in parallel), swap the placeholder for a transparent pixel.
+  return html.split("{{BG_IMAGE}}").join(bg || EMPTY_IMAGE);
 }
 
 /** Lists the models actually available to the user's keys (e.g. newest Opus versions). */
