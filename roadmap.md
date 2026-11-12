@@ -3,7 +3,7 @@
 ## Entrada simplificada do Instagram
 - [x] Mostrar somente Cadastrar conta do Instagram e Acessar tutoriais na abertura
 - [x] Abrir a área completa de cadastro ao escolher a primeira opção, preservando contas, métricas e tutoriais
-- [ ] Validar navegação e responsividade no navegador
+- [x] Validar navegação e responsividade no navegador (desktop e mobile, cadastro e tutoriais)
 
 ## IG Online: atividade, envios e criativos
 - [x] Criar migração PostgreSQL aditiva para contadores diários, destinatários e histórico de criativos
