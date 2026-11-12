@@ -444,11 +444,20 @@ async function adminMetrics(body: Body) {
   const sinceDay = spDay(new Date(Date.now() - (days - 1) * 86_400_000));
   const sessions = await adminQuery<Row>("SELECT * FROM public.ig_online_sessions ORDER BY last_seen_at DESC LIMIT 1000");
   const metrics = await adminQuery<Row>(
-    "SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_start, followers_end, welcome_sent, followers_gained FROM public.ig_online_metrics WHERE day >= $1 ORDER BY day ASC LIMIT 20000",
-    [sinceDay],
+    `SELECT instagram_username, to_char(day,'YYYY-MM-DD') AS day, followers_start, followers_end,
+       welcome_sent, followers_gained, likes_sent, follows_sent, unfollows_sent,
+       ai_replies_sent, ai_people_replied, mass_sent
+       FROM public.ig_online_metrics WHERE day >= $1 ORDER BY day ASC LIMIT 20000`, [sinceDay],
   );
-  const byIg = new Map<string, { growth: number | null; welcome: number; days: number }>();
-  const series = new Map<string, { growth: number; welcome: number }>();
+  type Activity = { likes: number; follows: number; unfollows: number; aiReplies: number; aiPeople: number; mass: number };
+  const zeroActivity = (): Activity => ({ likes: 0, follows: 0, unfollows: 0, aiReplies: 0, aiPeople: 0, mass: 0 });
+  const addActivity = (target: Activity, row: Row) => {
+    target.likes += Number(row.likes_sent ?? 0); target.follows += Number(row.follows_sent ?? 0);
+    target.unfollows += Number(row.unfollows_sent ?? 0); target.aiReplies += Number(row.ai_replies_sent ?? 0);
+    target.aiPeople += Number(row.ai_people_replied ?? 0); target.mass += Number(row.mass_sent ?? 0);
+  };
+  const byIg = new Map<string, { growth: number | null; welcome: number; days: number } & Activity>();
+  const series = new Map<string, { growth: number; welcome: number } & Activity>();
   const lastF = new Map<string, number>();
   for (const m of metrics) {
     const key = String(m.instagram_username).toLowerCase();
@@ -456,69 +465,76 @@ async function adminMetrics(body: Body) {
     const fs = numOrNull(m.followers_start), fe = numOrNull(m.followers_end);
     const gainedDay = Number(m.followers_gained ?? 0);
     const diff = fs !== null && fe !== null ? fe - fs : null;
-    // Total enviado tem prioridade; sem total, usa o contador de ganhos da extensão.
     const g = diff !== null && diff !== 0 ? diff : gainedDay > 0 ? gainedDay : diff;
-    const cur = byIg.get(key) ?? { growth: null, welcome: 0, days: 0 };
+    const cur = byIg.get(key) ?? { growth: null, welcome: 0, days: 0, ...zeroActivity() };
     if (g !== null) cur.growth = (cur.growth ?? 0) + g;
-    cur.welcome += Number(m.welcome_sent ?? 0);
-    cur.days += 1;
-    byIg.set(key, cur);
-    const s = series.get(day) ?? { growth: 0, welcome: 0 };
-    s.welcome += Number(m.welcome_sent ?? 0);
-    if (g !== null) s.growth += g;
-    series.set(day, s);
+    cur.welcome += Number(m.welcome_sent ?? 0); cur.days += 1; addActivity(cur, m); byIg.set(key, cur);
+    const point = series.get(day) ?? { growth: 0, welcome: 0, ...zeroActivity() };
+    point.welcome += Number(m.welcome_sent ?? 0); if (g !== null) point.growth += g;
+    addActivity(point, m); series.set(day, point);
     if (fe !== null) lastF.set(`${day}|${key}`, fe);
   }
   const profiles = new Set(metrics.map((m) => String(m.instagram_username).toLowerCase()));
   const known = new Map<string, number>();
-  const outSeries = [...series.keys()].sort().map((d) => {
-    for (const p of profiles) { const v = lastF.get(`${d}|${p}`); if (v !== undefined) known.set(p, v); }
-    const s = series.get(d)!;
-    return { day: d, followers: known.size ? [...known.values()].reduce((a, b) => a + b, 0) : null, growth: s.growth, welcome: s.welcome };
+  const outSeries = [...series.keys()].sort().map((day) => {
+    for (const profile of profiles) { const value = lastF.get(`${day}|${profile}`); if (value !== undefined) known.set(profile, value); }
+    return { day, followers: known.size ? [...known.values()].reduce((a, b) => a + b, 0) : null, ...series.get(day)! };
   });
-  // Mesma referência inicial usada em /instagram/painel (print ou 1ª leitura da extensão).
-  const baselines = await loadBaselines(sessions.map((s) => String(s.instagram_username))).catch((err) => {
-    console.warn("[ig-online] baselines indisponíveis", (err as Error).message);
-    return new Map();
-  });
+  const baselines = await loadBaselines(sessions.map((s) => String(s.instagram_username))).catch(() => new Map());
+  const creativeCounts = await adminQuery<Row>(
+    `SELECT lower(instagram_username) AS instagram_username, count(*)::int AS total,
+       count(*) FILTER (WHERE status='scheduled')::int AS scheduled,
+       count(*) FILTER (WHERE status='published')::int AS published
+       FROM public.ig_online_creatives GROUP BY lower(instagram_username)`,
+  ).catch(() => []);
   const rows = sessions.map((s) => {
     const key = String(s.instagram_username).toLowerCase();
     const agg = byIg.get(key);
     const b = baselines.get(key);
+    const creative = creativeCounts.find(c => c.instagram_username === key);
     const fi = b?.initial_followers ?? numOrNull(s.followers_initial);
     const fc = numOrNull(s.followers_current) ?? b?.current_followers ?? null;
     return {
       id: s.id, instagram_username: s.instagram_username, status: s.status,
       followers_initial: fi, followers_current: fc,
-      initial_source: b?.initial_source ?? (fi !== null ? "extensao" : null),
-      initial_captured_at: b?.initial_captured_at ?? null,
+      initial_source: b?.initial_source ?? (fi !== null ? "extensao" : null), initial_captured_at: b?.initial_captured_at ?? null,
       following_initial: b?.initial_following ?? null, following_current: b?.current_following ?? null,
       posts_initial: b?.initial_posts ?? null, posts_current: b?.current_posts ?? null,
-      followers_gained_total: Number(s.followers_gained_total ?? 0),
-      last_metrics_fields: s.last_metrics_fields ?? null,
+      followers_gained_total: Number(s.followers_gained_total ?? 0), last_metrics_fields: s.last_metrics_fields ?? null,
       followers_diff: fi !== null && fc !== null && fc !== fi ? fc - fi : Number(s.followers_gained_total ?? 0) > 0 ? Number(s.followers_gained_total) : fi !== null && fc !== null ? 0 : null,
       period_growth: agg?.growth ?? null,
       daily_growth: agg && agg.growth !== null && agg.days ? Math.round((agg.growth / agg.days) * 10) / 10 : null,
       welcome_total: Number(s.welcome_total ?? 0), welcome_period: agg?.welcome ?? 0,
-      last_seen_at: iso(s.last_seen_at), session_started_at: iso(s.session_started_at),
-      session_ended_at: iso(s.session_ended_at), metrics_updated_at: iso(s.metrics_updated_at),
+      likes_total: Number(s.likes_total ?? 0), likes_period: agg?.likes ?? 0,
+      follows_total: Number(s.follows_total ?? 0), follows_period: agg?.follows ?? 0,
+      unfollows_total: Number(s.unfollows_total ?? 0), unfollows_period: agg?.unfollows ?? 0,
+      ai_replies_total: Number(s.ai_replies_total ?? 0), ai_replies_period: agg?.aiReplies ?? 0,
+      ai_people_total: Number(s.ai_people_total ?? 0), ai_people_period: agg?.aiPeople ?? 0,
+      mass_sent_total: Number(s.mass_sent_total ?? 0), mass_sent_period: agg?.mass ?? 0,
+      creatives_total: Number(creative?.total ?? 0), creatives_scheduled: Number(creative?.scheduled ?? 0), creatives_published: Number(creative?.published ?? 0),
+      last_seen_at: iso(s.last_seen_at), session_started_at: iso(s.session_started_at), session_ended_at: iso(s.session_ended_at), metrics_updated_at: iso(s.metrics_updated_at),
       blocked: Boolean(s.blocked), block_message: s.block_message ?? null, blocked_at: iso(s.blocked_at),
       online: Date.now() - new Date(s.last_seen_at as string).getTime() < ONLINE_WINDOW_MS,
     };
   });
   const withF = rows.filter((r) => r.followers_current !== null);
   const lastUpdate = rows.reduce<string | null>((a, r) => (r.metrics_updated_at && (!a || r.metrics_updated_at > a) ? r.metrics_updated_at : a), null);
+  const sum = (key: keyof typeof rows[number]) => rows.reduce((total, row) => total + Number(row[key] ?? 0), 0);
   return [200, {
     success: true, days, rows, series: outSeries,
     summary: {
-      profiles: rows.length,
-      followers_total: withF.length ? withF.reduce((a, r) => a + Number(r.followers_current), 0) : null,
+      profiles: rows.length, followers_total: withF.length ? withF.reduce((a, r) => a + Number(r.followers_current), 0) : null,
       growth_period: rows.some((r) => r.period_growth !== null) ? rows.reduce((a, r) => a + Number(r.period_growth ?? 0), 0) : null,
-      welcome_period: rows.reduce((a, r) => a + r.welcome_period, 0),
-      welcome_total: rows.reduce((a, r) => a + r.welcome_total, 0),
+      welcome_period: sum("welcome_period"), welcome_total: sum("welcome_total"),
+      likes_period: sum("likes_period"), likes_total: sum("likes_total"),
+      follows_period: sum("follows_period"), follows_total: sum("follows_total"),
+      unfollows_period: sum("unfollows_period"), unfollows_total: sum("unfollows_total"),
+      ai_replies_period: sum("ai_replies_period"), ai_replies_total: sum("ai_replies_total"),
+      ai_people_period: sum("ai_people_period"), ai_people_total: sum("ai_people_total"),
+      mass_sent_period: sum("mass_sent_period"), mass_sent_total: sum("mass_sent_total"),
+      creatives_total: sum("creatives_total"), creatives_scheduled: sum("creatives_scheduled"), creatives_published: sum("creatives_published"),
       active_recent: rows.filter((r) => r.last_seen_at && Date.now() - new Date(r.last_seen_at).getTime() < 86_400_000).length,
-      online: rows.filter((r) => r.online).length,
-      last_update: lastUpdate,
+      online: rows.filter((r) => r.online).length, last_update: lastUpdate,
     },
   }] as const;
 }

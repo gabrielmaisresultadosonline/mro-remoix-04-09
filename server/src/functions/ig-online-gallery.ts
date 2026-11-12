@@ -126,6 +126,10 @@ export async function galleryUpload(ig: string, body: Body) {
   const imageIndex = toIndex(firstDefined(body, ["image_index", "index", "slide_index", "position"]), 0);
   if (!publicationId) console.warn(`[ig-gallery] @${ig} enviou imagem sem publication_id — não será agrupada em carrossel`);
   const r = await saveOne(ig, body.image_base64 ?? body.image, publicationId, imageIndex, caption);
+  if (r.body.success && publicationId) {
+    try { await recordCreative({ ...body, publication_id: publicationId, caption, status: body.status ?? "created" }, ig); }
+    catch (error) { console.warn(`[ig-gallery] histórico do criativo ${publicationId} não gravado`, (error as Error).message); }
+  }
   return [r.status, { ...r.body, publication_id: publicationId }] as const;
 }
 
