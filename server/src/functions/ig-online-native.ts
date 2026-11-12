@@ -583,7 +583,7 @@ async function adminProfileDetail(body: Body) {
   const [session] = await adminQuery<Row>("SELECT * FROM public.ig_online_sessions WHERE lower(instagram_username)=$1", [ig]);
   if (!session) return [404, { success: false, error: "Perfil não encontrado" }] as const;
   const [metrics, events, history, outreach, creatives] = await Promise.all([
-    adminQuery<Row>(`SELECT to_char(day,'YYYY-MM-DD') AS day, followers_start, followers_end, welcome_sent,
+    adminQuery<Row>(`SELECT to_char(day,'YYYY-MM-DD') AS day, followers_start, followers_end, followers_gained, welcome_sent,
       likes_sent, follows_sent, unfollows_sent, ai_replies_sent, ai_people_replied, mass_sent, updated_at
       FROM public.ig_online_metrics WHERE lower(instagram_username)=$1 ORDER BY day DESC LIMIT 365`, [ig]),
     adminQuery<Row>("SELECT created_at, browser, ip, url FROM public.ig_online_events WHERE lower(instagram_username)=$1 ORDER BY created_at DESC LIMIT 100", [ig]),

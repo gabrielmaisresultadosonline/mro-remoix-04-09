@@ -413,7 +413,7 @@ GET ${ENDPOINT}?file=<id>   → a imagem (permanece até exclusão manual pelo a
         <li><code>recipient</code> é o @destinatário, sem senha, telefone ou conteúdo da conversa. <code>campaign_id</code> é opcional.</li>
         <li>Resposta <code>already_sent:true</code> ou <code>duplicate:true</code>: não envie novamente para essa pessoa nesse tipo.</li>
         <li>Ao abrir a extensão ou depois de reinstalar, chame <code>outreach_history</code> e reconstrua o “Histórico de Envios (Local)” com os arrays <code>recipients.welcome</code> e <code>recipients.mass</code>.</li>
-        <li>O histórico não expira. A consulta aceita <code>limit</code> até 5000 e devolve somente o perfil informado.</li>
+        <li>O histórico não expira. A consulta aceita <code>limit</code> até 5000 e devolve somente o perfil informado. Se houver mais registros, use <code>before:&lt;next_before&gt;</code> para buscar a próxima página até <code>next_before</code> vir nulo.</li>
       </ul>
     </Card>
 

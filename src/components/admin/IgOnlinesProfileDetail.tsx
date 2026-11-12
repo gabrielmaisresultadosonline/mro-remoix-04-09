@@ -65,8 +65,12 @@ const IgOnlinesProfileDetail: React.FC<Props> = ({ instagram, days, onClose, onC
     return metrics.filter(metric => metric.day >= since);
   }, [metrics, days]);
   const newFollowers = useMemo(() => {
-    const valid = periodMetrics.filter(metric => metric.followers_start !== null && metric.followers_end !== null);
-    return valid.length ? valid.reduce((total, metric) => total + Number(metric.followers_end) - Number(metric.followers_start), 0) : null;
+    const valid = periodMetrics.filter(metric => (metric.followers_start !== null && metric.followers_end !== null) || metric.followers_gained > 0);
+    if (!valid.length) return null;
+    return valid.reduce((total, metric) => {
+      const difference = metric.followers_start !== null && metric.followers_end !== null ? Number(metric.followers_end) - Number(metric.followers_start) : null;
+      return total + (difference !== null && difference !== 0 ? difference : Number(metric.followers_gained ?? 0) > 0 ? Number(metric.followers_gained) : difference ?? 0);
+    }, 0);
   }, [periodMetrics]);
   const sessionTime = useMemo(() => {
     if (!session?.session_started_at) return WAIT;
