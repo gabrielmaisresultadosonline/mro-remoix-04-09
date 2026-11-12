@@ -573,15 +573,24 @@ async function adminProfileDetail(body: Body) {
   const ig = normalizeIG(body.instagram);
   const [session] = await adminQuery<Row>("SELECT * FROM public.ig_online_sessions WHERE lower(instagram_username)=$1", [ig]);
   if (!session) return [404, { success: false, error: "Perfil não encontrado" }] as const;
-  const [metrics, events, history] = await Promise.all([
-    adminQuery<Row>("SELECT to_char(day,'YYYY-MM-DD') AS day, followers_start, followers_end, welcome_sent, updated_at FROM public.ig_online_metrics WHERE lower(instagram_username)=$1 ORDER BY day DESC LIMIT 365", [ig]),
+  const [metrics, events, history, outreach, creatives] = await Promise.all([
+    adminQuery<Row>(`SELECT to_char(day,'YYYY-MM-DD') AS day, followers_start, followers_end, welcome_sent,
+      likes_sent, follows_sent, unfollows_sent, ai_replies_sent, ai_people_replied, mass_sent, updated_at
+      FROM public.ig_online_metrics WHERE lower(instagram_username)=$1 ORDER BY day DESC LIMIT 365`, [ig]),
     adminQuery<Row>("SELECT created_at, browser, ip, url FROM public.ig_online_events WHERE lower(instagram_username)=$1 ORDER BY created_at DESC LIMIT 100", [ig]),
     adminQuery<Row>("SELECT action, block_message, admin_email, created_at FROM public.ig_online_block_history WHERE lower(instagram_username)=$1 ORDER BY created_at DESC LIMIT 100", [ig]).catch(() => []),
+    adminQuery<Row>("SELECT kind, recipient, campaign_id, sent_at FROM public.ig_online_outreach WHERE lower(instagram_username)=$1 ORDER BY sent_at DESC LIMIT 500", [ig]),
+    creativesForAccounts([ig], await ownedGalleryImages([ig], PUBLIC_BASE)),
   ]);
   return [200, {
     success: true, session: withOnline(session),
-    metrics: metrics.map((m) => ({ ...m, followers_start: numOrNull(m.followers_start), followers_end: numOrNull(m.followers_end), welcome_sent: Number(m.welcome_sent ?? 0) })),
-    events, block_history: history, default_block_message: DEFAULT_BLOCK_MSG,
+    metrics: metrics.map((m) => ({
+      ...m, followers_start: numOrNull(m.followers_start), followers_end: numOrNull(m.followers_end),
+      welcome_sent: Number(m.welcome_sent ?? 0), likes_sent: Number(m.likes_sent ?? 0), follows_sent: Number(m.follows_sent ?? 0),
+      unfollows_sent: Number(m.unfollows_sent ?? 0), ai_replies_sent: Number(m.ai_replies_sent ?? 0),
+      ai_people_replied: Number(m.ai_people_replied ?? 0), mass_sent: Number(m.mass_sent ?? 0),
+    })),
+    events, block_history: history, outreach, creatives, default_block_message: DEFAULT_BLOCK_MSG,
   }] as const;
 }
 
