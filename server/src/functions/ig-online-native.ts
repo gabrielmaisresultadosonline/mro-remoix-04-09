@@ -18,6 +18,7 @@ import { hasValidAdminSession } from "../admin-session.js";
 import { loadBaselines, recordProfileReading, ownedInstagrams } from "./ig-profile-baseline.js";
 import { authenticateMroMetrics } from "./mro-tool-login-native.js";
 import { adminGallery, adminGalleryDelete, galleryUpload, handleGalleryGet, ownedGalleryImages } from "./ig-online-gallery.js";
+import { creativesForAccounts, recordCreative } from "./ig-online-creatives.js";
 
 const PUBLIC_BASE = (process.env.PUBLIC_API_URL || "https://api.maisresultadosonline.com.br").replace(/\/$/, "") + "/functions/v1/ig-online-api";
 
