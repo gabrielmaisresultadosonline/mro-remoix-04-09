@@ -45,6 +45,8 @@ export default function MotionMro() {
   const [face, setFace] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
+  const [logs, setLogs] = useState<MotionLogEvent[]>([]);
+  useEffect(() => { setMotionLogger((e) => setLogs((l) => { const last = l[l.length - 1]; if (last && e.chars !== undefined && last.chars !== undefined && last.kind === e.kind && e.message.startsWith("Recebendo")) return [...l.slice(0, -1), e]; return [...l, e].slice(-60); })); return () => setMotionLogger(null); }, []);
   const [generationSteps, setGenerationSteps] = useState<GenerationStep[] | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [demo, setDemo] = useState<(typeof DEMOS)[number] | null>(DEMOS[0]);
@@ -106,7 +108,7 @@ export default function MotionMro() {
   });
 
   async function run(label: string, fn: () => Promise<void>) {
-    setBusy(label);
+    setBusy(label); setLogs([]);
     try { await fn(); } catch (e: any) { toast.error(e?.message || "Falha na geração"); } finally { setBusy(null); }
   }
 
@@ -243,7 +245,7 @@ export default function MotionMro() {
               <Button className="w-full font-bold" size="lg" disabled={!!busy} onClick={() => generate()}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}{busy || "Gerar motion"}
               </Button>
-              {generationSteps && <GenerationProgress steps={generationSteps} />}
+              {generationSteps && <GenerationProgress logs={logs} steps={generationSteps} />}
             </TabsContent>
 
             <TabsContent value="keys" className="space-y-4 rounded-xl border border-border bg-card p-4">
@@ -328,7 +330,7 @@ export default function MotionMro() {
             </div>
             <div className="flex justify-center bg-background rounded-lg p-2">
               <div ref={stageRef} className="relative overflow-hidden rounded-md bg-background" style={{ aspectRatio: FORMATS[previewFormat].ratio, width: `min(100%, calc(78vh * ${FORMATS[previewFormat].w} / ${FORMATS[previewFormat].h}))` }}>
-                {busy && !recording && <div className="absolute inset-0 z-10 grid place-items-center bg-background/80 p-3 text-sm">{generationSteps ? <GenerationProgress steps={generationSteps} /> : <div className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />{busy}<div className="text-xs text-muted-foreground mt-1">Pode levar de 1 a 3 minutos</div></div>}</div>}
+                {busy && !recording && <div className="absolute inset-0 z-10 grid place-items-center bg-background/80 p-3 text-sm">{generationSteps ? <GenerationProgress logs={logs} steps={generationSteps} /> : <div className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />{busy}<div className="text-xs text-muted-foreground mt-1">Pode levar de 1 a 3 minutos</div></div>}</div>}
                 {srcDoc && <iframe key={`${currentId || demo?.file}-${frameKey}`} title="Prévia do motion" className="absolute inset-0 h-full w-full border-0" srcDoc={srcDoc} sandbox="allow-scripts" allow="autoplay" />}
               </div>
             </div>
@@ -379,7 +381,15 @@ export default function MotionMro() {
   );
 }
 
-function GenerationProgress({ steps }: { steps: GenerationStep[] }) {
+function GenerationProgress({ steps, logs }: { steps: GenerationStep[]; logs: MotionLogEvent[] }) {
+  const [now, setNow] = useState(Date.now());
+  const [startedAt] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const boxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight }); }, [logs]);
+  const last = logs[logs.length - 1];
+  const quiet = last ? Math.round((now - last.at) / 1000) : 0;
+  const elapsed = Math.round((now - startedAt) / 1000);
   const percent = generationPercent(steps);
   const activeIndex = steps.findIndex((step) => step.status === "active");
   const currentStep = activeIndex >= 0 ? activeIndex + 1 : steps.length;
