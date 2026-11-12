@@ -21,7 +21,7 @@ interface Session {
   browser: string; os: string;
 }
 interface Metric {
-  day: string; followers_start: number | null; followers_end: number | null; welcome_sent: number;
+  day: string; followers_start: number | null; followers_end: number | null; followers_gained: number; welcome_sent: number;
   mass_sent: number; likes_sent: number; follows_sent: number; unfollows_sent: number;
   ai_replies_sent: number; ai_people_replied: number;
 }

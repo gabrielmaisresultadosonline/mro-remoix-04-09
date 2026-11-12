@@ -396,16 +396,22 @@ async function actionOutreachHistory(body: Body) {
   const ig = normalizeIG(body.instagram ?? body.instagram_username);
   if (!IG_RE.test(ig)) return [400, { success: false, error: "Instagram inválido" }] as const;
   const limit = Math.max(1, Math.min(5000, Math.trunc(Number(body.limit ?? 5000) || 5000)));
+  const beforeRaw = clean(body.before, 60);
+  const before = beforeRaw && Number.isFinite(new Date(beforeRaw).getTime()) ? new Date(beforeRaw).toISOString() : null;
   const rows = await adminQuery<Row>(
     `SELECT kind, recipient, campaign_id, sent_at FROM public.ig_online_outreach
-      WHERE lower(instagram_username)=$1 ORDER BY sent_at DESC LIMIT $2`, [ig, limit],
+      WHERE lower(instagram_username)=$1 ${before ? "AND sent_at < $2::timestamptz" : ""}
+      ORDER BY sent_at DESC LIMIT $${before ? 3 : 2}`,
+    before ? [ig, before, limit + 1] : [ig, limit + 1],
   );
+  const page = rows.slice(0, limit);
   return [200, {
-    success: true, instagram_username: ig, items: rows,
+    success: true, instagram_username: ig, items: page,
     recipients: {
-      welcome: rows.filter(r => r.kind === "welcome").map(r => r.recipient),
-      mass: rows.filter(r => r.kind === "mass").map(r => r.recipient),
+      welcome: page.filter(r => r.kind === "welcome").map(r => r.recipient),
+      mass: page.filter(r => r.kind === "mass").map(r => r.recipient),
     },
+    next_before: rows.length > limit ? page[page.length - 1]?.sent_at ?? null : null,
   }] as const;
 }
 
