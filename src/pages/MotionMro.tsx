@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Check, Clapperboard, Download, Film, KeyRound, Loader2, Pencil, RefreshCw, Sparkles, Trash2, Upload, Calculator, Image as ImageIcon, Globe, Play, Maximize2 } from "lucide-react";
 import { kvGet, kvSet, kvClear } from "@/lib/motion/store";
 import { MODEL_PRICES, summarizeUsage, type UsageEntry } from "@/lib/motion/pricing";
-import { FORMATS, generatePlan, generateHtml, editHtml, generateBackground, fetchAccountModels, renderHtml, type AiSettings, type MotionFormat, type MotionPlan } from "@/lib/motion/ai";
+import { FORMATS, generatePlan, generateHtml, editHtml, generateBackground, fetchAccountModels, renderHtml, setMotionLogger, cancelMotionGeneration, type MotionLogEvent, type AiSettings, type MotionFormat, type MotionPlan } from "@/lib/motion/ai";
 import { completeGenerationStep, createGenerationSteps, generationPercent, type GenerationStageId, type GenerationStep } from "@/lib/motion/generationProgress";
 import { stripCloudflareRum } from "@/lib/motion/demoHtml";
 import { recordElement, download } from "@/lib/motion/recorder";
