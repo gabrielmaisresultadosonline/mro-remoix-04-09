@@ -718,6 +718,9 @@ export async function handleNativeIgOnline(req: Request, res: Response): Promise
       result = action === "ping" ? await actionPing(body, ip, ua, ver)
         : action === "metrics" ? await actionMetrics(body)
         : action === "check_access" ? await actionCheckAccess(body)
+        : action === "outreach_event" ? await actionOutreachEvent(body)
+        : action === "outreach_history" ? await actionOutreachHistory(body)
+        : action === "creative_event" ? await recordCreative(body, igKey)
         : action === "gallery_upload" ? (IG_RE.test(igKey) ? await galleryUpload(igKey, body) : [400, { success: false, error: "Instagram inválido" }] as const)
         : await actionMessageEvent(body);
     } else {
