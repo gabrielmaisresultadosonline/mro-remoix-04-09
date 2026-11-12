@@ -219,7 +219,8 @@ Responda SOMENTE com o código dentro de \`\`\`html.`;
 
 async function completeHtml(s: AiSettings, user: string, kind: string, onUsage: OnUsage) {
   let raw = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind }, onUsage);
-  for (let i = 0; i < 4 && !/<\/html>/i.test(raw); i++) {
+  for (let i = 0; i < 2 && !/<\/html>/i.test(raw); i++) {
+    log(kind, `Motion veio incompleto; pedindo continuação ${i + 1} de 2…`);
     if (!raw.trim()) raw = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind }, onUsage);
     else {
       const more = await callModel(s, MOTION_RULES, user, { maxTokens: 16000, kind: kind + " (continuação)", prefill: raw }, onUsage);
