@@ -114,6 +114,10 @@ export async function galleryUpload(ig: string, body: Body) {
       results.push((await saveOne(ig, raw, publicationId, idx, caption)).body);
     }
     const saved = results.filter((r) => r.success).length;
+    if (saved && publicationId) {
+      try { await recordCreative({ ...body, publication_id: publicationId, caption, status: body.status ?? "created" }, ig); }
+      catch (error) { console.warn(`[ig-gallery] histórico do criativo ${publicationId} não gravado`, (error as Error).message); }
+    }
     return [saved ? 200 : 400, {
       success: saved > 0, publication_id: publicationId, total: list.length, saved, results,
     }] as const;

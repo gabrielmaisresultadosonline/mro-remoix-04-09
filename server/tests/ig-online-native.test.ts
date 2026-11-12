@@ -48,6 +48,26 @@ try {
   const row = m.json.rows.find((r: any) => r.instagram_username === "perfilcliente");
   assert.equal(row.followers_initial, 100); assert.equal(row.followers_current, 112);
   assert.equal(row.followers_diff, 12); assert.equal(row.welcome_total, 5);
+
+  // Contadores novos somam incrementos e request_id repetido não duplica atividade.
+  await call({ action: "metrics", instagram: "perfilcliente", likes_sent: 4, follows_sent: 3, unfollows_sent: 1, ai_replies_sent: 6, ai_people_replied: 2, request_id: `${RID}-activity` });
+  await call({ action: "metrics", instagram: "perfilcliente", likes_sent: 4, follows_sent: 3, request_id: `${RID}-activity` });
+  // Boas-vindas e massa são independentes e o histórico impede reenvio ao mesmo destinatário.
+  const welcome = await call({ action: "outreach_event", instagram: "perfilcliente", kind: "welcome", recipient: "pessoa01", event_id: `${RID}-w1` });
+  assert.equal(welcome.json.already_sent, false);
+  const mass = await call({ action: "outreach_event", instagram: "perfilcliente", kind: "mass", recipient: "pessoa01", event_id: `${RID}-m1` });
+  assert.equal(mass.json.already_sent, false, "massa e boas-vindas contam separadamente");
+  assert.equal((await call({ action: "outreach_event", instagram: "perfilcliente", kind: "mass", recipient: "pessoa01", event_id: `${RID}-m2` })).json.already_sent, true);
+  const history = await call({ action: "outreach_history", instagram: "perfilcliente" });
+  assert.deepEqual(history.json.recipients.welcome, ["pessoa01"]);
+  assert.deepEqual(history.json.recipients.mass, ["pessoa01"]);
+  await call({ action: "creative_event", instagram: "perfilcliente", publication_id: `${RID}-post`, status: "scheduled", caption: "Teste" });
+  await call({ action: "creative_event", instagram: "perfilcliente", publication_id: `${RID}-post`, status: "published" });
+  const activityAdmin = await call({ action: "admin_metrics", days: 7 }, admin);
+  const activityRow = activityAdmin.json.rows.find((r: any) => r.instagram_username === "perfilcliente");
+  assert.equal(activityRow.likes_total, 4); assert.equal(activityRow.follows_total, 3);
+  assert.equal(activityRow.unfollows_total, 1); assert.equal(activityRow.ai_replies_total, 6);
+  assert.equal(activityRow.ai_people_total, 2); assert.equal(activityRow.mass_sent_total, 1);
   const fora = m.json.rows.find((r: any) => r.instagram_username === "perfilfora");
   assert.equal(fora.followers_current, null, "sem envio = Aguardando dados (null)");
 
@@ -84,5 +104,7 @@ try {
   await pool.query("DELETE FROM ig_online_sessions WHERE instagram_username IN ('perfilcliente','perfilfora')");
   await pool.query("DELETE FROM ig_online_metrics WHERE instagram_username IN ('perfilcliente','perfilfora')");
   await pool.query("DELETE FROM ig_online_block_history WHERE instagram_username = 'perfilcliente'");
+  await pool.query("DELETE FROM ig_online_outreach WHERE instagram_username IN ('perfilcliente','perfilfora')");
+  await pool.query("DELETE FROM ig_online_creatives WHERE instagram_username IN ('perfilcliente','perfilfora')");
   server.close(); await pool.end();
 }

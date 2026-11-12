@@ -350,6 +350,65 @@ async function actionMessageEvent(body: Body) {
   return [200, { success: true }] as const;
 }
 
+/** Boas-vindas e massa têm históricos separados; cada destinatário conta uma vez por tipo. */
+async function actionOutreachEvent(body: Body) {
+  const ig = normalizeIG(body.instagram ?? body.instagram_username);
+  const rawKind = clean(body.kind ?? body.type ?? body.tipo, 30).toLowerCase();
+  const kind = ["welcome", "boas_vindas", "boas-vindas"].includes(rawKind) ? "welcome"
+    : ["mass", "massa", "bulk"].includes(rawKind) ? "mass" : null;
+  const recipient = normalizeIG(body.recipient ?? body.recipient_username ?? body.destinatario);
+  const eventId = clean(body.event_id ?? body.request_id, 100) || null;
+  const campaignId = clean(body.campaign_id ?? body.campanha_id, 100) || null;
+  if (!IG_RE.test(ig) || !kind || !/^[a-z0-9._-]{1,60}$/.test(recipient)) {
+    return [400, { success: false, error: "Informe instagram, kind (welcome/mass) e recipient válidos" }] as const;
+  }
+  const sentAt = body.sent_at ? new Date(String(body.sent_at)) : new Date();
+  if (!Number.isFinite(sentAt.getTime())) return [400, { success: false, error: "sent_at inválido" }] as const;
+  const result = await tx(async (c) => {
+    const inserted = await c.query(
+      `INSERT INTO public.ig_online_outreach (event_id, instagram_username, kind, recipient, campaign_id, sent_at)
+       VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING RETURNING id`,
+      [eventId, ig, kind, recipient, campaignId, sentAt.toISOString()],
+    );
+    if (!inserted.rowCount) return { duplicate: true, already_sent: true };
+    const s = await ensureSession(c, ig);
+    const totalColumn = kind === "welcome" ? "welcome_total" : "mass_sent_total";
+    const dayColumn = kind === "welcome" ? "welcome_sent" : "mass_sent";
+    await c.query(
+      `UPDATE public.ig_online_sessions SET ${totalColumn} = ${totalColumn} + 1,
+         metrics_updated_at = now(), last_seen_at = now() WHERE id = $1`, [s.id],
+    );
+    await c.query(
+      `INSERT INTO public.ig_online_metrics (instagram_username, day, ${dayColumn})
+       VALUES ($1, ($3::timestamptz AT TIME ZONE 'America/Sao_Paulo')::date, 1)
+       ON CONFLICT (lower(instagram_username), day) DO UPDATE SET
+         ${dayColumn} = public.ig_online_metrics.${dayColumn} + 1, updated_at = now()`,
+      [ig, kind, sentAt.toISOString()],
+    );
+    return { duplicate: false, already_sent: false, id: inserted.rows[0].id };
+  });
+  console.info(`[ig-online] outreach @${ig} kind=${kind} recipient=${recipient} duplicate=${result.duplicate}`);
+  return [200, { success: true, kind, recipient, sent_at: sentAt.toISOString(), ...result }] as const;
+}
+
+/** A extensão consulta antes de enviar e traz o histórico local de volta após reinstalar. */
+async function actionOutreachHistory(body: Body) {
+  const ig = normalizeIG(body.instagram ?? body.instagram_username);
+  if (!IG_RE.test(ig)) return [400, { success: false, error: "Instagram inválido" }] as const;
+  const limit = Math.max(1, Math.min(5000, Math.trunc(Number(body.limit ?? 5000) || 5000)));
+  const rows = await adminQuery<Row>(
+    `SELECT kind, recipient, campaign_id, sent_at FROM public.ig_online_outreach
+      WHERE lower(instagram_username)=$1 ORDER BY sent_at DESC LIMIT $2`, [ig, limit],
+  );
+  return [200, {
+    success: true, instagram_username: ig, items: rows,
+    recipients: {
+      welcome: rows.filter(r => r.kind === "welcome").map(r => r.recipient),
+      mass: rows.filter(r => r.kind === "mass").map(r => r.recipient),
+    },
+  }] as const;
+}
+
 // ───────────────────────── ações do painel ─────────────────────────
 
 /** BIGINT chega como string no driver pg; o painel espera números. */
