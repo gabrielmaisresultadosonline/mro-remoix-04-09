@@ -1,12 +1,13 @@
 # Roadmap
 
 ## IG Online: atividade, envios e criativos
-- [ ] Criar migração PostgreSQL aditiva para contadores diários, destinatários e histórico de criativos
-- [ ] Criar endpoints da extensão para métricas ampliadas, envios com deduplicação, consulta de histórico e criativos
-- [ ] Ampliar dashboard admin com cartões, linhas diárias e históricos por perfil
-- [ ] Mostrar atividade e criativos das próprias contas no /instagram, sem misturar clientes
-- [ ] Documentar payloads, respostas e integração da extensão no admin
-- [ ] Testar regras de contagem, duplicidade, isolamento e telas; validação real depende do deploy/extensão atualizada
+- [x] Criar migração PostgreSQL aditiva para contadores diários, destinatários e histórico de criativos
+- [x] Criar endpoints da extensão para métricas ampliadas, envios com deduplicação, consulta paginada de histórico e criativos
+- [x] Ampliar dashboard admin com cartões, linhas diárias e históricos por perfil
+- [x] Mostrar atividade e criativos das próprias contas no /instagram, sem misturar clientes
+- [x] Documentar payloads, respostas e integração da extensão no admin
+- [x] Testar regras locais, isolamento e telas admin/cliente (70 testes e navegador com respostas simuladas)
+- [ ] Aplicar migração 032 na VPS e validar PostgreSQL real e envios da extensão atualizada (depende do deploy e da extensão, que está em outro projeto)
 
 ## E-mail boas-vindas afiliados
 - [x] Usar SMTP Hostinger configurado na VPS e reportar resultado real do envio
