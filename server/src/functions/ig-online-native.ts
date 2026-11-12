@@ -632,7 +632,7 @@ async function adminMessages() {
 
 // ───────────────────────── roteamento ─────────────────────────
 
-const EXTENSION_ACTIONS = new Set(["ping", "metrics", "check_access", "message_event", "gallery_upload"]);
+const EXTENSION_ACTIONS = new Set(["ping", "metrics", "check_access", "message_event", "gallery_upload", "outreach_event", "outreach_history", "creative_event"]);
 
 async function userMetrics(body: Body) {
   const requested = Array.isArray(body.instagrams) ? body.instagrams : [];
