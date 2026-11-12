@@ -9,6 +9,31 @@ export interface AccountImage {
   image_index?: number | null;
 }
 
+export interface AccountCreative {
+  id: string;
+  instagram_username: string;
+  publication_id: string;
+  status: 'created' | 'scheduled' | 'published' | 'cancelled' | 'failed';
+  caption: string | null;
+  scheduled_at: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  images?: { id: string; url: string; image_index: number | null }[];
+}
+
+export interface AccountDailyMetric {
+  day: string;
+  followers_end: number | null;
+  welcome_sent: number;
+  likes_sent?: number;
+  follows_sent?: number;
+  unfollows_sent?: number;
+  ai_replies_sent?: number;
+  ai_people_replied?: number;
+  mass_sent?: number;
+}
+
 export interface AccountMetrics {
   instagram_username: string;
   initial_followers: number | null;
@@ -17,9 +42,16 @@ export interface AccountMetrics {
   last_seen_at: string | null;
   metrics_updated_at?: string | null;
   welcome_total: number;
+  likes_total?: number;
+  follows_total?: number;
+  unfollows_total?: number;
+  ai_replies_total?: number;
+  ai_people_total?: number;
+  mass_sent_total?: number;
   online: boolean;
   images?: { id: string; instagram_username: string; url: string; caption: string | null; publication_id: string | null; image_index: number | null }[];
-  metrics: { day: string; followers_end: number | null; welcome_sent: number }[];
+  creatives?: AccountCreative[];
+  metrics: AccountDailyMetric[];
 }
 
 export function accountFollowerSummary(session: ProfileSession, metrics?: AccountMetrics) {

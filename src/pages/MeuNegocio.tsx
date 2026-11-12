@@ -12,6 +12,7 @@ import { StrategyGenerator } from '@/components/StrategyGenerator';
 import { StrategyDisplay } from '@/components/StrategyDisplay';
 import { InstagramGrowthOverview } from '@/components/InstagramGrowthOverview';
 import { InstagramAccountImages } from '@/components/InstagramAccountImages';
+import { InstagramActivityPanel } from '@/components/InstagramActivityPanel';
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser, getRegisteredIGs, isAuthenticated, addRegisteredIG, loadUserFromCloud, saveUserToCloud, syncIGsFromSquare, updateUserEmail } from '@/lib/userStorage';
 import { getSession, addProfile, setActiveProfile, addStrategy, saveSession, getArchivedProfiles, initializeFromCloud, setCloudSyncCallback, restoreProfileFromArchive } from '@/lib/storage';
@@ -41,6 +42,7 @@ function AccountGrowth({ account, metrics }: { account: ProfileSession; metrics?
     </div>
     <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"><span>Último acesso: {date(metrics?.last_seen_at)}</span><span className="text-primary">{metrics?.online ? 'Em atividade' : 'Sem atividade recente'}</span></div>
     {values.length > 1 ? <div><p className="text-sm font-semibold mb-2">Crescimento de seguidores</p><svg role="img" aria-label="Gráfico de crescimento de seguidores" viewBox="0 0 600 170" className="w-full h-40"><path d="M24 12 V144 H580" fill="none" className="instagram-growth-axis" /><polyline points={polyline} fill="none" strokeWidth="3" strokeLinejoin="round" className="instagram-growth-line" /><text x="24" y="165" fill="currentColor" fontSize="11">{new Date(points[0].day).toLocaleDateString('pt-BR')}</text><text x="575" y="165" fill="currentColor" textAnchor="end" fontSize="11">{new Date(points[points.length - 1].day).toLocaleDateString('pt-BR')}</text></svg></div> : <p className="text-sm text-muted-foreground">Aguardando as próximas leituras do perfil para mostrar o crescimento.</p>}
+    <InstagramActivityPanel metrics={metrics} />
   </div>;
 }
 

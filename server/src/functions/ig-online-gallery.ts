@@ -13,6 +13,7 @@ import path from "node:path";
 import type { Request, Response } from "express";
 import { adminQuery } from "../db.js";
 import { env } from "../env.js";
+import { recordCreative } from "./ig-online-creatives.js";
 
 type Body = Record<string, unknown>;
 type Row = Record<string, unknown>;
@@ -113,6 +114,10 @@ export async function galleryUpload(ig: string, body: Body) {
       results.push((await saveOne(ig, raw, publicationId, idx, caption)).body);
     }
     const saved = results.filter((r) => r.success).length;
+    if (saved && publicationId) {
+      try { await recordCreative({ ...body, publication_id: publicationId, caption, status: body.status ?? "created" }, ig); }
+      catch (error) { console.warn(`[ig-gallery] histórico do criativo ${publicationId} não gravado`, (error as Error).message); }
+    }
     return [saved ? 200 : 400, {
       success: saved > 0, publication_id: publicationId, total: list.length, saved, results,
     }] as const;
@@ -121,14 +126,18 @@ export async function galleryUpload(ig: string, body: Body) {
   const imageIndex = toIndex(firstDefined(body, ["image_index", "index", "slide_index", "position"]), 0);
   if (!publicationId) console.warn(`[ig-gallery] @${ig} enviou imagem sem publication_id — não será agrupada em carrossel`);
   const r = await saveOne(ig, body.image_base64 ?? body.image, publicationId, imageIndex, caption);
+  if (r.body.success && publicationId) {
+    try { await recordCreative({ ...body, publication_id: publicationId, caption, status: body.status ?? "created" }, ig); }
+    catch (error) { console.warn(`[ig-gallery] histórico do criativo ${publicationId} não gravado`, (error as Error).message); }
+  }
   return [r.status, { ...r.body, publication_id: publicationId }] as const;
 }
 
 const fileUrl = (base: string, id: unknown) => `${base}?file=${id}`;
 
 /** Only accepts server-validated owned usernames; never expose account names in public_gallery. */
-export async function ownedGalleryImages(owned: string[], base: string) {
-  if (!owned.length) return [];
+export async function ownedGalleryImages(owned: string[], base: string): Promise<(Row & { url: string })[]> {
+  if (!owned.length) return [] as (Row & { url: string })[];
   const rows = await adminQuery<Row>(
     `SELECT id, instagram_username, publication_id, image_index, caption, created_at
        FROM public.ig_online_gallery WHERE lower(instagram_username) = ANY($1::text[])
