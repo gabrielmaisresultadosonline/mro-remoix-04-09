@@ -378,6 +378,110 @@ async function enviarImagemAprovada({ instagram, publicacaoId, indice, imagemBlo
 GET ${ENDPOINT}?file=<id>   → a imagem (permanece até exclusão manual pelo admin)`}</pre>
     </Card>
 
+    <Card className="p-4 space-y-2 border-primary">
+      <h3 className="font-bold">Atividade completa: curtidas, seguidas, IA e crescimento diário</h3>
+      <p className="text-sm text-muted-foreground">Envie os campos abaixo na mesma ação <code>metrics</code>. Todos são <strong>incrementos desde o último envio</strong>, nunca o total acumulado. O servidor grava o total da conta e o valor de cada dia (Brasília), alimentando os cartões e as linhas do dashboard.</p>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li><code>likes_sent</code>: curtidas feitas; <code>follows_sent</code>: pessoas seguidas; <code>unfollows_sent</code>: pessoas deixadas de seguir.</li>
+        <li><code>ai_replies_sent</code>: respostas enviadas pelo agente IA; <code>ai_people_replied</code>: pessoas <strong>novas</strong> atendidas desde o último envio (não repita a mesma pessoa em toda sincronização).</li>
+        <li><code>mass_sent</code> existe para integrações simples, mas o recomendado é <code>outreach_event</code>, que também guarda quem recebeu.</li>
+        <li>Crescimento diário usa <code>followers_end − followers_start</code>; sem o total atual, usa <code>followers_gained</code>. Ausência continua como “Aguardando dados”, nunca como zero inventado.</li>
+      </ul>
+    </Card>
+
+    <Block
+      title="8) Enviar toda a movimentação (action: metrics)"
+      code={`await fetch('${ENDPOINT}', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    action: 'metrics', instagram: perfilLogado(),
+    followers: 1520, followers_gained: 7,
+    welcome_sent: 0, // se usar outreach_event para boas-vindas, deixe zero aqui
+    likes_sent: 12, follows_sent: 5, unfollows_sent: 2,
+    ai_replies_sent: 8, ai_people_replied: 3,
+    request_id: crypto.randomUUID()
+  })
+});
+// Repetir o mesmo request_id não soma nada novamente.`}
+    />
+
+    <Card className="p-4 space-y-2 border-primary">
+      <h3 className="font-bold">Histórico de Envios (Local) sincronizado com o servidor</h3>
+      <p className="text-sm text-muted-foreground">Depois de cada envio concluído, registre o destinatário com <code>outreach_event</code>. <code>kind:"welcome"</code> e <code>kind:"mass"</code> são listas e números separados: a mesma pessoa pode ter uma boas-vindas e uma mensagem em massa, mas não é contada duas vezes no mesmo tipo.</p>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li>Envie <code>event_id</code> único por tentativa concluída. Se cair a internet e repetir, o servidor não duplica.</li>
+        <li><code>recipient</code> é o @destinatário, sem senha, telefone ou conteúdo da conversa. <code>campaign_id</code> é opcional.</li>
+        <li>Resposta <code>already_sent:true</code> ou <code>duplicate:true</code>: não envie novamente para essa pessoa nesse tipo.</li>
+        <li>Ao abrir a extensão ou depois de reinstalar, chame <code>outreach_history</code> e reconstrua o “Histórico de Envios (Local)” com os arrays <code>recipients.welcome</code> e <code>recipients.mass</code>.</li>
+        <li>O histórico não expira. A consulta aceita <code>limit</code> até 5000 e devolve somente o perfil informado.</li>
+      </ul>
+    </Card>
+
+    <Block
+      title="9) Guardar destinatário e recuperar quem já recebeu"
+      code={`async function registrarEnvio(destinatario, kind, campaignId) {
+  const r = await fetch('${ENDPOINT}', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'outreach_event', instagram: perfilLogado(),
+      kind,                 // 'welcome' ou 'mass'
+      recipient: destinatario.replace(/^@/, ''),
+      event_id: crypto.randomUUID(),
+      campaign_id: campaignId || null,
+      sent_at: new Date().toISOString()
+    })
+  }).then(x => x.json());
+  return r; // already_sent:false na primeira vez; true impede reenvio
+}
+
+async function restaurarHistoricoLocal() {
+  const r = await fetch('${ENDPOINT}', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'outreach_history', instagram: perfilLogado(), limit: 5000 })
+  }).then(x => x.json());
+  const boasVindas = new Set(r.recipients?.welcome || []);
+  const massa = new Set(r.recipients?.mass || []);
+  // Antes de enviar: if (massa.has(destinatario)) pular;
+  // Depois do envio: registrarEnvio(destinatario, 'mass', campanhaId)
+}`}
+    />
+
+    <Card className="p-4 space-y-2 border-primary">
+      <h3 className="font-bold">Criativos criados, agendados e publicados</h3>
+      <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+        <li>Use o <strong>mesmo</strong> <code>publication_id</code> no <code>gallery_upload</code> e nos eventos abaixo. É ele que liga o histórico às imagens já salvas em <code>/galeria-ig</code>, sem enviar o arquivo outra vez.</li>
+        <li><code>created</code>: criativo produzido; <code>scheduled</code>: agendado, com <code>scheduled_at</code>; <code>published</code>: publicado, com <code>published_at</code> opcional.</li>
+        <li>O upload de imagem já cria o histórico como <code>created</code>. Envie <code>creative_event</code> ao agendar e ao publicar.</li>
+        <li>Publicado é estado final: se um evento antigo de agendamento chegar atrasado, não apaga a publicação.</li>
+        <li>O admin vê os criativos em Detalhes do perfil. Em <code>/instagram</code>, o cliente vê somente os das próprias contas validadas, com capa, carrossel, legenda e horários.</li>
+      </ul>
+    </Card>
+
+    <Block
+      title="10) Criar, agendar e publicar o mesmo criativo"
+      code={`async function eventoCriativo(publicationId, status, extra = {}) {
+  return fetch('${ENDPOINT}', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'creative_event', instagram: perfilLogado(),
+      publication_id: publicationId, status,
+      caption: legendaDoCriativo, ...extra
+    })
+  }).then(x => x.json());
+}
+await eventoCriativo(idDaPublicacao, 'created');
+await eventoCriativo(idDaPublicacao, 'scheduled', { scheduled_at: dataAgendamentoISO });
+await eventoCriativo(idDaPublicacao, 'published', { published_at: new Date().toISOString() });`}
+    />
+
+    <Card className="p-4 space-y-2">
+      <h4 className="font-semibold text-sm">Diagnóstico no terminal da VPS</h4>
+      <pre className="text-[11px] bg-muted p-3 rounded-md overflow-x-auto whitespace-pre">{`pm2 logs mro-api | grep -E "ig-online.*(metrics|outreach)|ig-gallery"
+# metrics mostra likes/follows/unfollows/ai/mass recebidos
+# outreach mostra kind, recipient e se foi duplicate
+# Se o painel ficar aguardando, confira se a extensão instalada já envia estes campos.`}</pre>
+    </Card>
+
     <Card className="p-4 space-y-2">
       <h4 className="font-semibold text-sm">Resposta do ping</h4>
       <pre className="text-[11px] bg-muted p-3 rounded-md overflow-x-auto whitespace-pre">{`{
