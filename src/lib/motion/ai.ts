@@ -69,37 +69,81 @@ export function extractHtml(text: string) {
   return html.trim();
 }
 
+export type MotionLogEvent = { at: number; kind: string; message: string; chars?: number; tokens?: number };
+let motionLogger: ((e: MotionLogEvent) => void) | null = null;
+let motionAbort: AbortController | null = null;
+export function setMotionLogger(fn: ((e: MotionLogEvent) => void) | null) { motionLogger = fn; }
+export function cancelMotionGeneration() { motionAbort?.abort(new DOMException("Cancelado por você.", "AbortError")); }
+const log = (kind: string, message: string, extra: Partial<MotionLogEvent> = {}) => motionLogger?.({ at: Date.now(), kind, message, ...extra });
+const IDLE_MS = 120000;
+
+async function* sse(r: Response, signal: AbortSignal, onIdle: () => void) {
+  const reader = r.body!.getReader(); const dec = new TextDecoder(); let buf = "";
+  let timer = setTimeout(onIdle, IDLE_MS);
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      clearTimeout(timer); if (done) break; if (signal.aborted) break;
+      timer = setTimeout(onIdle, IDLE_MS);
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        const data = chunk.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("");
+        if (!data || data === "[DONE]") continue;
+        try { yield JSON.parse(data); } catch { /* ignore */ }
+      }
+    }
+  } finally { clearTimeout(timer); }
+}
+
 async function callModel(s: AiSettings, system: string, user: string, opts: { maxTokens: number; webSearch?: boolean; kind: string; prefill?: string }, onUsage: OnUsage) {
   const provider = MODEL_PRICES[s.model]?.provider ?? s.customModels?.find((m) => m.id === s.model)?.provider ?? s.provider;
-  if (provider === "openai") {
-    if (!s.openaiKey) throw new Error("Configure o token da OpenAI (ChatGPT).");
-    const body: any = { model: s.model, instructions: system, input: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : user, max_output_tokens: opts.maxTokens };
-    if (opts.webSearch) body.tools = [{ type: "web_search" }];
-    const r = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.openaiKey}` }, body: JSON.stringify(body),
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d?.error?.message || `OpenAI ${r.status}`);
-    const text = (d.output || []).filter((o: any) => o.type === "message").flatMap((o: any) => o.content || []).filter((c: any) => c.type === "output_text").map((c: any) => c.text).join("\n");
-    const searches = (d.output || []).filter((o: any) => o.type === "web_search_call").length;
-    const it = d.usage?.input_tokens ?? 0, ot = d.usage?.output_tokens ?? 0;
-    onUsage({ id: crypto.randomUUID(), at: Date.now(), provider, model: s.model, kind: opts.kind, inputTokens: it, outputTokens: ot, images: 0, searches, costUsd: costFor(s.model, it, ot, 0, searches) });
-    return text;
-  }
-  if (!s.claudeKey) throw new Error("Configure o token da Claude (Anthropic).");
-  const body: any = { model: s.model, max_tokens: opts.maxTokens, system, messages: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill.trimEnd() }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : [{ role: "user", content: user }] };
-  if (opts.webSearch) body.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": s.claudeKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-    body: JSON.stringify(body),
-  });
-  const d = await r.json();
-  if (!r.ok) throw new Error(r.status === 404 ? `Modelo "${s.model}" não existe na sua conta Anthropic. Clique em "Buscar modelos da minha conta" em Tokens e escolha um da lista.` : d?.error?.message || `Claude ${r.status}`);
-  const text = (d.content || []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n");
-  const searches = d.usage?.server_tool_use?.web_search_requests ?? 0;
-  const it = d.usage?.input_tokens ?? 0, ot = d.usage?.output_tokens ?? 0;
-  onUsage({ id: crypto.randomUUID(), at: Date.now(), provider, model: s.model, kind: opts.kind, inputTokens: it, outputTokens: ot, images: 0, searches, costUsd: costFor(s.model, it, ot, 0, searches) });
+  const ctrl = new AbortController(); motionAbort = ctrl;
+  let idle = false;
+  const onIdle = () => { idle = true; log(opts.kind, "Sem resposta da IA há 2 minutos — cancelando para não travar."); ctrl.abort(); };
+  const t0 = Date.now(); let text = ""; let lastLog = 0;
+  const progress = () => { const now = Date.now(); if (now - lastLog > 1500) { lastLog = now; log(opts.kind, `Recebendo… ${text.length.toLocaleString("pt-BR")} caracteres (${Math.round((now - t0) / 1000)}s)`, { chars: text.length, tokens: Math.round(text.length / 3.5) }); } };
+  log(opts.kind, `Enviando pedido para ${s.model}${opts.prefill ? " (continuação)" : ""}…`);
+  try {
+    if (provider === "openai") {
+      if (!s.openaiKey) throw new Error("Configure o token da OpenAI (ChatGPT).");
+      const body: any = { model: s.model, instructions: system, stream: true, input: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : user, max_output_tokens: opts.maxTokens };
+      if (opts.webSearch) body.tools = [{ type: "web_search" }];
+      const r = await fetch("https://api.openai.com/v1/responses", { method: "POST", signal: ctrl.signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.openaiKey}` }, body: JSON.stringify(body) });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d?.error?.message || `OpenAI ${r.status}`); }
+      log(opts.kind, "Conectado. A IA está pensando…");
+      let it = 0, ot = 0, searches = 0;
+      for await (const ev of sse(r, ctrl.signal, onIdle)) {
+        if (ev.type === "response.output_text.delta") { text += ev.delta || ""; progress(); }
+        else if (ev.type === "response.web_search_call.searching") log(opts.kind, "Pesquisando na internet…");
+        else if (ev.type === "response.reasoning_summary_text.delta" || ev.type === "response.in_progress") progress();
+        else if (ev.type === "response.completed" || ev.type === "response.incomplete") { it = ev.response?.usage?.input_tokens ?? 0; ot = ev.response?.usage?.output_tokens ?? 0; searches = (ev.response?.output || []).filter((o: any) => o.type === "web_search_call").length; }
+        else if (ev.type === "error" || ev.type === "response.failed") throw new Error(ev.error?.message || ev.response?.error?.message || "Falha na OpenAI");
+      }
+      onUsage({ id: crypto.randomUUID(), at: Date.now(), provider, model: s.model, kind: opts.kind, inputTokens: it, outputTokens: ot, images: 0, searches, costUsd: costFor(s.model, it, ot, 0, searches) });
+    } else {
+      if (!s.claudeKey) throw new Error("Configure o token da Claude (Anthropic).");
+      const body: any = { model: s.model, max_tokens: opts.maxTokens, stream: true, system, messages: opts.prefill ? [{ role: "user", content: user }, { role: "assistant", content: opts.prefill.trimEnd() }, { role: "user", content: "Continue EXATAMENTE de onde parou, sem repetir nada e sem explicações, até fechar </html>." }] : [{ role: "user", content: user }] };
+      if (opts.webSearch) body.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
+      const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: ctrl.signal, headers: { "Content-Type": "application/json", "x-api-key": s.claudeKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify(body) });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(r.status === 404 ? `Modelo "${s.model}" não existe na sua conta Anthropic. Clique em "Buscar modelos da minha conta" em Tokens e escolha um da lista.` : d?.error?.message || `Claude ${r.status}`); }
+      log(opts.kind, "Conectado. A IA está pensando…");
+      let it = 0, ot = 0, searches = 0;
+      for await (const ev of sse(r, ctrl.signal, onIdle)) {
+        if (ev.type === "message_start") it = ev.message?.usage?.input_tokens ?? 0;
+        else if (ev.type === "content_block_start" && ev.content_block?.type === "server_tool_use") log(opts.kind, "Pesquisando na internet…");
+        else if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") { text += ev.delta.text || ""; progress(); }
+        else if (ev.type === "message_delta") { ot = ev.usage?.output_tokens ?? ot; searches = ev.usage?.server_tool_use?.web_search_requests ?? searches; if (ev.delta?.stop_reason === "max_tokens") log(opts.kind, "Resposta atingiu o limite de tamanho; vou pedir a continuação."); }
+        else if (ev.type === "error") throw new Error(ev.error?.message || "Falha na Claude");
+      }
+      onUsage({ id: crypto.randomUUID(), at: Date.now(), provider, model: s.model, kind: opts.kind, inputTokens: it, outputTokens: ot, images: 0, searches, costUsd: costFor(s.model, it, ot, 0, searches) });
+    }
+  } catch (e: any) {
+    if (ctrl.signal.aborted) throw new Error(idle ? "A IA ficou 2 minutos sem responder e a geração foi interrompida. Tente de novo ou troque de modelo." : "Geração cancelada.");
+    log(opts.kind, `Erro: ${e?.message || e}`); throw e;
+  } finally { if (motionAbort === ctrl) motionAbort = null; }
+  log(opts.kind, `Concluído em ${Math.round((Date.now() - t0) / 1000)}s · ${text.length.toLocaleString("pt-BR")} caracteres.`, { chars: text.length });
   return text;
 }
 
