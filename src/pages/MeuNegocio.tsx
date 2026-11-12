@@ -49,7 +49,7 @@ function AccountGrowth({ account, metrics }: { account: ProfileSession; metrics?
 export default function MeuNegocioPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [view, setView] = useState<'home' | 'strategy' | 'growth'>('home');
+  const [view, setView] = useState<'home' | 'accounts' | 'strategy' | 'growth'>('home');
   const [accountQuery, setAccountQuery] = useState('');
   const [accounts, setAccounts] = useState<ProfileSession[]>([]);
   const [metrics, setMetrics] = useState<Record<string, AccountMetrics>>({});

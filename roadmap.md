@@ -1,5 +1,10 @@
 # Roadmap
 
+## Entrada simplificada do Instagram
+- [x] Mostrar somente Cadastrar conta do Instagram e Acessar tutoriais na abertura
+- [x] Abrir a área completa de cadastro ao escolher a primeira opção, preservando contas, métricas e tutoriais
+- [ ] Validar navegação e responsividade no navegador
+
 ## IG Online: atividade, envios e criativos
 - [x] Criar migração PostgreSQL aditiva para contadores diários, destinatários e histórico de criativos
 - [x] Criar endpoints da extensão para métricas ampliadas, envios com deduplicação, consulta paginada de histórico e criativos
