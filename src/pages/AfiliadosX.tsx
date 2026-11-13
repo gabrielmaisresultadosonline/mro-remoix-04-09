@@ -485,6 +485,30 @@ export default function AfiliadosX() {
           </Button>
         </Card>
       </section>
+
+      <AlertDialog open={showReplaceDialog} onOpenChange={setShowReplaceDialog}>
+        <AlertDialogContent className="border-yellow-500/40 bg-zinc-950 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-black">Já existe um afiliado com este email</AlertDialogTitle>
+            <AlertDialogDescription className="text-base font-bold text-yellow-400">
+              Deseja substituir?
+            </AlertDialogDescription>
+            <AlertDialogDescription className="leading-relaxed text-zinc-400">
+              Ao escolher “Sim”, os dados preenchidos agora serão ativados para <strong className="text-white">{form.email}</strong>. O identificador, os links, o Pix e o histórico de vendas existentes serão preservados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700" disabled={loading}>Não</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-yellow-500 font-black text-black hover:bg-yellow-400"
+              disabled={loading}
+              onClick={() => { void submit(true); }}
+            >
+              Sim, substituir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

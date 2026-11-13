@@ -279,7 +279,10 @@ async function actionRegister(body: any) {
   };
 
   try {
-    await saveAffiliates([...affiliates, newAffiliate]);
+    const result = existingByEmail
+      ? replaceAffiliateByEmail(affiliates, email, newAffiliate)
+      : { affiliates: [...affiliates, newAffiliate], affiliate: newAffiliate };
+    await saveAffiliates(result.affiliates);
   } catch (e) {
     console.error("[afiliadosx] saveAffiliates", e);
     return json({ success: false, error: "Erro ao salvar cadastro" }, 500);
