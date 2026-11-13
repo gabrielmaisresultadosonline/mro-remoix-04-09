@@ -71,20 +71,6 @@ function randomSuffix(): string {
 // -------------------------------------------------------------
 // Load / save affiliates JSON (same shape as admin panel)
 // -------------------------------------------------------------
-interface Affiliate {
-  id: string;
-  name: string;
-  email: string;
-  photoUrl?: string;
-  active: boolean;
-  createdAt: string;
-  commissionNotified?: string[];
-  isLifetime?: boolean;
-  source?: string; // "afiliadosx" for self-service
-  squarecloudUsername?: string;
-  showPromoBanner?: boolean;
-}
-
 async function loadAffiliates(): Promise<Affiliate[]> {
   const { data, error } = await supabase.storage
     .from("user-data")

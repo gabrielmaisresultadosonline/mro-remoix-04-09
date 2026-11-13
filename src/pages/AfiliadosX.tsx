@@ -59,6 +59,7 @@ export default function AfiliadosX() {
   const [savingPix, setSavingPix] = useState(false);
   const [showResumo, setShowResumo] = useState(false);
   const [sendingWelcome, setSendingWelcome] = useState(false);
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState({
