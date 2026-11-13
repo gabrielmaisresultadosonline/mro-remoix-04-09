@@ -30,6 +30,18 @@ interface CreatedAffiliate {
   };
 }
 
+async function readFnError(error: any, fallback: string): Promise<string> {
+  try {
+    const res = error?.context;
+    if (res && typeof res.json === "function") {
+      const body = await res.clone().json().catch(async () => ({ error: await res.text() }));
+      if (body?.error) return String(body.error);
+      if (body?.message) return String(body.message);
+    }
+  } catch { /* ignore */ }
+  return fallback;
+}
+
 export default function AfiliadosX() {
   const navigate = useNavigate();
   const [user, setUser] = useState<MROUser | null>(null);
@@ -148,7 +160,7 @@ export default function AfiliadosX() {
           show_promo_banner: form.show_promo_banner,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await readFnError(error, "Erro ao cadastrar"));
       if (!data?.success) throw new Error(data?.error || "Erro ao cadastrar");
       setCreated(data.affiliate as CreatedAffiliate);
       if (data.welcomeEmailSent) toast.success("Afiliado ativado! Boas-vindas enviadas ao seu e-mail.");
@@ -239,7 +251,8 @@ export default function AfiliadosX() {
                 setSavingPix(true);
                 try {
                   const { data, error } = await supabase.functions.invoke("afiliadosx", { body: { action: "save_pix", ...credentials, pix_key: pixKey.trim() } });
-                  if (error || !data?.success) throw new Error(data?.error || "Não foi possível salvar a chave Pix");
+                  if (error) throw new Error(await readFnError(error, "Não foi possível salvar a chave Pix"));
+                  if (!data?.success) throw new Error(data?.error || "Não foi possível salvar a chave Pix");
                   setPixKey(data.pixKey);
                   toast.success("Chave Pix salva!");
                 } catch (error) { toast.error(error instanceof Error ? error.message : "Erro ao salvar Pix"); }
