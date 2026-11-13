@@ -6,6 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { getCurrentUser, logoutUser, loginUser } from "@/lib/userStorage";
 import { loginToSquare } from "@/lib/squareApi";
@@ -55,6 +59,7 @@ export default function AfiliadosX() {
   const [savingPix, setSavingPix] = useState(false);
   const [showResumo, setShowResumo] = useState(false);
   const [sendingWelcome, setSendingWelcome] = useState(false);
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState({
@@ -140,7 +145,7 @@ export default function AfiliadosX() {
     }
   };
 
-  const submit = async () => {
+  const submit = async (replaceExisting = false) => {
     if (!user) return;
     if (!form.first_name.trim()) return toast.error("Informe seu nome");
     if (!form.email.includes("@")) return toast.error("Email inválido");
@@ -158,13 +163,27 @@ export default function AfiliadosX() {
           ...credentials,
           photo_url: form.photo_url || null,
           show_promo_banner: form.show_promo_banner,
+          replace_existing: replaceExisting,
         },
       });
-      if (error) throw new Error(await readFnError(error, "Erro ao cadastrar"));
+      if (error) {
+        const message = await readFnError(error, "Erro ao cadastrar");
+        if (message === "Já existe um afiliado com este email") {
+          setShowReplaceDialog(true);
+          return;
+        }
+        throw new Error(message);
+      }
+      if (data?.code === "duplicate_email") {
+        setShowReplaceDialog(true);
+        return;
+      }
       if (!data?.success) throw new Error(data?.error || "Erro ao cadastrar");
+      setShowReplaceDialog(false);
       setCreated(data.affiliate as CreatedAffiliate);
-      if (data.welcomeEmailSent) toast.success("Afiliado ativado! Boas-vindas enviadas ao seu e-mail.");
-      else toast.warning("Afiliado ativado e links salvos, mas o e-mail não foi enviado. Use Reenviar boas-vindas.");
+      const activationMessage = data.replaced ? "Afiliado substituído e ativado!" : "Afiliado ativado!";
+      if (data.welcomeEmailSent) toast.success(`${activationMessage} Boas-vindas enviadas ao seu e-mail.`);
+      else toast.warning(`${activationMessage} Links salvos, mas o e-mail não foi enviado. Use Reenviar boas-vindas.`);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao cadastrar");
     } finally {
@@ -456,7 +475,7 @@ export default function AfiliadosX() {
 
 
           <Button
-            onClick={submit}
+            onClick={() => submit()}
             disabled={loading}
             className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black text-base py-6"
           >
@@ -466,6 +485,30 @@ export default function AfiliadosX() {
           </Button>
         </Card>
       </section>
+
+      <AlertDialog open={showReplaceDialog} onOpenChange={setShowReplaceDialog}>
+        <AlertDialogContent className="border-yellow-500/40 bg-zinc-950 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-black">Já existe um afiliado com este email</AlertDialogTitle>
+            <AlertDialogDescription className="text-base font-bold text-yellow-400">
+              Deseja substituir?
+            </AlertDialogDescription>
+            <AlertDialogDescription className="leading-relaxed text-zinc-400">
+              Ao escolher “Sim”, os dados preenchidos agora serão ativados para <strong className="text-white">{form.email}</strong>. O identificador, os links, o Pix e o histórico de vendas existentes serão preservados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700" disabled={loading}>Não</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-yellow-500 font-black text-black hover:bg-yellow-400"
+              disabled={loading}
+              onClick={() => { void submit(true); }}
+            >
+              Sim, substituir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

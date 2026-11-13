@@ -4,6 +4,7 @@ import { sanitizeEmailSubject, htmlToPlainText } from "../_shared/email-encode.t
 import { isAdminRequest } from "../_shared/require-admin.ts";
 import nodemailer from "npm:nodemailer@6.10.1";
 import { deliverAffiliateWelcome } from "../_shared/affiliate-welcome-delivery.ts";
+import { findAffiliateByEmail, replaceAffiliateByEmail, type Affiliate } from "./registration.ts";
 
 // Self-service affiliate registration.
 // Writes into the SAME affiliates JSON managed by /instagram-nova-admin
@@ -70,20 +71,6 @@ function randomSuffix(): string {
 // -------------------------------------------------------------
 // Load / save affiliates JSON (same shape as admin panel)
 // -------------------------------------------------------------
-interface Affiliate {
-  id: string;
-  name: string;
-  email: string;
-  photoUrl?: string;
-  active: boolean;
-  createdAt: string;
-  commissionNotified?: string[];
-  isLifetime?: boolean;
-  source?: string; // "afiliadosx" for self-service
-  squarecloudUsername?: string;
-  showPromoBanner?: boolean;
-}
-
 async function loadAffiliates(): Promise<Affiliate[]> {
   const { data, error } = await supabase.storage
     .from("user-data")
@@ -251,24 +238,29 @@ async function actionRegister(body: any) {
     return json({ success: false, error: "Erro ao carregar lista de afiliados" }, 500);
   }
 
-  // Duplicate email guard
-  if (affiliates.some(a => (a.email || "").toLowerCase() === email)) {
-    return json({ success: false, error: "Já existe um afiliado com este email" }, 400);
+  // A duplicate is replaced only after the explicit confirmation in /afiliadosx.
+  const replaceExisting = body.replace_existing === true;
+  const existingByEmail = findAffiliateByEmail(affiliates, email);
+  if (existingByEmail && !replaceExisting) {
+    return json({ success: false, code: "duplicate_email", error: "Já existe um afiliado com este email" });
   }
-  // Duplicate SquareCloud user guard (only against self-service entries)
-  if (affiliates.some(a => a.source === "afiliadosx" && (a.squarecloudUsername || "").toLowerCase() === scUsername)) {
+  // Duplicate SquareCloud user guard (only against another self-service entry)
+  if (affiliates.some(a => a.id !== existingByEmail?.id && a.source === "afiliadosx" && (a.squarecloudUsername || "").toLowerCase() === scUsername)) {
     return json({ success: false, error: "Este usuário MRO já está cadastrado como afiliado" }, 400);
   }
 
-  // 3. Build a unique id
-  const desired = cleanSlug(desiredId || first) || "afiliado";
-  let candidate = desired;
-  let tries = 0;
-  while (affiliates.some(a => a.id === candidate)) {
-    candidate = `${desired}${randomSuffix()}`;
-    if (++tries > 10) return json({ success: false, error: "Não foi possível gerar um identificador único" }, 500);
+  // 3. Build a unique id for a new registration. Replacement preserves the old public links.
+  let affiliateId = existingByEmail?.id || "";
+  if (!affiliateId) {
+    const desired = cleanSlug(desiredId || first) || "afiliado";
+    let candidate = desired;
+    let tries = 0;
+    while (affiliates.some(a => a.id === candidate)) {
+      candidate = `${desired}${randomSuffix()}`;
+      if (++tries > 10) return json({ success: false, error: "Não foi possível gerar um identificador único" }, 500);
+    }
+    affiliateId = candidate;
   }
-  const affiliateId = candidate;
 
   // 4. Append new affiliate (shape identical to admin creation)
   const fullName = last ? `${first} ${last}` : first;
@@ -280,14 +272,17 @@ async function actionRegister(body: any) {
     active: true,
     createdAt: new Date().toISOString(),
     commissionNotified: [],
-    isLifetime: true,
+    isLifetime: existingByEmail?.isLifetime ?? true,
     source: "afiliadosx",
     squarecloudUsername: scUsername,
     showPromoBanner,
   };
 
   try {
-    await saveAffiliates([...affiliates, newAffiliate]);
+    const result = existingByEmail
+      ? replaceAffiliateByEmail(affiliates, email, newAffiliate)
+      : { affiliates: [...affiliates, newAffiliate], affiliate: newAffiliate };
+    await saveAffiliates(result.affiliates);
   } catch (e) {
     console.error("[afiliadosx] saveAffiliates", e);
     return json({ success: false, error: "Erro ao salvar cadastro" }, 500);
@@ -316,6 +311,7 @@ async function actionRegister(body: any) {
 
   return json({
     success: true,
+    replaced: Boolean(existingByEmail),
     welcomeEmailSent: welcome.ok,
     affiliate: {
       id: affiliateId,
