@@ -311,6 +311,7 @@ async function actionRegister(body: any) {
 
   return json({
     success: true,
+    replaced: Boolean(existingByEmail),
     welcomeEmailSent: welcome.ok,
     affiliate: {
       id: affiliateId,
