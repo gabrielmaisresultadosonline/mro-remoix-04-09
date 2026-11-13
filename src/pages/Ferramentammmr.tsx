@@ -59,6 +59,7 @@ import logoMro from "@/assets/logo-mro.png";
 import { PromoHlsVideo } from "@/components/sales/PromoHlsVideo";
 import ActiveClientsSection from "@/components/ActiveClientsSection";
 import { MroServiceBonus } from "@/components/sales/MroServiceBonus";
+import { PromoCtaBand } from "@/components/sales/PromoCtaBand";
 import { pageCopy, type SalesLang } from "@/lib/salesCopy";
 import {
   BlackNovemberBadge,
@@ -455,6 +456,12 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
     pricingRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  /** CTA do meio da página: registra o clique e leva até o container de preços. */
+  const promoCta = (source: string) => {
+    track("cta_click", { source });
+    scrollToPricing();
+  };
+
   const openVideo = (url: string) => {
     setCurrentVideoUrl(url);
     setShowVideoModal(true);
@@ -557,10 +564,35 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
 
       <MroIntelligentFeatures lang={lang} />
 
+      {blackPromo && (
+        <PromoCtaBand
+          label="APROVEITAR PROMO"
+          caption="Garanta seu acesso com o desconto Black November antes que termine"
+          onCta={() => promoCta("apos-funcionalidades")}
+        />
+      )}
+
       <MroContentAutomation lang={lang} />
+
+      {blackPromo && (
+        <PromoCtaBand
+          variant="inline"
+          label="ADQUIRIR AGORA"
+          onCta={() => promoCta("apos-conteudo")}
+        />
+      )}
 
       {blackPromo && <BlackNovemberBadge />}
       {blackPromo && <BlackNovemberTapes />}
+
+      {blackPromo && (
+        <PromoCtaBand
+          label="APROVEITAR PROMO"
+          eyebrow="Oferta por tempo limitado"
+          caption="Anual por R$300 ou vitalício por R$967 — clique e escolha seu plano"
+          onCta={() => promoCta("antes-da-garantia")}
+        />
+      )}
 
       {/* Guarantee Section */}
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
@@ -599,6 +631,14 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
           </div>
         </div>
       </section>
+
+      {blackPromo && (
+        <PromoCtaBand
+          variant="inline"
+          label="ADQUIRIR AGORA"
+          onCta={() => promoCta("antes-dos-precos")}
+        />
+      )}
 
       {/* O que está incluso */}
       <section ref={pricingRef} className="py-10 sm:py-16 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
@@ -750,6 +790,15 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
 
       {/* Bônus: faturar prestando serviço (somente /ferramentamropromo) */}
       {blackPromo && <MroServiceBonus onCta={scrollToPricing} />}
+
+      {blackPromo && (
+        <PromoCtaBand
+          label="APROVEITAR PROMO"
+          eyebrow="Última chamada"
+          caption="Comece hoje com a MRO Inteligente e o bônus de serviços incluso"
+          onCta={() => promoCta("apos-bonus")}
+        />
+      )}
 
 
       {/* Final CTA */}
