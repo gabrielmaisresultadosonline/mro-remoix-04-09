@@ -4,6 +4,7 @@ import { sanitizeEmailSubject, htmlToPlainText } from "../_shared/email-encode.t
 import { isAdminRequest } from "../_shared/require-admin.ts";
 import nodemailer from "npm:nodemailer@6.10.1";
 import { deliverAffiliateWelcome } from "../_shared/affiliate-welcome-delivery.ts";
+import { findAffiliateByEmail, replaceAffiliateByEmail, type Affiliate } from "./registration.ts";
 
 // Self-service affiliate registration.
 // Writes into the SAME affiliates JSON managed by /instagram-nova-admin
