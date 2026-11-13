@@ -272,7 +272,7 @@ async function actionRegister(body: any) {
     active: true,
     createdAt: new Date().toISOString(),
     commissionNotified: [],
-    isLifetime: true,
+    isLifetime: existingByEmail?.isLifetime ?? true,
     source: "afiliadosx",
     squarecloudUsername: scUsername,
     showPromoBanner,

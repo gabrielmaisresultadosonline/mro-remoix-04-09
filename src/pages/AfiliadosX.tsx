@@ -475,7 +475,7 @@ export default function AfiliadosX() {
 
 
           <Button
-            onClick={submit}
+            onClick={() => submit()}
             disabled={loading}
             className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black text-base py-6"
           >
