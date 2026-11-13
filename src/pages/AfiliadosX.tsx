@@ -145,7 +145,7 @@ export default function AfiliadosX() {
     }
   };
 
-  const submit = async () => {
+  const submit = async (replaceExisting = false) => {
     if (!user) return;
     if (!form.first_name.trim()) return toast.error("Informe seu nome");
     if (!form.email.includes("@")) return toast.error("Email inválido");
@@ -163,13 +163,27 @@ export default function AfiliadosX() {
           ...credentials,
           photo_url: form.photo_url || null,
           show_promo_banner: form.show_promo_banner,
+          replace_existing: replaceExisting,
         },
       });
-      if (error) throw new Error(await readFnError(error, "Erro ao cadastrar"));
+      if (error) {
+        const message = await readFnError(error, "Erro ao cadastrar");
+        if (message === "Já existe um afiliado com este email") {
+          setShowReplaceDialog(true);
+          return;
+        }
+        throw new Error(message);
+      }
+      if (data?.code === "duplicate_email") {
+        setShowReplaceDialog(true);
+        return;
+      }
       if (!data?.success) throw new Error(data?.error || "Erro ao cadastrar");
+      setShowReplaceDialog(false);
       setCreated(data.affiliate as CreatedAffiliate);
-      if (data.welcomeEmailSent) toast.success("Afiliado ativado! Boas-vindas enviadas ao seu e-mail.");
-      else toast.warning("Afiliado ativado e links salvos, mas o e-mail não foi enviado. Use Reenviar boas-vindas.");
+      const activationMessage = data.replaced ? "Afiliado substituído e ativado!" : "Afiliado ativado!";
+      if (data.welcomeEmailSent) toast.success(`${activationMessage} Boas-vindas enviadas ao seu e-mail.`);
+      else toast.warning(`${activationMessage} Links salvos, mas o e-mail não foi enviado. Use Reenviar boas-vindas.`);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao cadastrar");
     } finally {
