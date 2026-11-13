@@ -703,6 +703,19 @@
   100% { transform: translateY(-105vh) scale(1); opacity: 0; }
 }
 
+/* CTAs de promoção no meio da página (somente /ferramentamropromo). */
+.mro-black-november .bn-cta-band {
+  box-shadow: 0 0 0 1px hsl(var(--primary) / .35), 0 18px 50px hsl(var(--primary) / .14);
+  animation: bn-band-glow 2.6s ease-in-out infinite;
+}
+@keyframes bn-band-glow {
+  0%, 100% { box-shadow: 0 0 0 1px hsl(var(--primary) / .35), 0 18px 50px hsl(var(--primary) / .14); }
+  50% { box-shadow: 0 0 0 1px hsl(var(--primary) / .7), 0 24px 70px hsl(var(--primary) / .3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mro-black-november .bn-cta-band { animation: none; }
+}
+
 /* Teste grátis /teste002 — preto, cinza, branco e amarelo (escopado). */
 .teste002-theme {
   --background: 0 0% 4%;
