@@ -655,7 +655,12 @@ async function userMetrics(body: Body) {
   if (!username) return [401, { success: false, error: 'Sessão MRO inválida ou expirada' }] as const;
   const owned = await ownedInstagrams(username, requested.map(normalizeIG));
   const keys = [...owned];
-  if (!keys.length) return [200, { success: true, profiles: [] }] as const;
+  const trialRows = await adminQuery<Row>(`SELECT a.instagram_username, a.trial_expires_at FROM public.mro_tool_accounts a
+      JOIN public.mro_tool_users u ON u.id = a.user_id
+     WHERE lower(u.username) = lower($1) AND a.is_trial = true
+       AND (a.trial_expires_at IS NULL OR a.trial_expires_at > now())`, [username]).catch(() => [] as Row[]);
+  const trial_accounts = trialRows.map((r) => ({ instagram_username: normalizeIG(String(r.instagram_username)), trial_expires_at: iso(r.trial_expires_at) }));
+  if (!keys.length) return [200, { success: true, profiles: [], trial_accounts }] as const;
   const [baselines, sessions, metrics, images] = await Promise.all([
     loadBaselines(keys),
     adminQuery<Row>(`SELECT instagram_username, followers_current, welcome_total, likes_total, follows_total,
@@ -668,7 +673,7 @@ async function userMetrics(body: Body) {
     ownedGalleryImages(keys, PUBLIC_BASE),
   ]);
   const creatives = await creativesForAccounts(keys, images);
-  return [200, { success: true, profiles: keys.map((ig) => {
+  return [200, { success: true, trial_accounts, profiles: keys.map((ig) => {
     const baseline = baselines.get(ig);
     const s = sessions.find((row) => normalizeIG(row.instagram_username) === ig);
     return {
