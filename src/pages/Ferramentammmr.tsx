@@ -67,6 +67,7 @@ import {
   BlackNovemberSparkles,
   BlackNovemberTapes,
   BlackNovemberTopBar,
+  useBlackPromoActive,
 } from "@/components/sales/BlackNovember";
 import { MRO_BLACK_PROMO_SOURCE } from "../../supabase/functions/_shared/mro-black-promo";
 
@@ -116,6 +117,8 @@ export interface FerramentammmrProps {
 }
 
 const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, children, lang = "pt", showWhatsApp = true, blackPromo = false }: FerramentammmrProps) => {
+  const blackLive = useBlackPromoActive();
+  const blackActive = blackPromo && blackLive;
   const t = pageCopy[lang];
   const annualAmount = promotionalOffer ? 300 : 397;
   const annualInstallments = promotionalOffer ? '12x de R$30' : '12x de R$ 40,00';
@@ -479,9 +482,9 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
   ];
 
   return (
-    <div className={`mro-intelligent-sales min-h-screen bg-background text-foreground overflow-x-hidden ${blackPromo ? 'mro-black-november' : ''}`}>
-      {blackPromo && <BlackNovemberTopBar />}
-      {blackPromo && <BlackNovemberSparkles />}
+    <div className={`mro-intelligent-sales min-h-screen bg-background text-foreground overflow-x-hidden ${blackActive ? 'mro-black-november' : ''}`}>
+      {blackActive && <BlackNovemberTopBar />}
+      {blackActive && <BlackNovemberSparkles />}
       {promotionalOffer && (
         <div className="sticky top-0 z-[60] bg-primary text-primary-foreground py-3 px-4">
           <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-center flex-wrap">
@@ -567,7 +570,7 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       {blackPromo && (
         <PromoCtaBand
           label="APROVEITAR PROMO"
-          caption="Garanta seu acesso com o desconto Black November antes que termine"
+          caption={blackActive ? "Garanta seu acesso com o desconto Black November até 17/11 às 16h" : "Garanta seu acesso à Ferramenta MRO agora"}
           onCta={() => promoCta("apos-funcionalidades")}
         />
       )}
@@ -582,14 +585,14 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
         />
       )}
 
-      {blackPromo && <BlackNovemberBadge />}
-      {blackPromo && <BlackNovemberTapes />}
+      {blackActive && <BlackNovemberBadge />}
+      {blackActive && <BlackNovemberTapes />}
 
       {blackPromo && (
         <PromoCtaBand
           label="APROVEITAR PROMO"
-          eyebrow="Oferta por tempo limitado"
-          caption="Anual por R$300 ou vitalício por R$967 — clique e escolha seu plano"
+          eyebrow={blackActive ? "Black até 17/11 às 16h" : "Escolha seu plano"}
+          caption={blackActive ? "Anual por R$300 ou vitalício por R$967 — clique e escolha seu plano" : "Anual por R$397 (4 contas) ou vitalício por R$1.200 (12 contas)"}
           onCta={() => promoCta("antes-da-garantia")}
         />
       )}
