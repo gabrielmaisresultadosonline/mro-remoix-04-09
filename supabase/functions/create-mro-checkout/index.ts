@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { MRO_BLACK_PROMO, MRO_BLACK_PROMO_SOURCE, blackPromoPlan, isBlackPromoSource } from "../_shared/mro-black-promo.ts";
+import { currentPromoOffer, MRO_BLACK_PROMO_SOURCE, blackPromoPlan, isBlackPromoSource } from "../_shared/mro-black-promo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,7 +54,7 @@ serve(async (req) => {
         );
       }
       planType = blackPlan;
-      amount = MRO_BLACK_PROMO[blackPlan].price;
+      amount = currentPromoOffer(blackPlan).price; // Black até 17/11 16h, depois R$397/R$1200
       log("Black promo checkout", { source: MRO_BLACK_PROMO_SOURCE, planType, amount });
     }
 

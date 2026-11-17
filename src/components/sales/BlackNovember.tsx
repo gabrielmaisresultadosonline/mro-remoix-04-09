@@ -3,14 +3,28 @@ import { CheckCircle2, CreditCard, Flame, Shield, Tag, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import {
   MRO_BLACK_PROMO,
+  MRO_BLACK_PROMO_END_MS,
+  currentPromoOffer,
+  isBlackPromoActive,
   type MroBlackPromoPlan,
 } from '../../../supabase/functions/_shared/mro-black-promo';
 
-const brl = (n: number) => `R$${n.toLocaleString('pt-BR')}`;
+const brl = (n: number) => `R$${n.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: Number.isInteger(n) ? 0 : 2 })}`;
 
-/** Fim da Black November: 30/11 às 23:59:59 (horário de Brasília). */
-function blackNovemberEnd(now = new Date()) {
-  return new Date(Date.UTC(now.getUTCFullYear(), 11, 1, 2, 59, 59)); // 01/12 02:59:59 UTC = 30/11 23:59:59 -03
+/** Fim da Black November: 17/11 às 16:00 (horário de Brasília). */
+function blackNovemberEnd() {
+  return new Date(MRO_BLACK_PROMO_END_MS);
+}
+
+/** true enquanto a Black estiver ativa; vira false sozinho às 16h de 17/11. */
+export function useBlackPromoActive() {
+  const [active, setActive] = useState(() => isBlackPromoActive());
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(() => { if (!isBlackPromoActive()) setActive(false); }, 1000);
+    return () => clearInterval(t);
+  }, [active]);
+  return active;
 }
 
 function useCountdown() {
@@ -111,13 +125,13 @@ export function BlackNovemberTapes() {
   );
 }
 
-const PLAN_INFO: Record<MroBlackPromoPlan, { title: string; tag: string; period: string; features: string[] }> = {
+const planInfo = (black: boolean): Record<MroBlackPromoPlan, { title: string; tag: string; period: string; features: string[] }> => ({
   annual: {
-    title: 'Anual Black',
-    tag: 'BLACK NOVEMBER',
+    title: black ? 'Anual Black' : 'Plano Anual',
+    tag: black ? 'BLACK NOVEMBER' : 'PLANO ANUAL',
     period: 'Acesso por 1 ano',
     features: [
-      `${MRO_BLACK_PROMO.annual.accounts} contas do Instagram simultâneas fixas`,
+      `${currentPromoOffer('annual', black ? 0 : Infinity).accounts} contas do Instagram simultâneas fixas`,
       '5 testes todo mês para usar em clientes/outras contas',
       'Ferramenta MRO completa',
       'Área de membros por 1 ano',
@@ -126,11 +140,11 @@ const PLAN_INFO: Record<MroBlackPromoPlan, { title: string; tag: string; period:
     ],
   },
   lifetime: {
-    title: 'Vitalício Black',
-    tag: '⭐ VITALÍCIO BLACK',
+    title: black ? 'Vitalício Black' : 'Plano Vitalício',
+    tag: black ? '⭐ VITALÍCIO BLACK' : '⭐ VITALÍCIO',
     period: 'Acesso vitalício — sem renovação',
     features: [
-      `${MRO_BLACK_PROMO.lifetime.accounts} contas do Instagram simultâneas fixas`,
+      `${currentPromoOffer('lifetime', black ? 0 : Infinity).accounts} contas do Instagram simultâneas fixas`,
       '5 testes todo mês para usar em clientes/outras contas',
       'Ferramenta MRO completa',
       'Área de membros vitalícia',
@@ -138,7 +152,7 @@ const PLAN_INFO: Record<MroBlackPromoPlan, { title: string; tag: string; period:
       'Suporte VIP',
     ],
   },
-};
+});
 
 export interface BlackPlanSelection {
   type: 'annual' | 'lifetime';
@@ -149,11 +163,12 @@ export interface BlackPlanSelection {
 }
 
 export function blackPlanSelection(plan: MroBlackPromoPlan): BlackPlanSelection {
-  const o = MRO_BLACK_PROMO[plan];
+  const black = isBlackPromoActive();
+  const o = currentPromoOffer(plan);
   return {
     type: plan,
     amount: o.price,
-    label: PLAN_INFO[plan].title,
+    label: planInfo(black)[plan].title,
     installments: `${o.installments}x de ${brl(o.installment)}`,
     oneTime: `${brl(o.price)} à vista`,
   };
@@ -161,21 +176,27 @@ export function blackPlanSelection(plan: MroBlackPromoPlan): BlackPlanSelection 
 
 /** Cartões de preço da Black November (anual e vitalício). */
 export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanSelection) => void }) {
+  const black = useBlackPromoActive();
+  const PLAN_INFO = planInfo(black);
   return (
     <div className="max-w-6xl mx-auto relative z-10">
       <div className="text-center mb-8 sm:mb-10">
-        <span className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-black text-xs tracking-[0.2em] uppercase rounded px-3 py-1 bn-pulse">
-          <Tag className="h-3.5 w-3.5" /> Desconto Black November
-        </span>
+        {black && (
+          <span className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-black text-xs tracking-[0.2em] uppercase rounded px-3 py-1 bn-pulse">
+            <Tag className="h-3.5 w-3.5" /> Desconto Black November
+          </span>
+        )}
         <h2 className="mro-sales-title text-3xl sm:text-4xl md:text-6xl uppercase mt-4">
-          Preços <span className="bn-shimmer-text">Black</span>
+          {black ? <>Preços <span className="bn-shimmer-text">Black</span></> : 'Escolha seu plano'}
         </h2>
-        <p className="text-muted-foreground mt-3 text-base sm:text-lg">Valores exclusivos da Black November. Os 5 testes mensais continuam iguais.</p>
+        <p className="text-muted-foreground mt-3 text-base sm:text-lg">
+          {black ? 'Valores exclusivos da Black November até 17/11 às 16h. Depois voltam para R$397 anual e R$1.200 vitalício.' : 'Os 5 testes mensais continuam iguais.'}
+        </p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
         {(Object.keys(MRO_BLACK_PROMO) as MroBlackPromoPlan[]).map((plan) => {
-          const o = MRO_BLACK_PROMO[plan];
+          const o = currentPromoOffer(plan, black ? 0 : Infinity);
           const info = PLAN_INFO[plan];
           const off = o.from - o.price;
           return (
@@ -183,16 +204,20 @@ export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanS
               <div className="bn-glow-inner rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col h-full">
                 <div className="flex items-center justify-between gap-2 mb-5">
                   <span className="text-primary font-black text-xs sm:text-sm tracking-widest">{info.tag}</span>
-                  <span className="bn-off-badge bg-primary text-primary-foreground font-black text-xs sm:text-sm rounded-full px-3 py-1">
-                    {brl(off)} OFF
-                  </span>
+                  {off > 0 && (
+                    <span className="bn-off-badge bg-primary text-primary-foreground font-black text-xs sm:text-sm rounded-full px-3 py-1">
+                      {brl(off)} OFF
+                    </span>
+                  )}
                 </div>
 
                 <h3 className="text-2xl sm:text-3xl font-bold text-center">{info.title}</h3>
                 <div className="text-center mt-4 mb-6 sm:mb-8">
-                  <p className="text-muted-foreground text-lg">
-                    de <span className="line-through">{brl(o.from)}</span> por
-                  </p>
+                  {off > 0 && (
+                    <p className="text-muted-foreground text-lg">
+                      de <span className="line-through">{brl(o.from)}</span> por
+                    </p>
+                  )}
                   <div className="text-primary">
                     <span className="text-lg sm:text-2xl font-medium">{o.installments}x de</span>
                     <span className="text-6xl sm:text-7xl font-black ml-2">{brl(o.installment)}</span>
@@ -216,7 +241,7 @@ export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanS
                   onClick={() => onSelect(blackPlanSelection(plan))}
                   className="bg-cta hover:bg-cta/90 text-cta-foreground w-full font-black text-base sm:text-xl py-5 sm:py-7 rounded-xl bn-cta bn-cta-green"
                 >
-                  {plan === 'annual' ? 'QUERO O ANUAL BLACK' : 'QUERO O VITALÍCIO BLACK'}
+                  {plan === 'annual' ? (black ? 'QUERO O ANUAL BLACK' : 'QUERO O ANUAL') : (black ? 'QUERO O VITALÍCIO BLACK' : 'QUERO O VITALÍCIO')}
                 </Button>
 
                 <div className="flex items-center justify-center gap-4 mt-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
