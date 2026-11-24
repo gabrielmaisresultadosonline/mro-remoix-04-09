@@ -1,388 +1,390 @@
--- =========================================================
--- MRO INSTAGRAM (/IG) - FASE 1
--- Núcleo multi-tenant isolado com prefixo ig_
--- =========================================================
-
-CREATE TYPE public.ig_role AS ENUM ('owner','admin','manager','agent','analyst');
-
--- ---------- PLANOS ----------
-CREATE TABLE public.ig_plans (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  price_cents INTEGER NOT NULL DEFAULT 0,
-  max_accounts INTEGER NOT NULL DEFAULT 1,
-  max_automations INTEGER NOT NULL DEFAULT 3,
-  max_messages_month INTEGER NOT NULL DEFAULT 1000,
-  max_ai_calls_month INTEGER NOT NULL DEFAULT 100,
-  max_members INTEGER NOT NULL DEFAULT 1,
-  history_days INTEGER NOT NULL DEFAULT 30,
-  features JSONB NOT NULL DEFAULT '{}'::jsonb,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-GRANT SELECT ON public.ig_plans TO anon, authenticated;
-GRANT ALL ON public.ig_plans TO service_role;
-ALTER TABLE public.ig_plans ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ig_plans_public_read" ON public.ig_plans FOR SELECT USING (is_active = true);
-
-INSERT INTO public.ig_plans (id,name,price_cents,max_accounts,max_automations,max_messages_month,max_ai_calls_month,max_members,history_days,features)
-VALUES
-  ('solo','SOLO',9700,1,5,2000,200,1,30,'{"ai":true,"crm":false,"agency":false}'::jsonb),
-  ('pro','PRO',19700,3,25,10000,2000,5,90,'{"ai":true,"crm":true,"agency":false}'::jsonb),
-  ('agency','AGÊNCIA',49700,20,200,100000,20000,25,365,'{"ai":true,"crm":true,"agency":true}'::jsonb);
-
--- ---------- PERFIS ----------
-CREATE TABLE public.ig_profiles (
-  user_id UUID PRIMARY KEY,
-  full_name TEXT,
-  company TEXT,
-  email TEXT,
-  avatar_url TEXT,
-  is_blocked BOOLEAN NOT NULL DEFAULT false,
-  last_login_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-GRANT SELECT, INSERT, UPDATE ON public.ig_profiles TO authenticated;
-GRANT ALL ON public.ig_profiles TO service_role;
-ALTER TABLE public.ig_profiles ENABLE ROW LEVEL SECURITY;
-
--- ---------- TENANTS ----------
-CREATE TABLE public.ig_tenants (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  slug TEXT UNIQUE,
-  plan_id TEXT NOT NULL DEFAULT 'solo' REFERENCES public.ig_plans(id),
-  created_by UUID,
-  is_blocked BOOLEAN NOT NULL DEFAULT false,
-  onboarding_done BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  deleted_at TIMESTAMPTZ
-);
-GRANT SELECT, UPDATE ON public.ig_tenants TO authenticated;
-GRANT ALL ON public.ig_tenants TO service_role;
-ALTER TABLE public.ig_tenants ENABLE ROW LEVEL SECURITY;
-
-CREATE TABLE public.ig_tenant_members (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL,
-  role public.ig_role NOT NULL DEFAULT 'agent',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (tenant_id, user_id)
-);
-CREATE INDEX ig_tenant_members_user_idx ON public.ig_tenant_members(user_id);
-CREATE INDEX ig_tenant_members_tenant_idx ON public.ig_tenant_members(tenant_id);
-GRANT SELECT ON public.ig_tenant_members TO authenticated;
-GRANT ALL ON public.ig_tenant_members TO service_role;
-ALTER TABLE public.ig_tenant_members ENABLE ROW LEVEL SECURITY;
-
--- ---------- SUPER ADMIN ----------
-CREATE TABLE public.ig_super_admins (
-  user_id UUID PRIMARY KEY,
-  email TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-GRANT SELECT ON public.ig_super_admins TO authenticated;
-GRANT ALL ON public.ig_super_admins TO service_role;
-ALTER TABLE public.ig_super_admins ENABLE ROW LEVEL SECURITY;
-
--- Conta administrativa própria do módulo (senha nunca em código; hash gerado no servidor)
-CREATE TABLE public.ig_admin_accounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  password_salt TEXT NOT NULL,
-  must_change_password BOOLEAN NOT NULL DEFAULT true,
-  failed_attempts INTEGER NOT NULL DEFAULT 0,
-  locked_until TIMESTAMPTZ,
-  last_login_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-GRANT ALL ON public.ig_admin_accounts TO service_role;
-ALTER TABLE public.ig_admin_accounts ENABLE ROW LEVEL SECURITY;
--- Sem policies: acessível somente via service_role (Edge Functions).
-
--- ---------- FUNÇÕES DE SEGURANÇA ----------
-CREATE OR REPLACE FUNCTION public.ig_is_tenant_member(_tenant_id UUID)
-RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.ig_tenant_members m
-    WHERE m.tenant_id = _tenant_id AND m.user_id = auth.uid()
-  );
-$$;
-
-CREATE OR REPLACE FUNCTION public.ig_has_tenant_role(_tenant_id UUID, _roles public.ig_role[])
-RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.ig_tenant_members m
-    WHERE m.tenant_id = _tenant_id AND m.user_id = auth.uid() AND m.role = ANY(_roles)
-  );
-$$;
-
-CREATE OR REPLACE FUNCTION public.ig_is_super_admin()
-RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (SELECT 1 FROM public.ig_super_admins s WHERE s.user_id = auth.uid());
-$$;
-
-CREATE OR REPLACE FUNCTION public.ig_touch_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql SET search_path = public AS $$
-BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
-
--- Policies que dependem das funções acima
-CREATE POLICY "ig_profiles_self_select" ON public.ig_profiles FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR public.ig_is_super_admin());
-CREATE POLICY "ig_profiles_self_insert" ON public.ig_profiles FOR INSERT TO authenticated
-  WITH CHECK (user_id = auth.uid());
-CREATE POLICY "ig_profiles_self_update" ON public.ig_profiles FOR UPDATE TO authenticated
-  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "ig_tenants_member_select" ON public.ig_tenants FOR SELECT TO authenticated
-  USING (public.ig_is_tenant_member(id) OR public.ig_is_super_admin());
-CREATE POLICY "ig_tenants_owner_update" ON public.ig_tenants FOR UPDATE TO authenticated
-  USING (public.ig_has_tenant_role(id, ARRAY['owner','admin']::public.ig_role[]))
-  WITH CHECK (public.ig_has_tenant_role(id, ARRAY['owner','admin']::public.ig_role[]));
-
-CREATE POLICY "ig_members_select" ON public.ig_tenant_members FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR public.ig_is_tenant_member(tenant_id) OR public.ig_is_super_admin());
-
-CREATE POLICY "ig_super_admins_self_select" ON public.ig_super_admins FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
-
--- ---------- CONTAS INSTAGRAM ----------
-CREATE TABLE public.ig_accounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  instagram_account_id TEXT NOT NULL,
-  instagram_user_id TEXT,
-  username TEXT,
-  name TEXT,
-  profile_picture_url TEXT,
-  followers_count INTEGER,
-  media_count INTEGER,
-  account_type TEXT,
-  connection_state TEXT NOT NULL DEFAULT 'connected'
-    CHECK (connection_state IN ('connected','needs_reconnect','disconnected')),
-  webhook_subscribed BOOLEAN NOT NULL DEFAULT false,
-  last_synced_at TIMESTAMPTZ,
-  last_error TEXT,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  deleted_at TIMESTAMPTZ,
-  UNIQUE (tenant_id, instagram_account_id)
-);
-CREATE INDEX ig_accounts_tenant_idx ON public.ig_accounts(tenant_id);
-CREATE INDEX ig_accounts_igid_idx ON public.ig_accounts(instagram_account_id);
-CREATE INDEX ig_accounts_created_idx ON public.ig_accounts(created_at);
-CREATE TRIGGER ig_accounts_touch BEFORE UPDATE ON public.ig_accounts
-  FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
-GRANT SELECT, UPDATE, DELETE ON public.ig_accounts TO authenticated;
-GRANT ALL ON public.ig_accounts TO service_role;
-ALTER TABLE public.ig_accounts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ig_accounts_member_select" ON public.ig_accounts FOR SELECT TO authenticated
-  USING (public.ig_is_tenant_member(tenant_id) OR public.ig_is_super_admin());
-CREATE POLICY "ig_accounts_manage_update" ON public.ig_accounts FOR UPDATE TO authenticated
-  USING (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin','manager']::public.ig_role[]))
-  WITH CHECK (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin','manager']::public.ig_role[]));
-CREATE POLICY "ig_accounts_manage_delete" ON public.ig_accounts FOR DELETE TO authenticated
-  USING (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[]));
-
--- ---------- TOKENS (somente service_role) ----------
-CREATE TABLE public.ig_tokens (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  ig_account_id UUID NOT NULL REFERENCES public.ig_accounts(id) ON DELETE CASCADE,
-  access_token TEXT NOT NULL,
-  token_type TEXT NOT NULL DEFAULT 'long_lived',
-  expires_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (ig_account_id, token_type)
-);
-CREATE INDEX ig_tokens_account_idx ON public.ig_tokens(ig_account_id);
-GRANT ALL ON public.ig_tokens TO service_role;
-ALTER TABLE public.ig_tokens ENABLE ROW LEVEL SECURITY;
--- Nenhuma policy: tokens da Meta nunca são legíveis pelo cliente.
-
--- ---------- WEBHOOK EVENTS ----------
-CREATE TABLE public.ig_webhook_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_key TEXT NOT NULL UNIQUE,
-  object TEXT,
-  field TEXT,
-  instagram_account_id TEXT,
-  tenant_id UUID REFERENCES public.ig_tenants(id) ON DELETE SET NULL,
-  payload JSONB NOT NULL,
-  status TEXT NOT NULL DEFAULT 'received'
-    CHECK (status IN ('received','queued','processed','failed','ignored')),
-  error TEXT,
-  received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  processed_at TIMESTAMPTZ
-);
-CREATE INDEX ig_webhook_events_tenant_idx ON public.ig_webhook_events(tenant_id);
-CREATE INDEX ig_webhook_events_received_idx ON public.ig_webhook_events(received_at);
-GRANT SELECT ON public.ig_webhook_events TO authenticated;
-GRANT ALL ON public.ig_webhook_events TO service_role;
-ALTER TABLE public.ig_webhook_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ig_webhook_events_member_select" ON public.ig_webhook_events FOR SELECT TO authenticated
-  USING ((tenant_id IS NOT NULL AND public.ig_is_tenant_member(tenant_id)) OR public.ig_is_super_admin());
-
--- ---------- FILA (substitui Redis) ----------
-CREATE TABLE public.ig_jobs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  type TEXT NOT NULL,
-  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-  dedupe_key TEXT UNIQUE,
-  status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending','running','done','failed','dead')),
-  attempts INTEGER NOT NULL DEFAULT 0,
-  max_attempts INTEGER NOT NULL DEFAULT 5,
-  run_after TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_error TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX ig_jobs_pending_idx ON public.ig_jobs(status, run_after);
-CREATE INDEX ig_jobs_tenant_idx ON public.ig_jobs(tenant_id);
-GRANT ALL ON public.ig_jobs TO service_role;
-ALTER TABLE public.ig_jobs ENABLE ROW LEVEL SECURITY;
--- Fila interna: apenas service_role.
-
--- ---------- AUDITORIA ----------
-CREATE TABLE public.ig_audit_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES public.ig_tenants(id) ON DELETE SET NULL,
-  actor_user_id UUID,
-  actor_type TEXT NOT NULL DEFAULT 'user' CHECK (actor_type IN ('user','super_admin','system','meta')),
-  action TEXT NOT NULL,
-  target TEXT,
-  result TEXT NOT NULL DEFAULT 'success' CHECK (result IN ('success','failure')),
-  ip TEXT,
-  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX ig_audit_logs_tenant_idx ON public.ig_audit_logs(tenant_id);
-CREATE INDEX ig_audit_logs_created_idx ON public.ig_audit_logs(created_at);
-GRANT SELECT ON public.ig_audit_logs TO authenticated;
-GRANT ALL ON public.ig_audit_logs TO service_role;
-ALTER TABLE public.ig_audit_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ig_audit_logs_select" ON public.ig_audit_logs FOR SELECT TO authenticated
-  USING ((tenant_id IS NOT NULL AND public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[])) OR public.ig_is_super_admin());
-
--- ---------- ASSINATURAS / USO ----------
-CREATE TABLE public.ig_subscriptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  plan_id TEXT NOT NULL REFERENCES public.ig_plans(id),
-  status TEXT NOT NULL DEFAULT 'trialing' CHECK (status IN ('trialing','active','past_due','canceled')),
-  current_period_end TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (tenant_id)
-);
-GRANT SELECT ON public.ig_subscriptions TO authenticated;
-GRANT ALL ON public.ig_subscriptions TO service_role;
-ALTER TABLE public.ig_subscriptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ig_subscriptions_select" ON public.ig_subscriptions FOR SELECT TO authenticated
-  USING (public.ig_is_tenant_member(tenant_id) OR public.ig_is_super_admin());
-
-CREATE TABLE public.ig_usage (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  metric TEXT NOT NULL,
-  period_start DATE NOT NULL DEFAULT date_trunc('month', now())::date,
-  value BIGINT NOT NULL DEFAULT 0,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (tenant_id, metric, period_start)
-);
-CREATE INDEX ig_usage_tenant_idx ON public.ig_usage(tenant_id);
-GRANT SELECT ON public.ig_usage TO authenticated;
-GRANT ALL ON public.ig_usage TO service_role;
-ALTER TABLE public.ig_usage ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ig_usage_select" ON public.ig_usage FOR SELECT TO authenticated
-  USING (public.ig_is_tenant_member(tenant_id) OR public.ig_is_super_admin());
-
--- ---------- NOTIFICAÇÕES ----------
-CREATE TABLE public.ig_notifications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  user_id UUID,
-  type TEXT NOT NULL,
-  title TEXT NOT NULL,
-  body TEXT,
-  read_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX ig_notifications_tenant_idx ON public.ig_notifications(tenant_id, created_at);
-GRANT SELECT, UPDATE ON public.ig_notifications TO authenticated;
-GRANT ALL ON public.ig_notifications TO service_role;
-ALTER TABLE public.ig_notifications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ig_notifications_select" ON public.ig_notifications FOR SELECT TO authenticated
-  USING (public.ig_is_tenant_member(tenant_id));
-CREATE POLICY "ig_notifications_update" ON public.ig_notifications FOR UPDATE TO authenticated
-  USING (public.ig_is_tenant_member(tenant_id)) WITH CHECK (public.ig_is_tenant_member(tenant_id));
-
-CREATE TABLE public.ig_notification_settings (
-  tenant_id UUID PRIMARY KEY REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  new_message BOOLEAN NOT NULL DEFAULT true,
-  new_comment BOOLEAN NOT NULL DEFAULT true,
-  publish_failed BOOLEAN NOT NULL DEFAULT true,
-  meta_error BOOLEAN NOT NULL DEFAULT true,
-  account_disconnected BOOLEAN NOT NULL DEFAULT true,
-  automation_executed BOOLEAN NOT NULL DEFAULT false,
-  growth_alert BOOLEAN NOT NULL DEFAULT true,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-GRANT SELECT, INSERT, UPDATE ON public.ig_notification_settings TO authenticated;
-GRANT ALL ON public.ig_notification_settings TO service_role;
-ALTER TABLE public.ig_notification_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ig_notif_settings_select" ON public.ig_notification_settings FOR SELECT TO authenticated
-  USING (public.ig_is_tenant_member(tenant_id));
-CREATE POLICY "ig_notif_settings_insert" ON public.ig_notification_settings FOR INSERT TO authenticated
-  WITH CHECK (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[]));
-CREATE POLICY "ig_notif_settings_update" ON public.ig_notification_settings FOR UPDATE TO authenticated
-  USING (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[]))
-  WITH CHECK (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[]));
-
--- ---------- RATE LIMIT ----------
-CREATE TABLE public.ig_rate_limits (
-  bucket TEXT PRIMARY KEY,
-  window_start TIMESTAMPTZ NOT NULL DEFAULT now(),
-  count INTEGER NOT NULL DEFAULT 0
-);
-GRANT ALL ON public.ig_rate_limits TO service_role;
-ALTER TABLE public.ig_rate_limits ENABLE ROW LEVEL SECURITY;
-
-CREATE OR REPLACE FUNCTION public.ig_rate_limit_hit(_bucket TEXT, _limit INTEGER, _window_seconds INTEGER)
-RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE
-  current_count INTEGER;
-BEGIN
-  INSERT INTO public.ig_rate_limits (bucket, window_start, count)
-  VALUES (_bucket, now(), 1)
-  ON CONFLICT (bucket) DO UPDATE
-    SET count = CASE
-          WHEN public.ig_rate_limits.window_start < now() - make_interval(secs => _window_seconds) THEN 1
-          ELSE public.ig_rate_limits.count + 1
-        END,
-        window_start = CASE
-          WHEN public.ig_rate_limits.window_start < now() - make_interval(secs => _window_seconds) THEN now()
-          ELSE public.ig_rate_limits.window_start
-        END
-  RETURNING count INTO current_count;
-
-  RETURN current_count <= _limit;
-END;
-$$;
-
--- Triggers de updated_at
-CREATE TRIGGER ig_tenants_touch BEFORE UPDATE ON public.ig_tenants FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
-CREATE TRIGGER ig_profiles_touch BEFORE UPDATE ON public.ig_profiles FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
-CREATE TRIGGER ig_tokens_touch BEFORE UPDATE ON public.ig_tokens FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
-CREATE TRIGGER ig_jobs_touch BEFORE UPDATE ON public.ig_jobs FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
-CREATE TRIGGER ig_subscriptions_touch BEFORE UPDATE ON public.ig_subscriptions FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
-CREATE TRIGGER ig_admin_accounts_touch BEFORE UPDATE ON public.ig_admin_accounts FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- Migration history repair: existing database schema is the baseline.
+-- -- =========================================================
+-- -- MRO INSTAGRAM (/IG) - FASE 1
+-- -- Núcleo multi-tenant isolado com prefixo ig_
+-- -- =========================================================
+-- 
+-- CREATE TYPE public.ig_role AS ENUM ('owner','admin','manager','agent','analyst');
+-- 
+-- -- ---------- PLANOS ----------
+-- CREATE TABLE public.ig_plans (
+--   id TEXT PRIMARY KEY,
+--   name TEXT NOT NULL,
+--   price_cents INTEGER NOT NULL DEFAULT 0,
+--   max_accounts INTEGER NOT NULL DEFAULT 1,
+--   max_automations INTEGER NOT NULL DEFAULT 3,
+--   max_messages_month INTEGER NOT NULL DEFAULT 1000,
+--   max_ai_calls_month INTEGER NOT NULL DEFAULT 100,
+--   max_members INTEGER NOT NULL DEFAULT 1,
+--   history_days INTEGER NOT NULL DEFAULT 30,
+--   features JSONB NOT NULL DEFAULT '{}'::jsonb,
+--   is_active BOOLEAN NOT NULL DEFAULT true,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- GRANT SELECT ON public.ig_plans TO anon, authenticated;
+-- GRANT ALL ON public.ig_plans TO service_role;
+-- ALTER TABLE public.ig_plans ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "ig_plans_public_read" ON public.ig_plans FOR SELECT USING (is_active = true);
+-- 
+-- INSERT INTO public.ig_plans (id,name,price_cents,max_accounts,max_automations,max_messages_month,max_ai_calls_month,max_members,history_days,features)
+-- VALUES
+--   ('solo','SOLO',9700,1,5,2000,200,1,30,'{"ai":true,"crm":false,"agency":false}'::jsonb),
+--   ('pro','PRO',19700,3,25,10000,2000,5,90,'{"ai":true,"crm":true,"agency":false}'::jsonb),
+--   ('agency','AGÊNCIA',49700,20,200,100000,20000,25,365,'{"ai":true,"crm":true,"agency":true}'::jsonb);
+-- 
+-- -- ---------- PERFIS ----------
+-- CREATE TABLE public.ig_profiles (
+--   user_id UUID PRIMARY KEY,
+--   full_name TEXT,
+--   company TEXT,
+--   email TEXT,
+--   avatar_url TEXT,
+--   is_blocked BOOLEAN NOT NULL DEFAULT false,
+--   last_login_at TIMESTAMPTZ,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- GRANT SELECT, INSERT, UPDATE ON public.ig_profiles TO authenticated;
+-- GRANT ALL ON public.ig_profiles TO service_role;
+-- ALTER TABLE public.ig_profiles ENABLE ROW LEVEL SECURITY;
+-- 
+-- -- ---------- TENANTS ----------
+-- CREATE TABLE public.ig_tenants (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   name TEXT NOT NULL,
+--   slug TEXT UNIQUE,
+--   plan_id TEXT NOT NULL DEFAULT 'solo' REFERENCES public.ig_plans(id),
+--   created_by UUID,
+--   is_blocked BOOLEAN NOT NULL DEFAULT false,
+--   onboarding_done BOOLEAN NOT NULL DEFAULT false,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   deleted_at TIMESTAMPTZ
+-- );
+-- GRANT SELECT, UPDATE ON public.ig_tenants TO authenticated;
+-- GRANT ALL ON public.ig_tenants TO service_role;
+-- ALTER TABLE public.ig_tenants ENABLE ROW LEVEL SECURITY;
+-- 
+-- CREATE TABLE public.ig_tenant_members (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   user_id UUID NOT NULL,
+--   role public.ig_role NOT NULL DEFAULT 'agent',
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   UNIQUE (tenant_id, user_id)
+-- );
+-- CREATE INDEX ig_tenant_members_user_idx ON public.ig_tenant_members(user_id);
+-- CREATE INDEX ig_tenant_members_tenant_idx ON public.ig_tenant_members(tenant_id);
+-- GRANT SELECT ON public.ig_tenant_members TO authenticated;
+-- GRANT ALL ON public.ig_tenant_members TO service_role;
+-- ALTER TABLE public.ig_tenant_members ENABLE ROW LEVEL SECURITY;
+-- 
+-- -- ---------- SUPER ADMIN ----------
+-- CREATE TABLE public.ig_super_admins (
+--   user_id UUID PRIMARY KEY,
+--   email TEXT NOT NULL,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- GRANT SELECT ON public.ig_super_admins TO authenticated;
+-- GRANT ALL ON public.ig_super_admins TO service_role;
+-- ALTER TABLE public.ig_super_admins ENABLE ROW LEVEL SECURITY;
+-- 
+-- -- Conta administrativa própria do módulo (senha nunca em código; hash gerado no servidor)
+-- CREATE TABLE public.ig_admin_accounts (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   email TEXT NOT NULL UNIQUE,
+--   password_hash TEXT NOT NULL,
+--   password_salt TEXT NOT NULL,
+--   must_change_password BOOLEAN NOT NULL DEFAULT true,
+--   failed_attempts INTEGER NOT NULL DEFAULT 0,
+--   locked_until TIMESTAMPTZ,
+--   last_login_at TIMESTAMPTZ,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- GRANT ALL ON public.ig_admin_accounts TO service_role;
+-- ALTER TABLE public.ig_admin_accounts ENABLE ROW LEVEL SECURITY;
+-- -- Sem policies: acessível somente via service_role (Edge Functions).
+-- 
+-- -- ---------- FUNÇÕES DE SEGURANÇA ----------
+-- CREATE OR REPLACE FUNCTION public.ig_is_tenant_member(_tenant_id UUID)
+-- RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+--   SELECT EXISTS (
+--     SELECT 1 FROM public.ig_tenant_members m
+--     WHERE m.tenant_id = _tenant_id AND m.user_id = auth.uid()
+--   );
+-- $$;
+-- 
+-- CREATE OR REPLACE FUNCTION public.ig_has_tenant_role(_tenant_id UUID, _roles public.ig_role[])
+-- RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+--   SELECT EXISTS (
+--     SELECT 1 FROM public.ig_tenant_members m
+--     WHERE m.tenant_id = _tenant_id AND m.user_id = auth.uid() AND m.role = ANY(_roles)
+--   );
+-- $$;
+-- 
+-- CREATE OR REPLACE FUNCTION public.ig_is_super_admin()
+-- RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+--   SELECT EXISTS (SELECT 1 FROM public.ig_super_admins s WHERE s.user_id = auth.uid());
+-- $$;
+-- 
+-- CREATE OR REPLACE FUNCTION public.ig_touch_updated_at()
+-- RETURNS TRIGGER LANGUAGE plpgsql SET search_path = public AS $$
+-- BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+-- 
+-- -- Policies que dependem das funções acima
+-- CREATE POLICY "ig_profiles_self_select" ON public.ig_profiles FOR SELECT TO authenticated
+--   USING (user_id = auth.uid() OR public.ig_is_super_admin());
+-- CREATE POLICY "ig_profiles_self_insert" ON public.ig_profiles FOR INSERT TO authenticated
+--   WITH CHECK (user_id = auth.uid());
+-- CREATE POLICY "ig_profiles_self_update" ON public.ig_profiles FOR UPDATE TO authenticated
+--   USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+-- 
+-- CREATE POLICY "ig_tenants_member_select" ON public.ig_tenants FOR SELECT TO authenticated
+--   USING (public.ig_is_tenant_member(id) OR public.ig_is_super_admin());
+-- CREATE POLICY "ig_tenants_owner_update" ON public.ig_tenants FOR UPDATE TO authenticated
+--   USING (public.ig_has_tenant_role(id, ARRAY['owner','admin']::public.ig_role[]))
+--   WITH CHECK (public.ig_has_tenant_role(id, ARRAY['owner','admin']::public.ig_role[]));
+-- 
+-- CREATE POLICY "ig_members_select" ON public.ig_tenant_members FOR SELECT TO authenticated
+--   USING (user_id = auth.uid() OR public.ig_is_tenant_member(tenant_id) OR public.ig_is_super_admin());
+-- 
+-- CREATE POLICY "ig_super_admins_self_select" ON public.ig_super_admins FOR SELECT TO authenticated
+--   USING (user_id = auth.uid());
+-- 
+-- -- ---------- CONTAS INSTAGRAM ----------
+-- CREATE TABLE public.ig_accounts (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   instagram_account_id TEXT NOT NULL,
+--   instagram_user_id TEXT,
+--   username TEXT,
+--   name TEXT,
+--   profile_picture_url TEXT,
+--   followers_count INTEGER,
+--   media_count INTEGER,
+--   account_type TEXT,
+--   connection_state TEXT NOT NULL DEFAULT 'connected'
+--     CHECK (connection_state IN ('connected','needs_reconnect','disconnected')),
+--   webhook_subscribed BOOLEAN NOT NULL DEFAULT false,
+--   last_synced_at TIMESTAMPTZ,
+--   last_error TEXT,
+--   is_active BOOLEAN NOT NULL DEFAULT true,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   deleted_at TIMESTAMPTZ,
+--   UNIQUE (tenant_id, instagram_account_id)
+-- );
+-- CREATE INDEX ig_accounts_tenant_idx ON public.ig_accounts(tenant_id);
+-- CREATE INDEX ig_accounts_igid_idx ON public.ig_accounts(instagram_account_id);
+-- CREATE INDEX ig_accounts_created_idx ON public.ig_accounts(created_at);
+-- CREATE TRIGGER ig_accounts_touch BEFORE UPDATE ON public.ig_accounts
+--   FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- GRANT SELECT, UPDATE, DELETE ON public.ig_accounts TO authenticated;
+-- GRANT ALL ON public.ig_accounts TO service_role;
+-- ALTER TABLE public.ig_accounts ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "ig_accounts_member_select" ON public.ig_accounts FOR SELECT TO authenticated
+--   USING (public.ig_is_tenant_member(tenant_id) OR public.ig_is_super_admin());
+-- CREATE POLICY "ig_accounts_manage_update" ON public.ig_accounts FOR UPDATE TO authenticated
+--   USING (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin','manager']::public.ig_role[]))
+--   WITH CHECK (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin','manager']::public.ig_role[]));
+-- CREATE POLICY "ig_accounts_manage_delete" ON public.ig_accounts FOR DELETE TO authenticated
+--   USING (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[]));
+-- 
+-- -- ---------- TOKENS (somente service_role) ----------
+-- CREATE TABLE public.ig_tokens (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   ig_account_id UUID NOT NULL REFERENCES public.ig_accounts(id) ON DELETE CASCADE,
+--   access_token TEXT NOT NULL,
+--   token_type TEXT NOT NULL DEFAULT 'long_lived',
+--   expires_at TIMESTAMPTZ,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   UNIQUE (ig_account_id, token_type)
+-- );
+-- CREATE INDEX ig_tokens_account_idx ON public.ig_tokens(ig_account_id);
+-- GRANT ALL ON public.ig_tokens TO service_role;
+-- ALTER TABLE public.ig_tokens ENABLE ROW LEVEL SECURITY;
+-- -- Nenhuma policy: tokens da Meta nunca são legíveis pelo cliente.
+-- 
+-- -- ---------- WEBHOOK EVENTS ----------
+-- CREATE TABLE public.ig_webhook_events (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   event_key TEXT NOT NULL UNIQUE,
+--   object TEXT,
+--   field TEXT,
+--   instagram_account_id TEXT,
+--   tenant_id UUID REFERENCES public.ig_tenants(id) ON DELETE SET NULL,
+--   payload JSONB NOT NULL,
+--   status TEXT NOT NULL DEFAULT 'received'
+--     CHECK (status IN ('received','queued','processed','failed','ignored')),
+--   error TEXT,
+--   received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   processed_at TIMESTAMPTZ
+-- );
+-- CREATE INDEX ig_webhook_events_tenant_idx ON public.ig_webhook_events(tenant_id);
+-- CREATE INDEX ig_webhook_events_received_idx ON public.ig_webhook_events(received_at);
+-- GRANT SELECT ON public.ig_webhook_events TO authenticated;
+-- GRANT ALL ON public.ig_webhook_events TO service_role;
+-- ALTER TABLE public.ig_webhook_events ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "ig_webhook_events_member_select" ON public.ig_webhook_events FOR SELECT TO authenticated
+--   USING ((tenant_id IS NOT NULL AND public.ig_is_tenant_member(tenant_id)) OR public.ig_is_super_admin());
+-- 
+-- -- ---------- FILA (substitui Redis) ----------
+-- CREATE TABLE public.ig_jobs (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   type TEXT NOT NULL,
+--   payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+--   dedupe_key TEXT UNIQUE,
+--   status TEXT NOT NULL DEFAULT 'pending'
+--     CHECK (status IN ('pending','running','done','failed','dead')),
+--   attempts INTEGER NOT NULL DEFAULT 0,
+--   max_attempts INTEGER NOT NULL DEFAULT 5,
+--   run_after TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   last_error TEXT,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- CREATE INDEX ig_jobs_pending_idx ON public.ig_jobs(status, run_after);
+-- CREATE INDEX ig_jobs_tenant_idx ON public.ig_jobs(tenant_id);
+-- GRANT ALL ON public.ig_jobs TO service_role;
+-- ALTER TABLE public.ig_jobs ENABLE ROW LEVEL SECURITY;
+-- -- Fila interna: apenas service_role.
+-- 
+-- -- ---------- AUDITORIA ----------
+-- CREATE TABLE public.ig_audit_logs (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID REFERENCES public.ig_tenants(id) ON DELETE SET NULL,
+--   actor_user_id UUID,
+--   actor_type TEXT NOT NULL DEFAULT 'user' CHECK (actor_type IN ('user','super_admin','system','meta')),
+--   action TEXT NOT NULL,
+--   target TEXT,
+--   result TEXT NOT NULL DEFAULT 'success' CHECK (result IN ('success','failure')),
+--   ip TEXT,
+--   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- CREATE INDEX ig_audit_logs_tenant_idx ON public.ig_audit_logs(tenant_id);
+-- CREATE INDEX ig_audit_logs_created_idx ON public.ig_audit_logs(created_at);
+-- GRANT SELECT ON public.ig_audit_logs TO authenticated;
+-- GRANT ALL ON public.ig_audit_logs TO service_role;
+-- ALTER TABLE public.ig_audit_logs ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "ig_audit_logs_select" ON public.ig_audit_logs FOR SELECT TO authenticated
+--   USING ((tenant_id IS NOT NULL AND public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[])) OR public.ig_is_super_admin());
+-- 
+-- -- ---------- ASSINATURAS / USO ----------
+-- CREATE TABLE public.ig_subscriptions (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   plan_id TEXT NOT NULL REFERENCES public.ig_plans(id),
+--   status TEXT NOT NULL DEFAULT 'trialing' CHECK (status IN ('trialing','active','past_due','canceled')),
+--   current_period_end TIMESTAMPTZ,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   UNIQUE (tenant_id)
+-- );
+-- GRANT SELECT ON public.ig_subscriptions TO authenticated;
+-- GRANT ALL ON public.ig_subscriptions TO service_role;
+-- ALTER TABLE public.ig_subscriptions ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "ig_subscriptions_select" ON public.ig_subscriptions FOR SELECT TO authenticated
+--   USING (public.ig_is_tenant_member(tenant_id) OR public.ig_is_super_admin());
+-- 
+-- CREATE TABLE public.ig_usage (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   metric TEXT NOT NULL,
+--   period_start DATE NOT NULL DEFAULT date_trunc('month', now())::date,
+--   value BIGINT NOT NULL DEFAULT 0,
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   UNIQUE (tenant_id, metric, period_start)
+-- );
+-- CREATE INDEX ig_usage_tenant_idx ON public.ig_usage(tenant_id);
+-- GRANT SELECT ON public.ig_usage TO authenticated;
+-- GRANT ALL ON public.ig_usage TO service_role;
+-- ALTER TABLE public.ig_usage ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "ig_usage_select" ON public.ig_usage FOR SELECT TO authenticated
+--   USING (public.ig_is_tenant_member(tenant_id) OR public.ig_is_super_admin());
+-- 
+-- -- ---------- NOTIFICAÇÕES ----------
+-- CREATE TABLE public.ig_notifications (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   user_id UUID,
+--   type TEXT NOT NULL,
+--   title TEXT NOT NULL,
+--   body TEXT,
+--   read_at TIMESTAMPTZ,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- CREATE INDEX ig_notifications_tenant_idx ON public.ig_notifications(tenant_id, created_at);
+-- GRANT SELECT, UPDATE ON public.ig_notifications TO authenticated;
+-- GRANT ALL ON public.ig_notifications TO service_role;
+-- ALTER TABLE public.ig_notifications ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "ig_notifications_select" ON public.ig_notifications FOR SELECT TO authenticated
+--   USING (public.ig_is_tenant_member(tenant_id));
+-- CREATE POLICY "ig_notifications_update" ON public.ig_notifications FOR UPDATE TO authenticated
+--   USING (public.ig_is_tenant_member(tenant_id)) WITH CHECK (public.ig_is_tenant_member(tenant_id));
+-- 
+-- CREATE TABLE public.ig_notification_settings (
+--   tenant_id UUID PRIMARY KEY REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   new_message BOOLEAN NOT NULL DEFAULT true,
+--   new_comment BOOLEAN NOT NULL DEFAULT true,
+--   publish_failed BOOLEAN NOT NULL DEFAULT true,
+--   meta_error BOOLEAN NOT NULL DEFAULT true,
+--   account_disconnected BOOLEAN NOT NULL DEFAULT true,
+--   automation_executed BOOLEAN NOT NULL DEFAULT false,
+--   growth_alert BOOLEAN NOT NULL DEFAULT true,
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- GRANT SELECT, INSERT, UPDATE ON public.ig_notification_settings TO authenticated;
+-- GRANT ALL ON public.ig_notification_settings TO service_role;
+-- ALTER TABLE public.ig_notification_settings ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "ig_notif_settings_select" ON public.ig_notification_settings FOR SELECT TO authenticated
+--   USING (public.ig_is_tenant_member(tenant_id));
+-- CREATE POLICY "ig_notif_settings_insert" ON public.ig_notification_settings FOR INSERT TO authenticated
+--   WITH CHECK (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[]));
+-- CREATE POLICY "ig_notif_settings_update" ON public.ig_notification_settings FOR UPDATE TO authenticated
+--   USING (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[]))
+--   WITH CHECK (public.ig_has_tenant_role(tenant_id, ARRAY['owner','admin']::public.ig_role[]));
+-- 
+-- -- ---------- RATE LIMIT ----------
+-- CREATE TABLE public.ig_rate_limits (
+--   bucket TEXT PRIMARY KEY,
+--   window_start TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   count INTEGER NOT NULL DEFAULT 0
+-- );
+-- GRANT ALL ON public.ig_rate_limits TO service_role;
+-- ALTER TABLE public.ig_rate_limits ENABLE ROW LEVEL SECURITY;
+-- 
+-- CREATE OR REPLACE FUNCTION public.ig_rate_limit_hit(_bucket TEXT, _limit INTEGER, _window_seconds INTEGER)
+-- RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+-- DECLARE
+--   current_count INTEGER;
+-- BEGIN
+--   INSERT INTO public.ig_rate_limits (bucket, window_start, count)
+--   VALUES (_bucket, now(), 1)
+--   ON CONFLICT (bucket) DO UPDATE
+--     SET count = CASE
+--           WHEN public.ig_rate_limits.window_start < now() - make_interval(secs => _window_seconds) THEN 1
+--           ELSE public.ig_rate_limits.count + 1
+--         END,
+--         window_start = CASE
+--           WHEN public.ig_rate_limits.window_start < now() - make_interval(secs => _window_seconds) THEN now()
+--           ELSE public.ig_rate_limits.window_start
+--         END
+--   RETURNING count INTO current_count;
+-- 
+--   RETURN current_count <= _limit;
+-- END;
+-- $$;
+-- 
+-- -- Triggers de updated_at
+-- CREATE TRIGGER ig_tenants_touch BEFORE UPDATE ON public.ig_tenants FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- CREATE TRIGGER ig_profiles_touch BEFORE UPDATE ON public.ig_profiles FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- CREATE TRIGGER ig_tokens_touch BEFORE UPDATE ON public.ig_tokens FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- CREATE TRIGGER ig_jobs_touch BEFORE UPDATE ON public.ig_jobs FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- CREATE TRIGGER ig_subscriptions_touch BEFORE UPDATE ON public.ig_subscriptions FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- CREATE TRIGGER ig_admin_accounts_touch BEFORE UPDATE ON public.ig_admin_accounts FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- 

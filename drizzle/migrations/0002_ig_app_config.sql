@@ -1,20 +1,21 @@
-CREATE TABLE IF NOT EXISTS public.ig_app_config (
-  id TEXT PRIMARY KEY DEFAULT 'default',
-  app_id TEXT,
-  app_secret TEXT,
-  webhook_verify_token TEXT,
-  scopes TEXT,
-  redirect_uri TEXT,
-  updated_by TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Somente edge functions (service_role) leem/escrevem: nenhum grant para anon/authenticated.
-GRANT ALL ON public.ig_app_config TO service_role;
-
-ALTER TABLE public.ig_app_config ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "ig_app_config_service_only" ON public.ig_app_config;
-CREATE POLICY "ig_app_config_service_only" ON public.ig_app_config
-  FOR ALL TO service_role USING (true) WITH CHECK (true);
+-- Migration history repair: existing database schema is the baseline.
+-- CREATE TABLE IF NOT EXISTS public.ig_app_config (
+--   id TEXT PRIMARY KEY DEFAULT 'default',
+--   app_id TEXT,
+--   app_secret TEXT,
+--   webhook_verify_token TEXT,
+--   scopes TEXT,
+--   redirect_uri TEXT,
+--   updated_by TEXT,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- 
+-- -- Somente edge functions (service_role) leem/escrevem: nenhum grant para anon/authenticated.
+-- GRANT ALL ON public.ig_app_config TO service_role;
+-- 
+-- ALTER TABLE public.ig_app_config ENABLE ROW LEVEL SECURITY;
+-- 
+-- DROP POLICY IF EXISTS "ig_app_config_service_only" ON public.ig_app_config;
+-- CREATE POLICY "ig_app_config_service_only" ON public.ig_app_config
+--   FOR ALL TO service_role USING (true) WITH CHECK (true);

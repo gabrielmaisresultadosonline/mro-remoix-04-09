@@ -1,148 +1,149 @@
--- Funções de dump completo (uso exclusivo do backend/service_role)
-CREATE OR REPLACE FUNCTION public.dump_list_tables()
-RETURNS TABLE(table_name text, row_count bigint)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  r record;
-  cnt bigint;
-BEGIN
-  FOR r IN
-    SELECT c.relname::text AS name
-    FROM pg_class c
-    JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'public' AND c.relkind = 'r'
-    ORDER BY c.relname
-  LOOP
-    EXECUTE format('SELECT count(*) FROM public.%I', r.name) INTO cnt;
-    table_name := r.name;
-    row_count := cnt;
-    RETURN NEXT;
-  END LOOP;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.dump_table_rows(p_table text, p_limit int DEFAULT 1000, p_offset int DEFAULT 0)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  result jsonb;
-BEGIN
-  -- Valida que a tabela existe no schema public (evita injeção)
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname = p_table
-  ) THEN
-    RAISE EXCEPTION 'Tabela inexistente: %', p_table;
-  END IF;
-
-  EXECUTE format(
-    'SELECT COALESCE(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) FROM (SELECT * FROM public.%I ORDER BY 1 LIMIT %s OFFSET %s) t',
-    p_table, GREATEST(1, LEAST(p_limit, 5000)), GREATEST(0, p_offset)
-  ) INTO result;
-
-  RETURN result;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.dump_schema_info()
-RETURNS jsonb
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT jsonb_build_object(
-    'columns', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(c)), '[]'::jsonb) FROM (
-        SELECT table_name, ordinal_position, column_name, data_type, udt_name,
-               is_nullable, column_default, character_maximum_length
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-        ORDER BY table_name, ordinal_position
-      ) c
-    ),
-    'constraints', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(k)), '[]'::jsonb) FROM (
-        SELECT conrelid::regclass::text AS table_name, conname AS name,
-               pg_get_constraintdef(oid) AS definition
-        FROM pg_constraint
-        WHERE connamespace = 'public'::regnamespace
-        ORDER BY conrelid::regclass::text, conname
-      ) k
-    ),
-    'indexes', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(i)), '[]'::jsonb) FROM (
-        SELECT tablename AS table_name, indexname AS name, indexdef AS definition
-        FROM pg_indexes WHERE schemaname = 'public'
-        ORDER BY tablename, indexname
-      ) i
-    ),
-    'policies', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(p)), '[]'::jsonb) FROM (
-        SELECT tablename AS table_name, policyname AS name, permissive, roles,
-               cmd, qual, with_check
-        FROM pg_policies WHERE schemaname = 'public'
-        ORDER BY tablename, policyname
-      ) p
-    ),
-    'triggers', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb) FROM (
-        SELECT c.relname::text AS table_name, tg.tgname AS name,
-               pg_get_triggerdef(tg.oid) AS definition
-        FROM pg_trigger tg
-        JOIN pg_class c ON c.oid = tg.tgrelid
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE NOT tg.tgisinternal AND n.nspname = 'public'
-        ORDER BY c.relname, tg.tgname
-      ) t
-    ),
-    'functions', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(f)), '[]'::jsonb) FROM (
-        SELECT p.proname AS name, pg_get_functiondef(p.oid) AS definition
-        FROM pg_proc p
-        JOIN pg_namespace n ON n.oid = p.pronamespace
-        WHERE n.nspname = 'public' AND p.prokind IN ('f','p')
-        ORDER BY p.proname
-      ) f
-    ),
-    'enums', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(e)), '[]'::jsonb) FROM (
-        SELECT t.typname AS name, array_agg(e.enumlabel ORDER BY e.enumsortorder) AS values
-        FROM pg_type t
-        JOIN pg_enum e ON e.enumtypid = t.oid
-        JOIN pg_namespace n ON n.oid = t.typnamespace
-        WHERE n.nspname = 'public'
-        GROUP BY t.typname ORDER BY t.typname
-      ) e
-    ),
-    'grants', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(g)), '[]'::jsonb) FROM (
-        SELECT table_name, grantee, privilege_type
-        FROM information_schema.role_table_grants
-        WHERE table_schema = 'public'
-        ORDER BY table_name, grantee, privilege_type
-      ) g
-    ),
-    'rls', (
-      SELECT COALESCE(jsonb_agg(to_jsonb(r)), '[]'::jsonb) FROM (
-        SELECT c.relname::text AS table_name, c.relrowsecurity AS rls_enabled
-        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relkind = 'r'
-        ORDER BY c.relname
-      ) r
-    )
-  );
-$$;
-
-REVOKE ALL ON FUNCTION public.dump_list_tables() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.dump_table_rows(text, int, int) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.dump_schema_info() FROM PUBLIC, anon, authenticated;
-
-GRANT EXECUTE ON FUNCTION public.dump_list_tables() TO service_role;
-GRANT EXECUTE ON FUNCTION public.dump_table_rows(text, int, int) TO service_role;
-GRANT EXECUTE ON FUNCTION public.dump_schema_info() TO service_role;
+-- Migration history repair: existing database schema is the baseline.
+-- -- Funções de dump completo (uso exclusivo do backend/service_role)
+-- CREATE OR REPLACE FUNCTION public.dump_list_tables()
+-- RETURNS TABLE(table_name text, row_count bigint)
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = public
+-- AS $$
+-- DECLARE
+--   r record;
+--   cnt bigint;
+-- BEGIN
+--   FOR r IN
+--     SELECT c.relname::text AS name
+--     FROM pg_class c
+--     JOIN pg_namespace n ON n.oid = c.relnamespace
+--     WHERE n.nspname = 'public' AND c.relkind = 'r'
+--     ORDER BY c.relname
+--   LOOP
+--     EXECUTE format('SELECT count(*) FROM public.%I', r.name) INTO cnt;
+--     table_name := r.name;
+--     row_count := cnt;
+--     RETURN NEXT;
+--   END LOOP;
+-- END;
+-- $$;
+-- 
+-- CREATE OR REPLACE FUNCTION public.dump_table_rows(p_table text, p_limit int DEFAULT 1000, p_offset int DEFAULT 0)
+-- RETURNS jsonb
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = public
+-- AS $$
+-- DECLARE
+--   result jsonb;
+-- BEGIN
+--   -- Valida que a tabela existe no schema public (evita injeção)
+--   IF NOT EXISTS (
+--     SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+--     WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname = p_table
+--   ) THEN
+--     RAISE EXCEPTION 'Tabela inexistente: %', p_table;
+--   END IF;
+-- 
+--   EXECUTE format(
+--     'SELECT COALESCE(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) FROM (SELECT * FROM public.%I ORDER BY 1 LIMIT %s OFFSET %s) t',
+--     p_table, GREATEST(1, LEAST(p_limit, 5000)), GREATEST(0, p_offset)
+--   ) INTO result;
+-- 
+--   RETURN result;
+-- END;
+-- $$;
+-- 
+-- CREATE OR REPLACE FUNCTION public.dump_schema_info()
+-- RETURNS jsonb
+-- LANGUAGE sql
+-- SECURITY DEFINER
+-- SET search_path = public
+-- AS $$
+--   SELECT jsonb_build_object(
+--     'columns', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(c)), '[]'::jsonb) FROM (
+--         SELECT table_name, ordinal_position, column_name, data_type, udt_name,
+--                is_nullable, column_default, character_maximum_length
+--         FROM information_schema.columns
+--         WHERE table_schema = 'public'
+--         ORDER BY table_name, ordinal_position
+--       ) c
+--     ),
+--     'constraints', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(k)), '[]'::jsonb) FROM (
+--         SELECT conrelid::regclass::text AS table_name, conname AS name,
+--                pg_get_constraintdef(oid) AS definition
+--         FROM pg_constraint
+--         WHERE connamespace = 'public'::regnamespace
+--         ORDER BY conrelid::regclass::text, conname
+--       ) k
+--     ),
+--     'indexes', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(i)), '[]'::jsonb) FROM (
+--         SELECT tablename AS table_name, indexname AS name, indexdef AS definition
+--         FROM pg_indexes WHERE schemaname = 'public'
+--         ORDER BY tablename, indexname
+--       ) i
+--     ),
+--     'policies', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(p)), '[]'::jsonb) FROM (
+--         SELECT tablename AS table_name, policyname AS name, permissive, roles,
+--                cmd, qual, with_check
+--         FROM pg_policies WHERE schemaname = 'public'
+--         ORDER BY tablename, policyname
+--       ) p
+--     ),
+--     'triggers', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb) FROM (
+--         SELECT c.relname::text AS table_name, tg.tgname AS name,
+--                pg_get_triggerdef(tg.oid) AS definition
+--         FROM pg_trigger tg
+--         JOIN pg_class c ON c.oid = tg.tgrelid
+--         JOIN pg_namespace n ON n.oid = c.relnamespace
+--         WHERE NOT tg.tgisinternal AND n.nspname = 'public'
+--         ORDER BY c.relname, tg.tgname
+--       ) t
+--     ),
+--     'functions', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(f)), '[]'::jsonb) FROM (
+--         SELECT p.proname AS name, pg_get_functiondef(p.oid) AS definition
+--         FROM pg_proc p
+--         JOIN pg_namespace n ON n.oid = p.pronamespace
+--         WHERE n.nspname = 'public' AND p.prokind IN ('f','p')
+--         ORDER BY p.proname
+--       ) f
+--     ),
+--     'enums', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(e)), '[]'::jsonb) FROM (
+--         SELECT t.typname AS name, array_agg(e.enumlabel ORDER BY e.enumsortorder) AS values
+--         FROM pg_type t
+--         JOIN pg_enum e ON e.enumtypid = t.oid
+--         JOIN pg_namespace n ON n.oid = t.typnamespace
+--         WHERE n.nspname = 'public'
+--         GROUP BY t.typname ORDER BY t.typname
+--       ) e
+--     ),
+--     'grants', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(g)), '[]'::jsonb) FROM (
+--         SELECT table_name, grantee, privilege_type
+--         FROM information_schema.role_table_grants
+--         WHERE table_schema = 'public'
+--         ORDER BY table_name, grantee, privilege_type
+--       ) g
+--     ),
+--     'rls', (
+--       SELECT COALESCE(jsonb_agg(to_jsonb(r)), '[]'::jsonb) FROM (
+--         SELECT c.relname::text AS table_name, c.relrowsecurity AS rls_enabled
+--         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+--         WHERE n.nspname = 'public' AND c.relkind = 'r'
+--         ORDER BY c.relname
+--       ) r
+--     )
+--   );
+-- $$;
+-- 
+-- REVOKE ALL ON FUNCTION public.dump_list_tables() FROM PUBLIC, anon, authenticated;
+-- REVOKE ALL ON FUNCTION public.dump_table_rows(text, int, int) FROM PUBLIC, anon, authenticated;
+-- REVOKE ALL ON FUNCTION public.dump_schema_info() FROM PUBLIC, anon, authenticated;
+-- 
+-- GRANT EXECUTE ON FUNCTION public.dump_list_tables() TO service_role;
+-- GRANT EXECUTE ON FUNCTION public.dump_table_rows(text, int, int) TO service_role;
+-- GRANT EXECUTE ON FUNCTION public.dump_schema_info() TO service_role;

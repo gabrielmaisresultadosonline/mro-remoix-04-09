@@ -10414,6 +10414,7 @@ export type Database = {
         Args: { p_limit?: number; p_offset?: number; p_table: string }
         Returns: Json
       }
+      get_partner_public_by_slug: { Args: { p_slug: string }; Returns: Json }
       get_whatsapp_public_config: { Args: never; Returns: Json }
       has_role: {
         Args: {

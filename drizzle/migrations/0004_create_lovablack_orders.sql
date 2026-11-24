@@ -1,28 +1,29 @@
-CREATE TABLE IF NOT EXISTS public.lovablack_orders (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  password TEXT NOT NULL,
-  whatsapp TEXT,
-  plan_type TEXT NOT NULL DEFAULT 'monthly' CHECK (plan_type IN ('monthly')),
-  amount NUMERIC NOT NULL DEFAULT 97,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','paid','expired','canceled')),
-  nsu_order TEXT NOT NULL UNIQUE,
-  infinitepay_link TEXT,
-  paid_at TIMESTAMPTZ,
-  expired_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS lovablack_orders_email_idx ON public.lovablack_orders (email);
-CREATE INDEX IF NOT EXISTS lovablack_orders_status_idx ON public.lovablack_orders (status);
-
-GRANT ALL ON public.lovablack_orders TO service_role;
-
-ALTER TABLE public.lovablack_orders ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Service role full access to lovablack_orders" ON public.lovablack_orders;
-CREATE POLICY "Service role full access to lovablack_orders"
-ON public.lovablack_orders FOR ALL TO service_role
-USING (true) WITH CHECK (true);
+-- Migration history repair: existing database schema is the baseline.
+-- CREATE TABLE IF NOT EXISTS public.lovablack_orders (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   name TEXT NOT NULL,
+--   email TEXT NOT NULL,
+--   password TEXT NOT NULL,
+--   whatsapp TEXT,
+--   plan_type TEXT NOT NULL DEFAULT 'monthly' CHECK (plan_type IN ('monthly')),
+--   amount NUMERIC NOT NULL DEFAULT 97,
+--   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','paid','expired','canceled')),
+--   nsu_order TEXT NOT NULL UNIQUE,
+--   infinitepay_link TEXT,
+--   paid_at TIMESTAMPTZ,
+--   expired_at TIMESTAMPTZ,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- );
+-- 
+-- CREATE INDEX IF NOT EXISTS lovablack_orders_email_idx ON public.lovablack_orders (email);
+-- CREATE INDEX IF NOT EXISTS lovablack_orders_status_idx ON public.lovablack_orders (status);
+-- 
+-- GRANT ALL ON public.lovablack_orders TO service_role;
+-- 
+-- ALTER TABLE public.lovablack_orders ENABLE ROW LEVEL SECURITY;
+-- 
+-- DROP POLICY IF EXISTS "Service role full access to lovablack_orders" ON public.lovablack_orders;
+-- CREATE POLICY "Service role full access to lovablack_orders"
+-- ON public.lovablack_orders FOR ALL TO service_role
+-- USING (true) WITH CHECK (true);

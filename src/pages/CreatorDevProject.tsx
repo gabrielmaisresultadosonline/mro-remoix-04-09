@@ -41,13 +41,10 @@ const CreatorDevProject = () => {
       }).catch(err => console.error("Error calling notify function:", err));
 
       // 3. Get Admin WhatsApp Number and Send Message
-      const { data: waData } = await supabase
-        .from('whatsapp_page_settings')
-        .select('whatsapp_number')
-        .limit(1)
-        .single();
+      const { data: waData } = await supabase.rpc('get_whatsapp_public_config');
+      const waConfig = waData as { whatsapp_number?: string } | null;
 
-      const adminWhatsApp = waData?.whatsapp_number || '555192036540';
+      const adminWhatsApp = waConfig?.whatsapp_number || '555192036540';
       
       const message = `🚀 *Nova Solicitação de Projeto - CreatorDev*\n\n` +
                       `👤 *Nome:* ${formData.full_name}\n` +

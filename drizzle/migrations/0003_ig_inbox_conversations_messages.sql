@@ -1,58 +1,59 @@
-CREATE TABLE public.ig_conversations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  ig_account_id UUID NOT NULL REFERENCES public.ig_accounts(id) ON DELETE CASCADE,
-  participant_id TEXT NOT NULL,
-  participant_username TEXT,
-  participant_name TEXT,
-  participant_picture_url TEXT,
-  last_message_text TEXT,
-  last_message_at TIMESTAMPTZ,
-  last_direction TEXT CHECK (last_direction IN ('in','out')),
-  unread_count INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (ig_account_id, participant_id)
-);
-
-CREATE TABLE public.ig_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
-  conversation_id UUID NOT NULL REFERENCES public.ig_conversations(id) ON DELETE CASCADE,
-  ig_account_id UUID NOT NULL REFERENCES public.ig_accounts(id) ON DELETE CASCADE,
-  mid TEXT,
-  direction TEXT NOT NULL CHECK (direction IN ('in','out')),
-  text TEXT,
-  attachments JSONB NOT NULL DEFAULT '[]'::jsonb,
-  sender_id TEXT,
-  recipient_id TEXT,
-  sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (mid)
-);
-
-CREATE INDEX idx_ig_conversations_tenant ON public.ig_conversations(tenant_id, last_message_at DESC);
-CREATE INDEX idx_ig_messages_conversation ON public.ig_messages(conversation_id, sent_at);
-CREATE INDEX idx_ig_messages_tenant ON public.ig_messages(tenant_id);
-
-GRANT SELECT ON public.ig_conversations TO authenticated;
-GRANT ALL ON public.ig_conversations TO service_role;
-GRANT SELECT ON public.ig_messages TO authenticated;
-GRANT ALL ON public.ig_messages TO service_role;
-
-ALTER TABLE public.ig_conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ig_messages ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members read tenant conversations" ON public.ig_conversations
-  FOR SELECT TO authenticated USING (public.ig_is_tenant_member(tenant_id));
-
-CREATE POLICY "Members read tenant messages" ON public.ig_messages
-  FOR SELECT TO authenticated USING (public.ig_is_tenant_member(tenant_id));
-
-CREATE TRIGGER ig_conversations_touch BEFORE UPDATE ON public.ig_conversations
-  FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
-
-ALTER PUBLICATION supabase_realtime ADD TABLE public.ig_conversations;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.ig_messages;
-ALTER TABLE public.ig_conversations REPLICA IDENTITY FULL;
-ALTER TABLE public.ig_messages REPLICA IDENTITY FULL;
+-- Migration history repair: existing database schema is the baseline.
+-- CREATE TABLE public.ig_conversations (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   ig_account_id UUID NOT NULL REFERENCES public.ig_accounts(id) ON DELETE CASCADE,
+--   participant_id TEXT NOT NULL,
+--   participant_username TEXT,
+--   participant_name TEXT,
+--   participant_picture_url TEXT,
+--   last_message_text TEXT,
+--   last_message_at TIMESTAMPTZ,
+--   last_direction TEXT CHECK (last_direction IN ('in','out')),
+--   unread_count INTEGER NOT NULL DEFAULT 0,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   UNIQUE (ig_account_id, participant_id)
+-- );
+-- 
+-- CREATE TABLE public.ig_messages (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   tenant_id UUID NOT NULL REFERENCES public.ig_tenants(id) ON DELETE CASCADE,
+--   conversation_id UUID NOT NULL REFERENCES public.ig_conversations(id) ON DELETE CASCADE,
+--   ig_account_id UUID NOT NULL REFERENCES public.ig_accounts(id) ON DELETE CASCADE,
+--   mid TEXT,
+--   direction TEXT NOT NULL CHECK (direction IN ('in','out')),
+--   text TEXT,
+--   attachments JSONB NOT NULL DEFAULT '[]'::jsonb,
+--   sender_id TEXT,
+--   recipient_id TEXT,
+--   sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   UNIQUE (mid)
+-- );
+-- 
+-- CREATE INDEX idx_ig_conversations_tenant ON public.ig_conversations(tenant_id, last_message_at DESC);
+-- CREATE INDEX idx_ig_messages_conversation ON public.ig_messages(conversation_id, sent_at);
+-- CREATE INDEX idx_ig_messages_tenant ON public.ig_messages(tenant_id);
+-- 
+-- GRANT SELECT ON public.ig_conversations TO authenticated;
+-- GRANT ALL ON public.ig_conversations TO service_role;
+-- GRANT SELECT ON public.ig_messages TO authenticated;
+-- GRANT ALL ON public.ig_messages TO service_role;
+-- 
+-- ALTER TABLE public.ig_conversations ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.ig_messages ENABLE ROW LEVEL SECURITY;
+-- 
+-- CREATE POLICY "Members read tenant conversations" ON public.ig_conversations
+--   FOR SELECT TO authenticated USING (public.ig_is_tenant_member(tenant_id));
+-- 
+-- CREATE POLICY "Members read tenant messages" ON public.ig_messages
+--   FOR SELECT TO authenticated USING (public.ig_is_tenant_member(tenant_id));
+-- 
+-- CREATE TRIGGER ig_conversations_touch BEFORE UPDATE ON public.ig_conversations
+--   FOR EACH ROW EXECUTE FUNCTION public.ig_touch_updated_at();
+-- 
+-- ALTER PUBLICATION supabase_realtime ADD TABLE public.ig_conversations;
+-- ALTER PUBLICATION supabase_realtime ADD TABLE public.ig_messages;
+-- ALTER TABLE public.ig_conversations REPLICA IDENTITY FULL;
+-- ALTER TABLE public.ig_messages REPLICA IDENTITY FULL;

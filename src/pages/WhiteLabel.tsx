@@ -108,12 +108,9 @@ const WhiteLabel = () => {
   useEffect(() => {
     const fetchPartner = async () => {
       if (!partnerSlug) return;
-      const { data } = await supabase
-        .from('partners')
-        .select('name, whatsapp')
-        .eq('slug', partnerSlug)
-        .single();
-      if (data) setPartner(data);
+      const { data } = await supabase.rpc('get_partner_public_by_slug', { p_slug: partnerSlug });
+      const partnerData = data as { name: string; whatsapp: string } | null;
+      if (partnerData) setPartner({ name: partnerData.name, whatsapp: partnerData.whatsapp });
     };
     fetchPartner();
   }, [partnerSlug]);
