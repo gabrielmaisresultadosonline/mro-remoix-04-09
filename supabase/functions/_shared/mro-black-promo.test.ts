@@ -11,12 +11,14 @@ describe("oferta /ferramentamropromo", () => {
     expect(currentPromoOffer("annual", before).price).toBe(300);
     expect(currentPromoOffer("lifetime", before).price).toBe(967);
   });
-  it("depois: anual R$397 com 4 contas", () => {
+  it("depois: anual R$397 em 12x de R$40,74 com 4 contas", () => {
     expect(currentPromoOffer("annual", after).price).toBe(397);
+    expect(currentPromoOffer("annual", after).installment).toBe(40.74);
     expect(blackPromoAccounts("annual", after)).toBe(4);
   });
-  it("depois: vitalício R$1200 com 12 contas", () => {
+  it("depois: vitalício R$1200 em 12x de R$123,14 com 12 contas", () => {
     expect(currentPromoOffer("lifetime", after).price).toBe(1200);
+    expect(currentPromoOffer("lifetime", after).installment).toBe(123.14);
     expect(blackPromoAccounts("lifetime", after)).toBe(12);
   });
 });

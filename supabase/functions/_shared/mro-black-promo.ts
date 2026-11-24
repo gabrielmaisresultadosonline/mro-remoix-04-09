@@ -20,8 +20,8 @@ export const MRO_BLACK_PROMO_END_MS = Date.UTC(2026, 10, 17, 19, 0, 0);
 
 /** Valores normais após o fim da Black (anual 4 contas, vitalício 12 contas). */
 export const MRO_PROMO_REGULAR = {
-  annual: { from: 397, price: 397, installments: 12, installment: 33.08, accounts: 4 },
-  lifetime: { from: 1200, price: 1200, installments: 12, installment: 100, accounts: 12 },
+  annual: { from: 397, price: 397, installments: 12, installment: 40.74, accounts: 4 },
+  lifetime: { from: 1200, price: 1200, installments: 12, installment: 123.14, accounts: 12 },
 } as const;
 
 export type MroPromoOffer = { from: number; price: number; installments: number; installment: number; accounts: number };

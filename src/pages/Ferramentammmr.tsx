@@ -588,15 +588,6 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       {blackActive && <BlackNovemberBadge />}
       {blackActive && <BlackNovemberTapes />}
 
-      {blackPromo && (
-        <PromoCtaBand
-          label="APROVEITAR PROMO"
-          eyebrow={blackActive ? "Black até 17/11 às 16h" : "Escolha seu plano"}
-          caption={blackActive ? "Anual por R$300 ou vitalício por R$967 — clique e escolha seu plano" : "Anual por R$397 (4 contas) ou vitalício por R$1.200 (12 contas)"}
-          onCta={() => promoCta("antes-da-garantia")}
-        />
-      )}
-
       {/* Guarantee Section */}
       <section className="py-16 sm:py-20 px-3 sm:px-4 bg-gradient-to-b from-card to-background">
         <div className="max-w-4xl mx-auto">
