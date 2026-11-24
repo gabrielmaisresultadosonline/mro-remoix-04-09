@@ -212,7 +212,7 @@ export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanS
                 </div>
 
                 <h3 className="text-2xl sm:text-3xl font-bold text-center">{info.title}</h3>
-                <div className="text-center mt-4 mb-6 sm:mb-8">
+                <div className="bn-value-box text-center mt-4 mb-6 sm:mb-8">
                   {off > 0 && (
                     <p className="text-muted-foreground text-lg">
                       de <span className="line-through">{brl(o.from)}</span> por
@@ -222,11 +222,14 @@ export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanS
                     <span className="text-lg sm:text-2xl font-medium">{o.installments}x de</span>
                     <span className="text-6xl sm:text-7xl font-black ml-2">{brl(o.installment)}</span>
                   </div>
+                  <div className="bn-divider" aria-hidden />
                   <p className="text-muted-foreground text-lg sm:text-xl">
                     ou <span className="text-foreground font-bold">{brl(o.price)} à vista</span>
                   </p>
                   <p className="text-muted-foreground text-xs sm:text-sm mt-1">{info.period}</p>
                 </div>
+
+                <div className="bn-divider" aria-hidden />
 
                 <div className="space-y-3 mb-6 sm:mb-8 flex-1">
                   {info.features.map((f) => (
@@ -236,6 +239,8 @@ export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanS
                     </div>
                   ))}
                 </div>
+
+                <div className="bn-divider" aria-hidden />
 
                 <Button
                   onClick={() => onSelect(blackPlanSelection(plan))}

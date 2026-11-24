@@ -656,6 +656,90 @@
 }
 .mro-black-november .bn-glow-inner { position: relative; background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--background))); }
 @keyframes bn-spin { to { transform: rotate(360deg); } }
+
+/* ===== Contêineres de preço da /ferramentamropromo: bordas refletivas em loop =====
+   Válidas enquanto a página de vendas MRO estiver no ar (a Black November pode ter
+   passado e a classe .mro-black-november sumir; os cards continuam os mesmos). */
+.mro-intelligent-sales .bn-glow-card {
+  position: relative;
+  border: 1px solid hsl(var(--border));
+  isolation: isolate;
+}
+.mro-intelligent-sales .bn-glow-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(115deg,
+      transparent 30%,
+      hsl(var(--foreground) / .75) 47%,
+      hsl(var(--primary)) 52%,
+      transparent 70%);
+  background-size: 300% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: bn-border-sweep 4.6s linear infinite;
+  pointer-events: none;
+}
+
+/* Caixa dos valores: borda refletiva em loop dividindo o bloco de preço. */
+.mro-intelligent-sales .bn-value-box {
+  position: relative;
+  border-radius: 1.25rem;
+  padding: 1.1rem .85rem 1rem;
+  isolation: isolate;
+  background: linear-gradient(180deg, hsl(var(--primary) / .07), hsl(var(--foreground) / .03));
+}
+.mro-intelligent-sales .bn-value-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(110deg,
+      transparent 25%,
+      hsl(var(--primary) / .85) 42%,
+      hsl(var(--foreground)) 50%,
+      hsl(var(--primary) / .85) 58%,
+      transparent 75%);
+  background-size: 260% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: bn-border-sweep 3.4s linear infinite;
+  pointer-events: none;
+}
+@keyframes bn-border-sweep {
+  0% { background-position: 220% 0; }
+  100% { background-position: -120% 0; }
+}
+
+/* Divisórias com reflexo percorrendo em loop. */
+.mro-intelligent-sales .bn-divider {
+  position: relative;
+  height: 1px;
+  margin: .9rem 0 1rem;
+  background: linear-gradient(90deg, transparent, hsl(var(--border)) 18%, hsl(var(--border)) 82%, transparent);
+  overflow: hidden;
+}
+.mro-intelligent-sales .bn-divider::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, hsl(var(--primary) / .9), hsl(var(--foreground)), hsl(var(--primary) / .9), transparent);
+  animation: bn-divider-sweep 3s ease-in-out infinite;
+}
+@keyframes bn-divider-sweep {
+  0% { transform: translateX(-130%); }
+  100% { transform: translateX(340%); }
+}
 .mro-black-november .bn-off-badge { animation: bn-wiggle 2.6s ease-in-out infinite; }
 @keyframes bn-wiggle {
   0%, 80%, 100% { transform: rotate(0) scale(1); }
