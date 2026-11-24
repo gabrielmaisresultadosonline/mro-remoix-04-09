@@ -11,7 +11,11 @@ export default function WhatsappVxLinkDireto() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.rpc("get_whatsapp_public_config");
+      const { data } = await supabase
+        .from("whatsapp_page_settings")
+        .select("whatsapp_number")
+        .limit(1)
+        .single();
       const num = (data as any)?.whatsapp_number || "";
       if (!num) { setError(true); return; }
       setNumber(num);

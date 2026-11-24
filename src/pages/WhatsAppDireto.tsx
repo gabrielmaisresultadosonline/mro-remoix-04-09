@@ -13,10 +13,13 @@ const WhatsAppDireto = () => {
   useEffect(() => {
     trackPageView("WhatsApp Direto");
     const load = async () => {
-      const { data } = await supabase.rpc("get_whatsapp_public_config");
-      const waConfig = data as { whatsapp_number?: string } | null;
-      if (waConfig?.whatsapp_number) {
-        setWhatsappNumber(waConfig.whatsapp_number);
+      const { data } = await supabase
+        .from("whatsapp_page_settings")
+        .select("whatsapp_number")
+        .limit(1)
+        .single();
+      if (data) {
+        setWhatsappNumber(data.whatsapp_number);
       }
       setLoading(false);
     };

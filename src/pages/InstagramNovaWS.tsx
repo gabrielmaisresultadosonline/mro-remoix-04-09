@@ -174,12 +174,11 @@ const InstagramNovaWS = () => {
         if (!error && data?.success && data?.data?.salesPageSettings) setSalesSettings(data.data.salesPageSettings);
         
         // Also load global WhatsApp settings
-        const { data: waData } = await supabase.rpc('get_whatsapp_public_config');
-        const waNumber = (waData as { whatsapp_number?: string } | null)?.whatsapp_number;
-        if (waNumber) {
+        const { data: waData } = await supabase.from('whatsapp_page_settings').select('whatsapp_number').limit(1).single();
+        if (waData?.whatsapp_number) {
           setSalesSettings(prev => ({
             ...prev,
-            whatsappNumber: waNumber
+            whatsappNumber: waData.whatsapp_number
           }));
         }
       } catch (err) { console.error('Error loading sales settings:', err); }
@@ -190,14 +189,18 @@ const InstagramNovaWS = () => {
   useEffect(() => {
     const loadPartner = async () => {
       if (!partnerSlug) return;
-      const { data } = await supabase.rpc('get_partner_public_by_slug', { p_slug: partnerSlug });
-      const partnerData = data as { id: string; name: string } | null;
+      const { data } = await supabase
+        .from('partners')
+        .select('id, name')
+        .eq('slug', partnerSlug)
+        .eq('status', 'active')
+        .single();
       
-      if (partnerData?.id) {
-        setPartner({ id: partnerData.id, name: partnerData.name });
+      if (data) {
+        setPartner(data);
         // Track visit if partner found
         await supabase.from('partner_visits').insert([{
-          partner_id: partnerData.id,
+          partner_id: data.id,
           user_agent: navigator.userAgent,
           referer: document.referrer
         }]);

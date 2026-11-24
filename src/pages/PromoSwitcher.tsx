@@ -19,7 +19,12 @@ const PromoSwitcher = () => {
       }
 
       try {
-        const { data, error } = await supabase.rpc('get_partner_public_by_slug', { p_slug: affiliateId });
+        const { data, error } = await supabase
+          .from('partners')
+          .select('id')
+          .eq('slug', affiliateId)
+          .eq('status', 'active')
+          .maybeSingle();
 
         if (data) {
           setIsPartner(true);

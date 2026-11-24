@@ -104,17 +104,21 @@ const AffiliatePromoPage = () => {
 
       try {
         // 1. Check DB partners first
-        const { data: rawPartner } = await supabase.rpc('get_partner_public_by_slug', { p_slug: affiliateId });
-        const dbPartner = rawPartner as { slug: string; name: string; photo_url?: string | null; show_promo_banner?: boolean } | null;
+        const { data: dbPartner } = await supabase
+          .from('partners')
+          .select('*')
+          .eq('slug', affiliateId)
+          .eq('status', 'active')
+          .maybeSingle();
 
         if (dbPartner) {
           setAffiliate({
             id: dbPartner.slug,
             name: dbPartner.name,
-            email: "",
-            photoUrl: dbPartner.photo_url || "",
+            email: dbPartner.email,
+            photoUrl: "",
             active: true,
-            showPromoBanner: dbPartner.show_promo_banner ?? true,
+            showPromoBanner: (dbPartner as any).show_promo_banner ?? true,
           });
           setLoading(false);
           return;
