@@ -26,7 +26,7 @@ export function PromoCtaBand({
   label,
   onCta,
   variant = "band",
-  eyebrow = "Desconto Black November",
+  eyebrow = "Desconto Black Friday",
   caption,
 }: PromoCtaProps) {
   if (variant === "inline") {

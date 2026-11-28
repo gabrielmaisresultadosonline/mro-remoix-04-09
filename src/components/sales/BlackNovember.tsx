@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   MRO_BLACK_PROMO,
   MRO_BLACK_PROMO_END_MS,
+  MRO_PROMO_REGULAR,
   currentPromoOffer,
   isBlackPromoActive,
   type MroBlackPromoPlan,
@@ -11,19 +12,19 @@ import {
 
 const brl = (n: number) => `R$${n.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: Number.isInteger(n) ? 0 : 2 })}`;
 
-/** Fim da Black November: 17/11 às 16:00 (horário de Brasília). */
+/** Fim da Black Friday: 30/11 às 14:00 (horário de Brasília). */
 function blackNovemberEnd() {
   return new Date(MRO_BLACK_PROMO_END_MS);
 }
 
-/** true enquanto a Black estiver ativa; vira false sozinho às 16h de 17/11. */
+/** true enquanto a Black estiver ativa; volta aos valores normais às 14h de 30/11. */
 export function useBlackPromoActive() {
   const [active, setActive] = useState(() => isBlackPromoActive());
   useEffect(() => {
-    if (!active) return;
-    const t = setInterval(() => { if (!isBlackPromoActive()) setActive(false); }, 1000);
+    if (Date.now() >= MRO_BLACK_PROMO_END_MS) return;
+    const t = setInterval(() => setActive(isBlackPromoActive()), 1000);
     return () => clearInterval(t);
-  }, [active]);
+  }, []);
   return active;
 }
 
@@ -44,14 +45,14 @@ function useCountdown() {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** Faixa amarela fixa no topo: só "BLACK NOVEMBER" e a contagem regressiva. */
+/** Faixa amarela fixa no topo: só "BLACK FRIDAY" e a contagem regressiva. */
 export function BlackNovemberTopBar() {
   const cd = useCountdown();
   return (
     <div className="sticky top-0 z-[60] bg-primary text-primary-foreground border-b border-primary">
       <div className="flex items-center justify-center gap-3 px-3 py-2">
         <span className="inline-flex items-center gap-2 font-black text-sm sm:text-base tracking-[0.3em] uppercase">
-          <Flame className="h-4 w-4" /> Black November
+          <Flame className="h-4 w-4" /> Black Friday
         </span>
         {cd && (
           <span className="shrink-0 bg-background text-primary px-2 sm:px-3 py-1 rounded font-mono text-xs sm:text-sm font-bold tabular-nums">
@@ -95,12 +96,12 @@ export function BlackNovemberSparkles() {
   );
 }
 
-/** Selo "Desconto Black November" — fica no meio da página, não no topo. */
+/** Selo "Desconto Black Friday" — fica no meio da página, não no topo. */
 export function BlackNovemberBadge() {
   return (
     <div className="flex justify-center my-6 sm:my-8">
       <div className="inline-flex items-center gap-2 rounded-full border border-primary/60 bg-primary/10 px-4 py-1.5 text-primary text-[11px] sm:text-xs font-black tracking-[0.25em] uppercase bn-pulse">
-        <Zap className="h-3.5 w-3.5" /> Desconto Black November
+        <Zap className="h-3.5 w-3.5" /> Desconto Black Friday
       </div>
     </div>
   );
@@ -108,7 +109,7 @@ export function BlackNovemberBadge() {
 
 /** Fitas cruzadas estilo Black Friday no meio da página. */
 export function BlackNovemberTapes() {
-  const words = Array.from({ length: 10 }, () => 'BLACK NOVEMBER · DESCONTO BLACK ·');
+  const words = Array.from({ length: 10 }, () => 'BLACK FRIDAY · DESCONTO BLACK ·');
   return (
     <div className="relative h-36 sm:h-44 overflow-hidden my-2" aria-hidden>
       <div className="bn-tape absolute left-[-10%] right-[-10%] top-1/2 -translate-y-1/2 -rotate-3">
@@ -128,10 +129,10 @@ export function BlackNovemberTapes() {
 const planInfo = (black: boolean): Record<MroBlackPromoPlan, { title: string; tag: string; period: string; features: string[] }> => ({
   annual: {
     title: black ? 'Anual Black' : 'Plano Anual',
-    tag: black ? 'BLACK NOVEMBER' : 'PLANO ANUAL',
+    tag: black ? 'BLACK FRIDAY' : 'PLANO ANUAL',
     period: 'Acesso por 1 ano',
     features: [
-      `${currentPromoOffer('annual', black ? 0 : Infinity).accounts} contas do Instagram simultâneas fixas`,
+      `${(black ? MRO_BLACK_PROMO.annual : MRO_PROMO_REGULAR.annual).accounts} contas do Instagram simultâneas fixas`,
       '5 testes todo mês para usar em clientes/outras contas',
       'Ferramenta MRO completa',
       'Área de membros por 1 ano',
@@ -144,7 +145,7 @@ const planInfo = (black: boolean): Record<MroBlackPromoPlan, { title: string; ta
     tag: black ? '⭐ VITALÍCIO BLACK' : '⭐ VITALÍCIO',
     period: 'Acesso vitalício — sem renovação',
     features: [
-      `${currentPromoOffer('lifetime', black ? 0 : Infinity).accounts} contas do Instagram simultâneas fixas`,
+      `${(black ? MRO_BLACK_PROMO.lifetime : MRO_PROMO_REGULAR.lifetime).accounts} contas do Instagram simultâneas fixas`,
       '5 testes todo mês para usar em clientes/outras contas',
       'Ferramenta MRO completa',
       'Área de membros vitalícia',
@@ -183,20 +184,20 @@ export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanS
       <div className="text-center mb-8 sm:mb-10">
         {black && (
           <span className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-black text-xs tracking-[0.2em] uppercase rounded px-3 py-1 bn-pulse">
-            <Tag className="h-3.5 w-3.5" /> Desconto Black November
+            <Tag className="h-3.5 w-3.5" /> Desconto Black Friday
           </span>
         )}
         <h2 className="mro-sales-title text-3xl sm:text-4xl md:text-6xl uppercase mt-4">
           {black ? <>Preços <span className="bn-shimmer-text">Black</span></> : 'Escolha seu plano'}
         </h2>
         <p className="text-muted-foreground mt-3 text-base sm:text-lg">
-          {black ? 'Valores exclusivos da Black November até 17/11 às 16h. Depois voltam para R$397 anual e R$1.200 vitalício.' : 'Os 5 testes mensais continuam iguais.'}
+          {black ? 'Valores exclusivos da Black Friday de 28/11 até 30/11 às 14h. Depois voltam para R$397 anual e R$1.200 vitalício.' : 'Os 5 testes mensais continuam iguais.'}
         </p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
         {(Object.keys(MRO_BLACK_PROMO) as MroBlackPromoPlan[]).map((plan) => {
-          const o = currentPromoOffer(plan, black ? 0 : Infinity);
+          const o = black ? MRO_BLACK_PROMO[plan] : MRO_PROMO_REGULAR[plan];
           const info = PLAN_INFO[plan];
           const off = o.from - o.price;
           return (
@@ -219,8 +220,8 @@ export function BlackNovemberPricing({ onSelect }: { onSelect: (plan: BlackPlanS
                     </p>
                   )}
                   <div className="text-primary">
-                    <span className="text-lg sm:text-2xl font-medium">{o.installments}x de</span>
-                    <span className="text-6xl sm:text-7xl font-black ml-2">{brl(o.installment)}</span>
+                    <span className="block sm:inline text-base sm:text-2xl font-medium">em até {o.installments}x de</span>
+                    <span className="text-5xl sm:text-7xl font-black sm:ml-2">{brl(o.installment)}</span>
                   </div>
                   <div className="bn-divider" aria-hidden />
                   <p className="text-muted-foreground text-lg sm:text-xl">

@@ -570,7 +570,8 @@ const Ferramentammmr = ({ promotionalOffer = false, heroVideo, pricingContent, c
       {blackPromo && (
         <PromoCtaBand
           label="APROVEITAR PROMO"
-          caption={blackActive ? "Garanta seu acesso com o desconto Black November até 17/11 às 16h" : "Garanta seu acesso à Ferramenta MRO agora"}
+          eyebrow={blackActive ? "Desconto Black Friday" : "Oferta MRO"}
+          caption={blackActive ? "Garanta seu acesso com o desconto Black Friday de 28/11 até 30/11 às 14h" : "Garanta seu acesso à Ferramenta MRO agora"}
           onCta={() => promoCta("apos-funcionalidades")}
         />
       )}

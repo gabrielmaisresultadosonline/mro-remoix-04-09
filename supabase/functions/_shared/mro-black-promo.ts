@@ -1,5 +1,5 @@
 /**
- * Oferta Black November da /ferramentamropromo.
+ * Oferta Black Friday da /ferramentamropromo.
  *
  * Fonte única dos valores exibidos na página, do valor cobrado no checkout e
  * das contas iniciais criadas na Ferramenta MRO para quem compra por ela.
@@ -10,13 +10,16 @@ export const MRO_BLACK_PROMO_LABEL = "BLACK PROMO";
 
 export const MRO_BLACK_PROMO = {
   annual: { from: 397, price: 300, installments: 12, installment: 30, accounts: 3 },
-  lifetime: { from: 1200, price: 967, installments: 12, installment: 99, accounts: 10 },
+  lifetime: { from: 1200, price: 1000, installments: 12, installment: 100, accounts: 10 },
 } as const;
 
 export type MroBlackPromoPlan = keyof typeof MRO_BLACK_PROMO;
 
-/** Fim da Black: 17/11/2026 às 16:00 (horário de Brasília) = 19:00 UTC. */
-export const MRO_BLACK_PROMO_END_MS = Date.UTC(2026, 10, 17, 19, 0, 0);
+/** Início da Black Friday: 28/11/2026 às 00:00 (horário de Brasília) = 03:00 UTC. */
+export const MRO_BLACK_PROMO_START_MS = Date.UTC(2026, 10, 28, 3, 0, 0);
+
+/** Fim da Black Friday: 30/11/2026 às 14:00 (horário de Brasília) = 17:00 UTC. */
+export const MRO_BLACK_PROMO_END_MS = Date.UTC(2026, 10, 30, 17, 0, 0);
 
 /** Valores normais após o fim da Black (anual 4 contas, vitalício 12 contas). */
 export const MRO_PROMO_REGULAR = {
@@ -27,7 +30,7 @@ export const MRO_PROMO_REGULAR = {
 export type MroPromoOffer = { from: number; price: number; installments: number; installment: number; accounts: number };
 
 export function isBlackPromoActive(now: number = Date.now()): boolean {
-  return now < MRO_BLACK_PROMO_END_MS;
+  return now >= MRO_BLACK_PROMO_START_MS && now < MRO_BLACK_PROMO_END_MS;
 }
 
 /** Oferta vigente da /ferramentamropromo: Black até o prazo, depois os valores normais. */

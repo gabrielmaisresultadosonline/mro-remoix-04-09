@@ -54,7 +54,7 @@ serve(async (req) => {
         );
       }
       planType = blackPlan;
-      amount = currentPromoOffer(blackPlan).price; // Black até 17/11 16h, depois R$397/R$1200
+      amount = currentPromoOffer(blackPlan).price; // Black Friday 28/11 até 30/11 14h, depois R$397/R$1200
       log("Black promo checkout", { source: MRO_BLACK_PROMO_SOURCE, planType, amount });
     }
 
